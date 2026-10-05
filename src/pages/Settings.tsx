@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { Trans } from "@lingui/react/macro";
 import { useState } from "react";
 import {
   ensurePermission,
@@ -25,6 +27,7 @@ export default function Settings() {
     getPermissionStatus(),
   );
   const [permissionBusy, setPermissionBusy] = useState(false);
+  const serverCount = servers.length;
 
   async function handleEnableNotifications() {
     setPermissionBusy(true);
@@ -46,17 +49,17 @@ export default function Settings() {
     const name = form.name.trim();
     const baseUrl = form.baseUrl.trim().replace(/\/$/, "");
     if (name === "" || baseUrl === "") {
-      setFormError("Name und Basis-URL sind Pflichtfelder.");
+      setFormError(t`Name und Basis-URL sind Pflichtfelder.`);
       return;
     }
     try {
       const url = new URL(baseUrl);
       if (url.protocol !== "http:" && url.protocol !== "https:") {
-        setFormError("Basis-URL muss mit http:// oder https:// beginnen.");
+        setFormError(t`Basis-URL muss mit http:// oder https:// beginnen.`);
         return;
       }
     } catch {
-      setFormError("Basis-URL ist ungültig.");
+      setFormError(t`Basis-URL ist ungültig.`);
       return;
     }
     const payload = {
@@ -88,56 +91,70 @@ export default function Settings() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-bold">Einstellungen</h1>
+      <h1 className="text-2xl font-bold">
+        <Trans>Einstellungen</Trans>
+      </h1>
       <p className="text-sm opacity-70">
-        Server werden lokal im Browser (localStorage) gespeichert. Pro Server ein Benutzer
-        (Basic Auth).
+        <Trans>
+          Server werden lokal im Browser (localStorage) gespeichert. Pro Server ein Benutzer
+          (Basic Auth).
+        </Trans>
       </p>
 
       <section className="card bg-base-200 shadow">
         <div className="card-body">
-          <h2 className="card-title">{editingId === null ? "Server hinzufügen" : "Server bearbeiten"}</h2>
+          <h2 className="card-title">
+            {editingId === null ? <Trans>Server hinzufügen</Trans> : <Trans>Server bearbeiten</Trans>}
+          </h2>
           <form className="flex flex-col gap-2" onSubmit={handleSubmit}>
             <label className="form-control">
-              <span className="label label-text">Name</span>
+              <span className="label label-text">
+                <Trans>Name</Trans>
+              </span>
               <input
                 className="input input-bordered"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="z. B. Heimserver"
-                aria-label="Servername"
+                placeholder={t`z. B. Heimserver`}
+                aria-label={t`Servername`}
               />
             </label>
             <label className="form-control">
-              <span className="label label-text">Basis-URL</span>
+              <span className="label label-text">
+                <Trans>Basis-URL</Trans>
+              </span>
               <input
                 className="input input-bordered"
                 value={form.baseUrl}
                 onChange={(e) => setForm({ ...form, baseUrl: e.target.value })}
                 placeholder="https://opencode.example.com"
                 inputMode="url"
-                aria-label="Basis-URL"
+                aria-label={t`Basis-URL`}
               />
             </label>
             <label className="form-control">
-              <span className="label label-text">Benutzer (Basic Auth)</span>
+              <span className="label label-text">
+                <Trans>Benutzer (Basic Auth)</Trans>
+              </span>
               <input
                 className="input input-bordered"
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
                 autoComplete="username"
-                aria-label="Benutzer"
+                aria-label={t`Benutzer`}
               />
             </label>
             <label className="form-control">
-              <span className="label label-text">Passwort (Basic Auth)</span>
+              <span className="label label-text">
+                <Trans>Passwort (Basic Auth)</Trans>
+              </span>
               <input
                 className="input input-bordered"
                 type="password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 autoComplete="current-password"
-                aria-label="Passwort"
+                aria-label={t`Passwort`}
               />
             </label>
             {formError !== null && (
@@ -147,11 +164,11 @@ export default function Settings() {
             )}
             <div className="flex gap-2 mt-2">
               <button className="btn btn-primary" type="submit">
-                {editingId === null ? "Hinzufügen" : "Speichern"}
+                {editingId === null ? <Trans>Hinzufügen</Trans> : <Trans>Speichern</Trans>}
               </button>
               {editingId !== null && (
                 <button className="btn btn-ghost" type="button" onClick={resetForm}>
-                  Abbrechen
+                  <Trans>Abbrechen</Trans>
                 </button>
               )}
             </div>
@@ -161,28 +178,36 @@ export default function Settings() {
 
       <section className="card bg-base-200 shadow">
         <div className="card-body">
-          <h2 className="card-title">Benachrichtigungen</h2>
+          <h2 className="card-title">
+            <Trans>Benachrichtigungen</Trans>
+          </h2>
           <p className="text-sm opacity-70">
-            Lokale Hinweise zu Session-, Kompaktierungs- und Freigabe-Ereignissen des
-            gewählten Servers. Kein Push-Server, alles bleibt im Browser.
+            <Trans>
+              Lokale Hinweise zu Session-, Kompaktierungs- und Freigabe-Ereignissen des
+              gewählten Servers. Kein Push-Server, alles bleibt im Browser.
+            </Trans>
           </p>
           {!isNotificationSupported() ? (
             <div className="alert alert-warning">
-              <span>Dieser Browser unterstützt keine Benachrichtigungen.</span>
+              <span>
+                <Trans>Dieser Browser unterstützt keine Benachrichtigungen.</Trans>
+              </span>
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-2">
               <span
                 className="badge"
                 data-testid="notification-status"
-                aria-label={`Status: ${permission}`}
+                aria-label={t`Status: ${permission}`}
               >
-                Status:{" "}
-                {permission === "granted"
-                  ? "aktiviert"
-                  : permission === "denied"
-                    ? "blockiert"
-                    : "nicht angefragt"}
+                <Trans>Status:</Trans>{" "}
+                {permission === "granted" ? (
+                  <Trans>aktiviert</Trans>
+                ) : permission === "denied" ? (
+                  <Trans>blockiert</Trans>
+                ) : (
+                  <Trans>nicht angefragt</Trans>
+                )}
               </span>
               {permission !== "granted" && (
                 <button
@@ -191,13 +216,15 @@ export default function Settings() {
                   onClick={() => void handleEnableNotifications()}
                   disabled={permissionBusy || permission === "denied"}
                 >
-                  {permissionBusy ? "Bitte warten …" : "Benachrichtigungen aktivieren"}
+                  {permissionBusy ? <Trans>Bitte warten …</Trans> : <Trans>Benachrichtigungen aktivieren</Trans>}
                 </button>
               )}
               {permission === "denied" && (
                 <p className="text-sm opacity-70 w-full">
-                  Benachrichtigungen sind blockiert. Bitte in den Browser-Einstellungen
-                  wieder zulassen.
+                  <Trans>
+                    Benachrichtigungen sind blockiert. Bitte in den Browser-Einstellungen
+                    wieder zulassen.
+                  </Trans>
                 </p>
               )}
             </div>
@@ -206,9 +233,13 @@ export default function Settings() {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold mb-2">Gespeicherte Server ({servers.length})</h2>
+        <h2 className="text-lg font-semibold mb-2">
+          <Trans>Gespeicherte Server ({serverCount})</Trans>
+        </h2>
         {servers.length === 0 ? (
-          <p className="opacity-70">Noch keine Server vorhanden.</p>
+          <p className="opacity-70">
+            <Trans>Noch keine Server vorhanden.</Trans>
+          </p>
         ) : (
           <ul className="flex flex-col gap-2">
             {servers.map((s) => (
@@ -220,7 +251,7 @@ export default function Settings() {
                   </div>
                   <div className="flex gap-2">
                     <button className="btn btn-sm btn-ghost" onClick={() => handleEdit(s.id)}>
-                      Bearbeiten
+                      <Trans>Bearbeiten</Trans>
                     </button>
                     <button
                       className="btn btn-sm btn-error btn-outline"
@@ -229,7 +260,7 @@ export default function Settings() {
                         removeServer(s.id);
                       }}
                     >
-                      Entfernen
+                      <Trans>Entfernen</Trans>
                     </button>
                   </div>
                 </div>

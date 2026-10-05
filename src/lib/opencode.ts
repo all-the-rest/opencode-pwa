@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { OpenCode } from "@opencode/client";
 
 export interface ServerConfig {
@@ -28,7 +29,7 @@ export function makeClient(server: ServerConfig): OpencodeClient {
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
-  return "Unbekannter Fehler";
+  return t`Unbekannter Fehler`;
 }
 
 export interface ApiResult<T> {

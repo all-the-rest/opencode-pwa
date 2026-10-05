@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { Trans } from "@lingui/react/macro";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
@@ -63,25 +65,26 @@ interface KillTarget {
 }
 
 function killTitle(target: KillTarget): string {
-  if (target.kind === "session-interrupt") return "Ausführung unterbrechen";
-  if (target.kind === "session-delete") return "Session löschen";
-  return "Shell entfernen";
+  if (target.kind === "session-interrupt") return t`Ausführung unterbrechen`;
+  if (target.kind === "session-delete") return t`Session löschen`;
+  return t`Shell entfernen`;
 }
 
 function killMessage(target: KillTarget): string {
+  const { label } = target;
   if (target.kind === "session-interrupt") {
-    return `Die laufende Ausführung der Session „${target.label}“ wird unterbrochen. Die Session selbst bleibt erhalten. Fortfahren?`;
+    return t`Die laufende Ausführung der Session „${label}“ wird unterbrochen. Die Session selbst bleibt erhalten. Fortfahren?`;
   }
   if (target.kind === "session-delete") {
-    return `Die Session „${target.label}“ wird endgültig gelöscht. Fortfahren?`;
+    return t`Die Session „${label}“ wird endgültig gelöscht. Fortfahren?`;
   }
-  return `Die Shell „${target.label}“ wird abgebrochen und entfernt. Fortfahren?`;
+  return t`Die Shell „${label}“ wird abgebrochen und entfernt. Fortfahren?`;
 }
 
 function killConfirmLabel(target: KillTarget): string {
-  if (target.kind === "session-interrupt") return "Unterbrechen";
-  if (target.kind === "session-delete") return "Löschen";
-  return "Entfernen";
+  if (target.kind === "session-interrupt") return t`Unterbrechen`;
+  if (target.kind === "session-delete") return t`Löschen`;
+  return t`Entfernen`;
 }
 
 export default function ServerDetail() {
@@ -199,15 +202,21 @@ export default function ServerDetail() {
   if (server === null) {
     return (
       <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold">Server nicht gefunden</h1>
+        <h1 className="text-2xl font-bold">
+          <Trans>Server nicht gefunden</Trans>
+        </h1>
         <button className="btn btn-primary w-fit" onClick={() => navigate("/")}>
-          Zurück zur Übersicht
+          <Trans>Zurück zur Übersicht</Trans>
         </button>
       </div>
     );
   }
 
   const activeServer: ServerConfig = server;
+  const serverName = server.name;
+  const projectCount = projects.length;
+  const shellCount = shells.length;
+  const ptyCount = ptys.length;
 
   async function loadMoreSessions() {
     if (nextCursor === null || loadingMore) return;
@@ -218,7 +227,7 @@ export default function ServerDetail() {
     });
     setLoadingMore(false);
     if (result.error !== null || result.data === null) {
-      setError(result.error ?? "Sessions konnten nicht nachgeladen werden.");
+      setError(result.error ?? t`Sessions konnten nicht nachgeladen werden.`);
       return;
     }
     const known = new Set(sessions.map((s) => s.id));
@@ -267,7 +276,7 @@ export default function ServerDetail() {
       cached === undefined ? undefined : cached.cursor,
     );
     if (result.error !== null || result.data === null) {
-      setShellOutputError(result.error ?? "Ausgabe konnte nicht geladen werden.");
+      setShellOutputError(result.error ?? t`Ausgabe konnte nicht geladen werden.`);
       return;
     }
     const fresh = result.data;
@@ -302,12 +311,12 @@ export default function ServerDetail() {
     setPtyTicketError(null);
     const result = await getPtyConnectToken(activeServer, ptyID);
     if (result.error !== null || result.data === null) {
-      setPtyTicketError(result.error ?? "Token konnte nicht angefordert werden.");
+      setPtyTicketError(result.error ?? t`Token konnte nicht angefordert werden.`);
       return;
     }
     const ticket = extractPtyTicket(result.data);
     if (ticket === null) {
-      setPtyTicketError("Unerwartete Token-Antwort vom Server.");
+      setPtyTicketError(t`Unerwartete Token-Antwort vom Server.`);
       return;
     }
     setPtyTickets((prev) => ({ ...prev, [ptyID]: ticket }));
@@ -324,12 +333,16 @@ export default function ServerDetail() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-bold">Server: {server.name}</h1>
+      <h1 className="text-2xl font-bold">
+        <Trans>Server: {serverName}</Trans>
+      </h1>
       <p className="text-sm opacity-70">{server.baseUrl}</p>
-      {loading && <span className="loading loading-spinner loading-md" aria-label="Lädt" />}
+      {loading && <span className="loading loading-spinner loading-md" aria-label={t`Lädt`} />}
       {error !== null && (
         <div className="alert alert-warning">
-          <span>Server offline oder nicht erreichbar: {error}</span>
+          <span>
+            <Trans>Server offline oder nicht erreichbar: {error}</Trans>
+          </span>
         </div>
       )}
       {!loading && error === null && (
@@ -337,10 +350,12 @@ export default function ServerDetail() {
           <section className="card bg-base-200 shadow">
             <div className="card-body">
               <h2 className="card-title">
-                <Icon name="project" /> Projekte ({projects.length})
+                <Icon name="project" /> <Trans>Projekte ({projectCount})</Trans>
               </h2>
               {projects.length === 0 ? (
-                <p className="opacity-70 text-sm">Keine Projekte.</p>
+                <p className="opacity-70 text-sm">
+                  <Trans>Keine Projekte.</Trans>
+                </p>
               ) : (
                 <ul className="menu gap-1">
                   {projects.map((p) => (
@@ -355,29 +370,35 @@ export default function ServerDetail() {
           <section className="card bg-base-200 shadow">
             <div className="card-body">
               <h2 className="card-title">
-                <Icon name="session" /> Sessions ({sessionCount})
+                <Icon name="session" /> <Trans>Sessions ({sessionCount})</Trans>
               </h2>
               <div className="flex flex-col gap-2">
                 <label className="form-control">
-                  <span className="label label-text">Suche</span>
+                  <span className="label label-text">
+                    <Trans>Suche</Trans>
+                  </span>
                   <input
                     className="input input-bordered input-sm"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Titel oder ID suchen"
-                    aria-label="Sessions suchen"
+                    placeholder={t`Titel oder ID suchen`}
+                    aria-label={t`Sessions suchen`}
                   />
                 </label>
                 <div className="flex gap-2">
                   <label className="form-control flex-1">
-                    <span className="label label-text">Agent</span>
+                    <span className="label label-text">
+                      <Trans>Agent</Trans>
+                    </span>
                     <select
                       className="select select-bordered select-sm w-full"
                       value={agentFilter}
                       onChange={(e) => setAgentFilter(e.target.value)}
-                      aria-label="Nach Agent filtern"
+                      aria-label={t`Nach Agent filtern`}
                     >
-                      <option value="">Alle Agenten</option>
+                      <option value="">
+                        <Trans>Alle Agenten</Trans>
+                      </option>
                       {agents.map((a) => (
                         <option key={a} value={a}>
                           {a}
@@ -386,14 +407,18 @@ export default function ServerDetail() {
                     </select>
                   </label>
                   <label className="form-control flex-1">
-                    <span className="label label-text">Projekt</span>
+                    <span className="label label-text">
+                      <Trans>Projekt</Trans>
+                    </span>
                     <select
                       className="select select-bordered select-sm w-full"
                       value={projectFilter}
                       onChange={(e) => setProjectFilter(e.target.value)}
-                      aria-label="Nach Projekt filtern"
+                      aria-label={t`Nach Projekt filtern`}
                     >
-                      <option value="">Alle Projekte</option>
+                      <option value="">
+                        <Trans>Alle Projekte</Trans>
+                      </option>
                       {projects.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name}
@@ -404,7 +429,9 @@ export default function ServerDetail() {
                 </div>
               </div>
               {sessionGroups.length === 0 ? (
-                <p className="opacity-70 text-sm">Keine Sessions.</p>
+                <p className="opacity-70 text-sm">
+                  <Trans>Keine Sessions.</Trans>
+                </p>
               ) : (
                 <div className="flex flex-col gap-3">
                   {sessionGroups.map((group) => (
@@ -413,7 +440,9 @@ export default function ServerDetail() {
                         {group.label} ({group.sessions.length})
                       </h3>
                       <ul className="menu gap-1">
-                        {group.sessions.map((s) => (
+                        {group.sessions.map((s) => {
+                          const label = s.label;
+                          return (
                           <li key={s.id}>
                             <div className="flex items-center gap-1">
                               <Link
@@ -425,8 +454,8 @@ export default function ServerDetail() {
                               <button
                                 type="button"
                                 className="btn btn-xs btn-ghost"
-                                title="Ausführung unterbrechen"
-                                aria-label={`Session ${s.label} unterbrechen`}
+                                title={t`Ausführung unterbrechen`}
+                                aria-label={t`Session ${label} unterbrechen`}
                                 onClick={() =>
                                   setKillTarget({ kind: "session-interrupt", id: s.id, label: s.label })
                                 }
@@ -436,8 +465,8 @@ export default function ServerDetail() {
                               <button
                                 type="button"
                                 className="btn btn-xs btn-ghost text-error"
-                                title="Session löschen"
-                                aria-label={`Session ${s.label} löschen`}
+                                title={t`Session löschen`}
+                                aria-label={t`Session ${label} löschen`}
                                 onClick={() =>
                                   setKillTarget({ kind: "session-delete", id: s.id, label: s.label })
                                 }
@@ -446,7 +475,8 @@ export default function ServerDetail() {
                               </button>
                             </div>
                           </li>
-                        ))}
+                          );
+                        })}
                       </ul>
                     </div>
                   ))}
@@ -459,7 +489,7 @@ export default function ServerDetail() {
                   onClick={() => void loadMoreSessions()}
                   disabled={loadingMore}
                 >
-                  {loadingMore ? "Lädt …" : "Weitere Sessions laden"}
+                  {loadingMore ? <Trans>Lädt …</Trans> : <Trans>Weitere Sessions laden</Trans>}
                 </button>
               )}
             </div>
@@ -467,21 +497,21 @@ export default function ServerDetail() {
           <section className="card bg-base-200 shadow">
             <div className="card-body">
               <h2 className="card-title">
-                <Icon name="shell" /> Shells ({shells.length})
+                <Icon name="shell" /> <Trans>Shells ({shellCount})</Trans>
               </h2>
               <form className="flex gap-2" onSubmit={(e) => void handleCreateShell(e)}>
                 <input
                   className="input input-bordered input-sm flex-1"
                   value={newCommand}
                   onChange={(e) => setNewCommand(e.target.value)}
-                  placeholder="Befehl starten, z. B. sleep 60"
-                  aria-label="Neuer Shell-Befehl"
+                  placeholder={t`Befehl starten, z. B. sleep 60`}
+                  aria-label={t`Neuer Shell-Befehl`}
                 />
                 <button
                   type="submit"
                   className="btn btn-primary btn-sm"
                   disabled={creating || newCommand.trim() === ""}
-                  aria-label="Shell starten"
+                  aria-label={t`Shell starten`}
                 >
                   <Icon name="plus" />
                 </button>
@@ -497,10 +527,15 @@ export default function ServerDetail() {
                 </div>
               )}
               {shells.length === 0 ? (
-                <p className="opacity-70 text-sm">Keine Shells.</p>
+                <p className="opacity-70 text-sm">
+                  <Trans>Keine Shells.</Trans>
+                </p>
               ) : (
                 <ul className="menu gap-1">
-                  {shells.map((s) => (
+                  {shells.map((s) => {
+                    const label = s.label;
+                    const shellExpanded = expandedShell === s.id;
+                    return (
                     <li key={s.id}>
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1">
@@ -508,16 +543,20 @@ export default function ServerDetail() {
                           <button
                             type="button"
                             className="btn btn-xs btn-ghost"
-                            aria-label={`Ausgabe von ${s.label} ${expandedShell === s.id ? "ausblenden" : "anzeigen"}`}
+                            aria-label={
+                              shellExpanded
+                                ? t`Ausgabe von ${label} ausblenden`
+                                : t`Ausgabe von ${label} anzeigen`
+                            }
                             onClick={() => void toggleShellOutput(s.id)}
                           >
-                            {expandedShell === s.id ? "Ausblenden" : "Ausgabe"}
+                            {shellExpanded ? <Trans>Ausblenden</Trans> : <Trans>Ausgabe</Trans>}
                           </button>
                           <button
                             type="button"
                             className="btn btn-xs btn-ghost text-error"
-                            title="Shell entfernen"
-                            aria-label={`Shell ${s.label} entfernen`}
+                            title={t`Shell entfernen`}
+                            aria-label={t`Shell ${label} entfernen`}
                             onClick={() => {
                               setKillError(null);
                               setKillTarget({ kind: "shell-remove", id: s.id, label: s.label });
@@ -526,17 +565,18 @@ export default function ServerDetail() {
                             <Icon name="trash" />
                           </button>
                         </div>
-                        {expandedShell === s.id && (
+                        {shellExpanded && (
                           <pre
                             className="text-xs bg-base-300 rounded p-2 whitespace-pre-wrap break-words max-h-48 overflow-auto"
                             data-testid={`shell-output-${s.id}`}
                           >
-                            {shellOutputs[s.id]?.output ?? "Ausgabe wird geladen …"}
+                            {shellOutputs[s.id]?.output ?? t`Ausgabe wird geladen …`}
                           </pre>
                         )}
                       </div>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -544,11 +584,13 @@ export default function ServerDetail() {
           <section className="card bg-base-200 shadow">
             <div className="card-body">
               <h2 className="card-title">
-                <Icon name="pty" /> PTYs ({ptys.length})
+                <Icon name="pty" /> <Trans>PTYs ({ptyCount})</Trans>
               </h2>
               <p className="text-xs opacity-70">
-                Hinweis: Terminal-Rendering folgt nach MVP. Ein Connect-Token kann pro PTY
-                angefordert werden (für externe Terminal-Clients).
+                <Trans>
+                  Hinweis: Terminal-Rendering folgt nach MVP. Ein Connect-Token kann pro PTY
+                  angefordert werden (für externe Terminal-Clients).
+                </Trans>
               </p>
               {ptyTicketError !== null && (
                 <div className="alert alert-warning">
@@ -556,10 +598,14 @@ export default function ServerDetail() {
                 </div>
               )}
               {ptys.length === 0 ? (
-                <p className="opacity-70 text-sm">Keine PTYs.</p>
+                <p className="opacity-70 text-sm">
+                  <Trans>Keine PTYs.</Trans>
+                </p>
               ) : (
                 <ul className="menu gap-1">
-                  {ptys.map((p) => (
+                  {ptys.map((p) => {
+                    const label = p.label;
+                    return (
                     <li key={p.id}>
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1">
@@ -567,10 +613,10 @@ export default function ServerDetail() {
                           <button
                             type="button"
                             className="btn btn-xs btn-ghost"
-                            aria-label={`Connect-Token für ${p.label} anfordern`}
+                            aria-label={t`Connect-Token für ${label} anfordern`}
                             onClick={() => void handlePtyTicket(p.id)}
                           >
-                            Token
+                            <Trans>Token</Trans>
                           </button>
                         </div>
                         {ptyTickets[p.id] !== undefined && (
@@ -583,7 +629,8 @@ export default function ServerDetail() {
                         )}
                       </div>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               )}
             </div>

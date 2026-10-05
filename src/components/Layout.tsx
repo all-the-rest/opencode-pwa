@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { Trans } from "@lingui/react/macro";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import Icon from "./Icon.tsx";
 import { useEventNotifications } from "../hooks/useEventNotifications.ts";
@@ -19,7 +21,7 @@ export default function Layout() {
       <div className="drawer-content flex flex-col">
         <header className="navbar bg-base-200 sticky top-0 z-10">
           <div className="flex-none lg:hidden">
-            <label htmlFor="app-drawer" className="btn btn-square btn-ghost" aria-label="Menü öffnen">
+            <label htmlFor="app-drawer" className="btn btn-square btn-ghost" aria-label={t`Menü öffnen`}>
               <Icon name="menu" className="h-5 w-5" />
             </label>
           </div>
@@ -34,18 +36,20 @@ export default function Layout() {
               href={GITHUB_URL}
               target="_blank"
               rel="noreferrer"
-              aria-label="GitHub-Repository öffnen"
-              title="GitHub-Repository"
+              aria-label={t`GitHub-Repository öffnen`}
+              title={t`GitHub-Repository`}
             >
               <Icon name="github" className="h-5 w-5" />
             </a>
             <select
               className="select select-bordered select-sm max-w-44"
-              aria-label="Server wählen"
+              aria-label={t`Server wählen`}
               value={selectedServer?.id ?? ""}
               onChange={(e) => selectServer(e.target.value === "" ? null : e.target.value)}
             >
-              <option value="">Kein Server</option>
+              <option value="">
+                <Trans>Kein Server</Trans>
+              </option>
               {servers.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -60,25 +64,22 @@ export default function Layout() {
         <footer className="footer footer-center p-4 bg-base-200 text-sm opacity-80">
           <aside>
             <p>
-              Web PWA for Opencode ·{" "}
-              <a
-                className="link"
-                href={GITHUB_URL}
-                target="_blank"
-                rel="noreferrer"
-              >
-                GitHub-Repository
-              </a>
+              <Trans>
+                Web PWA for Opencode ·{" "}
+                <a className="link" href={GITHUB_URL} target="_blank" rel="noreferrer">
+                  GitHub-Repository
+                </a>
+              </Trans>
             </p>
           </aside>
         </footer>
       </div>
       <aside className="drawer-side">
-        <label htmlFor="app-drawer" className="drawer-overlay" aria-label="Menü schließen" />
+        <label htmlFor="app-drawer" className="drawer-overlay" aria-label={t`Menü schließen`} />
         <nav className="menu bg-base-200 min-h-full w-64 gap-1 p-4">
           <li>
             <NavLink to="/" end className={({ isActive }) => navClass(isActive)}>
-              Übersicht
+              <Trans>Übersicht</Trans>
             </NavLink>
           </li>
           <li>
@@ -86,19 +87,23 @@ export default function Layout() {
               to={selectedServer ? `/servers/${selectedServer.id}` : "/"}
               className={({ isActive }) => navClass(isActive)}
             >
-              Serverdetails
+              <Trans>Serverdetails</Trans>
             </NavLink>
           </li>
           <li>
             <NavLink to="/settings" className={({ isActive }) => navClass(isActive)}>
-              Einstellungen
+              <Trans>Einstellungen</Trans>
             </NavLink>
           </li>
           <li className="menu-title mt-4">
-            <span>Server</span>
+            <span>
+              <Trans>Server</Trans>
+            </span>
           </li>
           {servers.length === 0 && (
-            <li className="text-sm opacity-70 px-4">Noch keine Server angelegt.</li>
+            <li className="text-sm opacity-70 px-4">
+              <Trans>Noch keine Server angelegt.</Trans>
+            </li>
           )}
           {servers.map((s) => (
             <li key={s.id}>

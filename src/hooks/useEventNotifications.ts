@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useEffect } from "react";
 import { subscribeServerEvents } from "../lib/eventHub.ts";
 import { extractMessageFromEvent } from "../lib/eventMessages.ts";
@@ -40,46 +41,46 @@ export function describeEvent(event: unknown): EventSummary | null {
   const suffix = session === "" ? "" : ` (${session})`;
 
   if (type === "permission.asked") {
-    return { title: "Freigabe erforderlich", body: `Eine Aktion wartet auf Freigabe${suffix}.`, important: true };
+    return { title: t`Freigabe erforderlich`, body: t`Eine Aktion wartet auf Freigabe${suffix}.`, important: true };
   }
   if (type === "permission.replied") {
-    return { title: "Freigabe beantwortet", body: `Die Freigabe wurde beantwortet${suffix}.`, important: false };
+    return { title: t`Freigabe beantwortet`, body: t`Die Freigabe wurde beantwortet${suffix}.`, important: false };
   }
   if (type === "session.created") {
-    return { title: "Neue Session", body: `Session erstellt${suffix}.`, important: false };
+    return { title: t`Neue Session`, body: t`Session erstellt${suffix}.`, important: false };
   }
   if (type === "session.deleted") {
-    return { title: "Session gelöscht", body: `Session entfernt${suffix}.`, important: false };
+    return { title: t`Session gelöscht`, body: t`Session entfernt${suffix}.`, important: false };
   }
   if (type === "session.idle") {
-    return { title: "Session bereit", body: `Session ist bereit${suffix}.`, important: false };
+    return { title: t`Session bereit`, body: t`Session ist bereit${suffix}.`, important: false };
   }
   if (type === "session.status" || type === "session.status.updated") {
-    return { title: "Session-Status", body: `Status geändert${suffix}.`, important: false };
+    return { title: t`Session-Status`, body: t`Status geändert${suffix}.`, important: false };
   }
   if (type === "session.execution.succeeded") {
-    return { title: "Ausführung fertig", body: `Die Ausführung war erfolgreich${suffix}.`, important: false };
+    return { title: t`Ausführung fertig`, body: t`Die Ausführung war erfolgreich${suffix}.`, important: false };
   }
   if (type === "session.execution.failed" || type === "session.step.failed" || type === "session.tool.failed") {
-    return { title: "Ausführung fehlgeschlagen", body: `${type}${suffix}.`, important: true };
+    return { title: t`Ausführung fehlgeschlagen`, body: t`${type}${suffix}.`, important: true };
   }
   if (type === "session.execution.interrupted") {
-    return { title: "Ausführung unterbrochen", body: `Die Ausführung wurde unterbrochen${suffix}.`, important: false };
+    return { title: t`Ausführung unterbrochen`, body: t`Die Ausführung wurde unterbrochen${suffix}.`, important: false };
   }
   if (type === "session.compaction.started") {
-    return { title: "Kompaktierung läuft", body: `Session wird kompaktiert${suffix}.`, important: false };
+    return { title: t`Kompaktierung läuft`, body: t`Session wird kompaktiert${suffix}.`, important: false };
   }
   if (type === "session.compaction.ended") {
-    return { title: "Kompaktierung fertig", body: `Session kompaktiert${suffix}.`, important: false };
+    return { title: t`Kompaktierung fertig`, body: t`Session kompaktiert${suffix}.`, important: false };
   }
   if (type === "session.compaction.failed") {
-    return { title: "Kompaktierung fehlgeschlagen", body: `Kompaktierung gescheitert${suffix}.`, important: true };
+    return { title: t`Kompaktierung fehlgeschlagen`, body: t`Kompaktierung gescheitert${suffix}.`, important: true };
   }
   if (type === "session.inbox.enqueued" || type === "session.inbox.delivered") {
-    return { title: "Neue Inbox-Nachricht", body: `Eingang für Session${suffix}.`, important: false };
+    return { title: t`Neue Inbox-Nachricht`, body: t`Eingang für Session${suffix}.`, important: false };
   }
   if (type === "session.shell.started" || type === "session.shell.ended") {
-    return { title: "Shell-Ereignis", body: `${type}${suffix}.`, important: false };
+    return { title: t`Shell-Ereignis`, body: t`${type}${suffix}.`, important: false };
   }
   return null;
 }

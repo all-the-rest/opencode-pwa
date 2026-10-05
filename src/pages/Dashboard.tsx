@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { Trans } from "@lingui/react/macro";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useLiveRefresh } from "../hooks/useLiveRefresh.ts";
@@ -53,6 +55,8 @@ export default function Dashboard() {
   const [counts, setCounts] = useState<Counts | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const selectedServerName = selectedServer?.name ?? "";
+  const serverCount = servers.length;
 
   const reload = useCallback(() => {
     if (selectedServer === null) return;
@@ -63,7 +67,7 @@ export default function Dashboard() {
         setError(null);
       })
       .catch((failure: unknown) => {
-        setError(failure instanceof Error ? failure.message : "Unbekannter Fehler");
+        setError(failure instanceof Error ? failure.message : t`Unbekannter Fehler`);
         setCounts(null);
       });
   }, [selectedServer]);
@@ -85,7 +89,7 @@ export default function Dashboard() {
       })
       .catch((failure: unknown) => {
         if (cancelled) return;
-        setError(failure instanceof Error ? failure.message : "Unbekannter Fehler");
+        setError(failure instanceof Error ? failure.message : t`Unbekannter Fehler`);
         setCounts(null);
       })
       .finally(() => {
@@ -101,13 +105,20 @@ export default function Dashboard() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-bold">Übersicht</h1>
+      <h1 className="text-2xl font-bold">
+        <Trans>Übersicht</Trans>
+      </h1>
 
       {selectedServer === null && (
         <div className="alert alert-info">
           <span>
-            Kein Server ausgewählt. Lege unter <Link className="link" to="/settings">Einstellungen</Link>{" "}
-            einen Server an.
+            <Trans>
+              Kein Server ausgewählt. Lege unter{" "}
+              <Link className="link" to="/settings">
+                Einstellungen
+              </Link>{" "}
+              einen Server an.
+            </Trans>
           </span>
         </div>
       )}
@@ -115,47 +126,61 @@ export default function Dashboard() {
       {selectedServer !== null && (
         <section className="card bg-base-200 shadow">
           <div className="card-body">
-            <h2 className="card-title">Aktiver Server: {selectedServer.name}</h2>
+            <h2 className="card-title">
+              <Trans>Aktiver Server: {selectedServerName}</Trans>
+            </h2>
             <p className="text-sm opacity-70">{selectedServer.baseUrl}</p>
-            {loading && <span className="loading loading-spinner loading-md" aria-label="Lädt" />}
+            {loading && <span className="loading loading-spinner loading-md" aria-label={t`Lädt`} />}
             {error !== null && (
               <div className="alert alert-warning">
-                <span>Server offline oder nicht erreichbar: {error}</span>
+                <span>
+                  <Trans>Server offline oder nicht erreichbar: {error}</Trans>
+                </span>
               </div>
             )}
             {error === null && !loading && (
               <dl className="stats stats-vertical sm:stats-horizontal shadow mt-2">
                 <div className="stat">
-                  <div className="stat-title">Version</div>
+                  <div className="stat-title">
+                    <Trans>Version</Trans>
+                  </div>
                   <div className="stat-value text-lg">{counts?.info ?? "–"}</div>
                 </div>
                 <div className="stat">
-                  <div className="stat-title">Laufende Sessions</div>
+                  <div className="stat-title">
+                    <Trans>Laufende Sessions</Trans>
+                  </div>
                   <div className="stat-value text-lg" data-testid="badge-sessions">
                     {counts?.sessions ?? "–"}
                   </div>
                 </div>
                 <div className="stat">
-                  <div className="stat-title">Laufende Shells</div>
+                  <div className="stat-title">
+                    <Trans>Laufende Shells</Trans>
+                  </div>
                   <div className="stat-value text-lg" data-testid="badge-shells">
                     {counts?.shells ?? "–"}
                   </div>
                 </div>
                 <div className="stat">
-                  <div className="stat-title">Agenten</div>
+                  <div className="stat-title">
+                    <Trans>Agenten</Trans>
+                  </div>
                   <div className="stat-value text-lg" data-testid="badge-agents">
                     {counts?.agents ?? "–"}
                   </div>
                 </div>
                 <div className="stat">
-                  <div className="stat-title">Projekte</div>
+                  <div className="stat-title">
+                    <Trans>Projekte</Trans>
+                  </div>
                   <div className="stat-value text-lg">{counts?.projects ?? "–"}</div>
                 </div>
               </dl>
             )}
             <div className="card-actions mt-2">
               <Link className="btn btn-primary btn-sm" to={`/servers/${selectedServer.id}`}>
-                Details öffnen
+                <Trans>Details öffnen</Trans>
               </Link>
             </div>
           </div>
@@ -163,9 +188,13 @@ export default function Dashboard() {
       )}
 
       <section>
-        <h2 className="text-lg font-semibold mb-2">Alle Server ({servers.length})</h2>
+        <h2 className="text-lg font-semibold mb-2">
+          <Trans>Alle Server ({serverCount})</Trans>
+        </h2>
         {servers.length === 0 ? (
-          <p className="opacity-70">Noch keine Server vorhanden.</p>
+          <p className="opacity-70">
+            <Trans>Noch keine Server vorhanden.</Trans>
+          </p>
         ) : (
           <ul className="grid gap-2 md:grid-cols-2">
             {servers.map((s) => (
@@ -175,7 +204,7 @@ export default function Dashboard() {
                   <span className="text-sm opacity-70">{s.baseUrl}</span>
                   <div className="card-actions">
                     <Link className="btn btn-sm btn-ghost" to={`/servers/${s.id}`}>
-                      Anzeigen
+                      <Trans>Anzeigen</Trans>
                     </Link>
                   </div>
                 </div>

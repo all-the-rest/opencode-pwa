@@ -1,4 +1,12 @@
 import "@testing-library/jest-dom/vitest";
+import { i18n } from "@lingui/core";
+
+// Unit tests never render <I18nProvider>: activate the source locale with an
+// empty catalog so macro `t` calls fall back to their German source messages.
+if (i18n.locale === undefined || i18n.locale === "") {
+  i18n.load("de", {});
+  i18n.activate("de");
+}
 
 if (typeof globalThis.localStorage === "undefined") {
   const store = new Map<string, string>();

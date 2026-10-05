@@ -7,15 +7,21 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "prebuild": "node scripts/check-i18n.mjs",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "eslint . --fix --max-warnings 0",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:e2e:smoke": "playwright test --grep @smoke"
+    "test:e2e:smoke": "playwright test --grep @smoke",
+    "lingui:extract": "lingui extract",
+    "lingui:compile": "lingui compile",
+    "check:i18n": "node scripts/check-i18n.mjs"
   },
   "dependencies": {
     "@iconify/react": "^6.0.2",
+    "@lingui/core": "^6.9.0",
+    "@lingui/react": "^6.9.0",
     "@opencode/client": "^2.0.23",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -24,6 +30,11 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
+    "@lingui/babel-plugin-lingui-macro": "^6.9.0",
+    "@lingui/cli": "^6.9.0",
+    "@lingui/format-po": "^6.9.0",
+    "@lingui/message-utils": "^6.9.0",
+    "@lingui/vite-plugin": "^6.9.0",
     "@playwright/test": "^1.49.1",
     "@tailwindcss/vite": "^4.1.12",
     "@testing-library/jest-dom": "^6.6.3",
@@ -34,6 +45,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "daisyui": "^5.0.0",
     "eslint": "^9.18.0",
+    "eslint-plugin-lingui": "^0.16.0",
     "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-react-hooks": "^5.1.0",
     "globals": "^15.14.0",

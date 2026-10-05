@@ -1,0 +1,729 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-10-05 20:52+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: de\n"
+
+#: src/pages/SessionDetail.tsx
+msgid "{base} (aus Zwischenspeicher)"
+msgstr "{base} (aus Zwischenspeicher)"
+
+#: src/pages/SessionDetail.tsx
+msgid "{base} (live)"
+msgstr "{base} (live)"
+
+#: src/pages/SessionDetail.tsx
+msgid "{base} (offline aus Zwischenspeicher)"
+msgstr "{base} (offline aus Zwischenspeicher)"
+
+#: src/pages/SessionDetail.tsx
+msgid "{liveCount} neue"
+msgstr "{liveCount} neue"
+
+#: src/pages/SessionDetail.tsx
+msgid "{total} Nachrichten"
+msgstr "{total} Nachrichten"
+
+#: src/hooks/useEventNotifications.ts
+msgid "{type}{suffix}."
+msgstr "{type}{suffix}."
+
+#: src/pages/SessionDetail.tsx
+msgid "1 Nachricht"
+msgstr "1 Nachricht"
+
+#: src/components/ConfirmDialog.tsx
+#: src/pages/Settings.tsx
+msgid "Abbrechen"
+msgstr "Abbrechen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Agent"
+msgstr "Agent"
+
+#: src/pages/Dashboard.tsx
+msgid "Agenten"
+msgstr "Agenten"
+
+#. placeholder {0}: selectedServer.name
+#: src/pages/Dashboard.tsx
+#~ msgid "Aktiver Server: {0}"
+#~ msgstr "Aktiver Server: {0}"
+
+#: src/pages/Dashboard.tsx
+msgid "Aktiver Server: {selectedServerName}"
+msgstr "Aktiver Server: {selectedServerName}"
+
+#: src/pages/Settings.tsx
+msgid "aktiviert"
+msgstr "aktiviert"
+
+#: src/pages/SessionDetail.tsx
+msgid "Aktualisiere …"
+msgstr "Aktualisiere …"
+
+#: src/pages/ServerDetail.tsx
+msgid "Alle Agenten"
+msgstr "Alle Agenten"
+
+#: src/pages/ServerDetail.tsx
+msgid "Alle Projekte"
+msgstr "Alle Projekte"
+
+#. placeholder {0}: servers.length
+#: src/pages/Dashboard.tsx
+#~ msgid "Alle Server ({0})"
+#~ msgstr "Alle Server ({0})"
+
+#: src/pages/Dashboard.tsx
+msgid "Alle Server ({serverCount})"
+msgstr "Alle Server ({serverCount})"
+
+#: src/pages/SessionDetail.tsx
+msgid "Ältere Nachrichten laden"
+msgstr "Ältere Nachrichten laden"
+
+#. placeholder {0}: total - visible.length
+#: src/pages/SessionDetail.tsx
+#~ msgid "Ältere Nachrichten laden ({0} weitere)"
+#~ msgstr "Ältere Nachrichten laden ({0} weitere)"
+
+#: src/pages/SessionDetail.tsx
+msgid "Ältere Nachrichten laden ({remaining} weitere)"
+msgstr "Ältere Nachrichten laden ({remaining} weitere)"
+
+#: src/pages/Dashboard.tsx
+msgid "Anzeigen"
+msgstr "Anzeigen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Ausblenden"
+msgstr "Ausblenden"
+
+#: src/hooks/useEventNotifications.ts
+msgid "Ausführung fehlgeschlagen"
+msgstr "Ausführung fehlgeschlagen"
+
+#: src/hooks/useEventNotifications.ts
+msgid "Ausführung fertig"
+msgstr "Ausführung fertig"
+
+#: src/pages/ServerDetail.tsx
+#: src/pages/SessionDetail.tsx
+msgid "Ausführung unterbrechen"
+msgstr "Ausführung unterbrechen"
+
+#: src/hooks/useEventNotifications.ts
+msgid "Ausführung unterbrochen"
+msgstr "Ausführung unterbrochen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Ausgabe"
+msgstr "Ausgabe"
+
+#: src/pages/ServerDetail.tsx
+msgid "Ausgabe konnte nicht geladen werden."
+msgstr "Ausgabe konnte nicht geladen werden."
+
+#. placeholder {0}: s.label
+#: src/pages/ServerDetail.tsx
+#~ msgid "Ausgabe von {0} anzeigen"
+#~ msgstr "Ausgabe von {0} anzeigen"
+
+#. placeholder {0}: s.label
+#: src/pages/ServerDetail.tsx
+#~ msgid "Ausgabe von {0} ausblenden"
+#~ msgstr "Ausgabe von {0} ausblenden"
+
+#: src/pages/ServerDetail.tsx
+msgid "Ausgabe von {label} anzeigen"
+msgstr "Ausgabe von {label} anzeigen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Ausgabe von {label} ausblenden"
+msgstr "Ausgabe von {label} ausblenden"
+
+#: src/pages/ServerDetail.tsx
+msgid "Ausgabe wird geladen …"
+msgstr "Ausgabe wird geladen …"
+
+#: src/pages/Settings.tsx
+msgid "Basis-URL"
+msgstr "Basis-URL"
+
+#: src/pages/Settings.tsx
+msgid "Basis-URL ist ungültig."
+msgstr "Basis-URL ist ungültig."
+
+#: src/pages/Settings.tsx
+msgid "Basis-URL muss mit http:// oder https:// beginnen."
+msgstr "Basis-URL muss mit http:// oder https:// beginnen."
+
+#: src/pages/Settings.tsx
+msgid "Bearbeiten"
+msgstr "Bearbeiten"
+
+#: src/pages/ServerDetail.tsx
+msgid "Befehl starten, z. B. sleep 60"
+msgstr "Befehl starten, z. B. sleep 60"
+
+#: src/pages/Settings.tsx
+msgid "Benachrichtigungen"
+msgstr "Benachrichtigungen"
+
+#: src/pages/Settings.tsx
+msgid "Benachrichtigungen aktivieren"
+msgstr "Benachrichtigungen aktivieren"
+
+#: src/pages/Settings.tsx
+msgid "Benachrichtigungen sind blockiert. Bitte in den Browser-Einstellungen wieder zulassen."
+msgstr "Benachrichtigungen sind blockiert. Bitte in den Browser-Einstellungen wieder zulassen."
+
+#: src/pages/Settings.tsx
+msgid "Benutzer"
+msgstr "Benutzer"
+
+#: src/pages/Settings.tsx
+msgid "Benutzer (Basic Auth)"
+msgstr "Benutzer (Basic Auth)"
+
+#: src/components/ConfirmDialog.tsx
+#: src/pages/Settings.tsx
+msgid "Bitte warten …"
+msgstr "Bitte warten …"
+
+#: src/pages/Settings.tsx
+msgid "blockiert"
+msgstr "blockiert"
+
+#. placeholder {0}: p.label
+#: src/pages/ServerDetail.tsx
+#~ msgid "Connect-Token für {0} anfordern"
+#~ msgstr "Connect-Token für {0} anfordern"
+
+#: src/pages/ServerDetail.tsx
+msgid "Connect-Token für {label} anfordern"
+msgstr "Connect-Token für {label} anfordern"
+
+#: src/pages/Dashboard.tsx
+msgid "Details öffnen"
+msgstr "Details öffnen"
+
+#: src/hooks/useEventNotifications.ts
+msgid "Die Ausführung war erfolgreich{suffix}."
+msgstr "Die Ausführung war erfolgreich{suffix}."
+
+#: src/hooks/useEventNotifications.ts
+msgid "Die Ausführung wurde unterbrochen{suffix}."
+msgstr "Die Ausführung wurde unterbrochen{suffix}."
+
+#: src/hooks/useEventNotifications.ts
+msgid "Die Freigabe wurde beantwortet{suffix}."
+msgstr "Die Freigabe wurde beantwortet{suffix}."
+
+#. placeholder {0}: target.label
+#: src/pages/ServerDetail.tsx
+#~ msgid "Die laufende Ausführung der Session „{0}“ wird unterbrochen. Die Session selbst bleibt erhalten. Fortfahren?"
+#~ msgstr "Die laufende Ausführung der Session „{0}“ wird unterbrochen. Die Session selbst bleibt erhalten. Fortfahren?"
+
+#: src/pages/ServerDetail.tsx
+msgid "Die laufende Ausführung der Session „{label}“ wird unterbrochen. Die Session selbst bleibt erhalten. Fortfahren?"
+msgstr "Die laufende Ausführung der Session „{label}“ wird unterbrochen. Die Session selbst bleibt erhalten. Fortfahren?"
+
+#: src/pages/SessionDetail.tsx
+msgid "Die laufende Ausführung wird unterbrochen. Die Session selbst bleibt erhalten. Fortfahren?"
+msgstr "Die laufende Ausführung wird unterbrochen. Die Session selbst bleibt erhalten. Fortfahren?"
+
+#. placeholder {0}: target.label
+#: src/pages/ServerDetail.tsx
+#~ msgid "Die Session „{0}“ wird endgültig gelöscht. Fortfahren?"
+#~ msgstr "Die Session „{0}“ wird endgültig gelöscht. Fortfahren?"
+
+#: src/pages/ServerDetail.tsx
+msgid "Die Session „{label}“ wird endgültig gelöscht. Fortfahren?"
+msgstr "Die Session „{label}“ wird endgültig gelöscht. Fortfahren?"
+
+#: src/pages/SessionDetail.tsx
+msgid "Die Session wird endgültig gelöscht. Fortfahren?"
+msgstr "Die Session wird endgültig gelöscht. Fortfahren?"
+
+#. placeholder {0}: target.label
+#: src/pages/ServerDetail.tsx
+#~ msgid "Die Shell „{0}“ wird abgebrochen und entfernt. Fortfahren?"
+#~ msgstr "Die Shell „{0}“ wird abgebrochen und entfernt. Fortfahren?"
+
+#: src/pages/ServerDetail.tsx
+msgid "Die Shell „{label}“ wird abgebrochen und entfernt. Fortfahren?"
+msgstr "Die Shell „{label}“ wird abgebrochen und entfernt. Fortfahren?"
+
+#: src/pages/Settings.tsx
+msgid "Dieser Browser unterstützt keine Benachrichtigungen."
+msgstr "Dieser Browser unterstützt keine Benachrichtigungen."
+
+#: src/hooks/useEventNotifications.ts
+msgid "Eine Aktion wartet auf Freigabe{suffix}."
+msgstr "Eine Aktion wartet auf Freigabe{suffix}."
+
+#: src/hooks/useEventNotifications.ts
+msgid "Eingang für Session{suffix}."
+msgstr "Eingang für Session{suffix}."
+
+#: src/components/Layout.tsx
+#: src/pages/Settings.tsx
+msgid "Einstellungen"
+msgstr "Einstellungen"
+
+#: src/pages/ServerDetail.tsx
+#: src/pages/Settings.tsx
+msgid "Entfernen"
+msgstr "Entfernen"
+
+#: src/hooks/useEventNotifications.ts
+msgid "Freigabe beantwortet"
+msgstr "Freigabe beantwortet"
+
+#: src/hooks/useEventNotifications.ts
+msgid "Freigabe erforderlich"
+msgstr "Freigabe erforderlich"
+
+#. placeholder {0}: servers.length
+#: src/pages/Settings.tsx
+#~ msgid "Gespeicherte Server ({0})"
+#~ msgstr "Gespeicherte Server ({0})"
+
+#: src/pages/Settings.tsx
+msgid "Gespeicherte Server ({serverCount})"
+msgstr "Gespeicherte Server ({serverCount})"
+
+#: src/components/Layout.tsx
+msgid "GitHub-Repository"
+msgstr "GitHub-Repository"
+
+#: src/components/Layout.tsx
+msgid "GitHub-Repository öffnen"
+msgstr "GitHub-Repository öffnen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Hinweis: Terminal-Rendering folgt nach MVP. Ein Connect-Token kann pro PTY angefordert werden (für externe Terminal-Clients)."
+msgstr "Hinweis: Terminal-Rendering folgt nach MVP. Ein Connect-Token kann pro PTY angefordert werden (für externe Terminal-Clients)."
+
+#: src/pages/Settings.tsx
+msgid "Hinzufügen"
+msgstr "Hinzufügen"
+
+#: src/components/Layout.tsx
+msgid "Kein Server"
+msgstr "Kein Server"
+
+#: src/pages/Dashboard.tsx
+msgid "Kein Server ausgewählt. Lege unter <0>Einstellungen</0> einen Server an."
+msgstr "Kein Server ausgewählt. Lege unter <0>Einstellungen</0> einen Server an."
+
+#: src/pages/SessionDetail.tsx
+msgid "Kein Server ausgewählt. Wähle oben einen Server."
+msgstr "Kein Server ausgewählt. Wähle oben einen Server."
+
+#: src/pages/SessionDetail.tsx
+msgid "Keine Nachrichten vorhanden."
+msgstr "Keine Nachrichten vorhanden."
+
+#: src/pages/ServerDetail.tsx
+msgid "Keine Projekte."
+msgstr "Keine Projekte."
+
+#: src/pages/ServerDetail.tsx
+msgid "Keine PTYs."
+msgstr "Keine PTYs."
+
+#: src/pages/ServerDetail.tsx
+msgid "Keine Sessions."
+msgstr "Keine Sessions."
+
+#: src/pages/ServerDetail.tsx
+msgid "Keine Shells."
+msgstr "Keine Shells."
+
+#: src/hooks/useEventNotifications.ts
+msgid "Kompaktierung fehlgeschlagen"
+msgstr "Kompaktierung fehlgeschlagen"
+
+#: src/hooks/useEventNotifications.ts
+msgid "Kompaktierung fertig"
+msgstr "Kompaktierung fertig"
+
+#: src/hooks/useEventNotifications.ts
+msgid "Kompaktierung gescheitert{suffix}."
+msgstr "Kompaktierung gescheitert{suffix}."
+
+#: src/hooks/useEventNotifications.ts
+msgid "Kompaktierung läuft"
+msgstr "Kompaktierung läuft"
+
+#: src/pages/Dashboard.tsx
+#: src/pages/ServerDetail.tsx
+#: src/pages/SessionDetail.tsx
+msgid "Lädt"
+msgstr "Lädt"
+
+#: src/pages/ServerDetail.tsx
+msgid "Lädt …"
+msgstr "Lädt …"
+
+#: src/pages/SessionDetail.tsx
+msgid "Laufende Ausführung unterbrechen"
+msgstr "Laufende Ausführung unterbrechen"
+
+#: src/pages/Dashboard.tsx
+msgid "Laufende Sessions"
+msgstr "Laufende Sessions"
+
+#: src/pages/Dashboard.tsx
+msgid "Laufende Shells"
+msgstr "Laufende Shells"
+
+#: src/pages/Settings.tsx
+msgid "Lokale Hinweise zu Session-, Kompaktierungs- und Freigabe-Ereignissen des gewählten Servers. Kein Push-Server, alles bleibt im Browser."
+msgstr "Lokale Hinweise zu Session-, Kompaktierungs- und Freigabe-Ereignissen des gewählten Servers. Kein Push-Server, alles bleibt im Browser."
+
+#: src/pages/ServerDetail.tsx
+#: src/pages/SessionDetail.tsx
+msgid "Löschen"
+msgstr "Löschen"
+
+#: src/components/Layout.tsx
+msgid "Menü öffnen"
+msgstr "Menü öffnen"
+
+#: src/components/Layout.tsx
+msgid "Menü schließen"
+msgstr "Menü schließen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Nach Agent filtern"
+msgstr "Nach Agent filtern"
+
+#: src/pages/ServerDetail.tsx
+msgid "Nach Projekt filtern"
+msgstr "Nach Projekt filtern"
+
+#: src/pages/SessionDetail.tsx
+msgid "Nachricht schreiben"
+msgstr "Nachricht schreiben"
+
+#: src/pages/SessionDetail.tsx
+msgid "Nachricht senden"
+msgstr "Nachricht senden"
+
+#: src/pages/SessionDetail.tsx
+msgid "Nachrichten konnten nicht geladen werden (offline?): {error}"
+msgstr "Nachrichten konnten nicht geladen werden (offline?): {error}"
+
+#: src/pages/SessionDetail.tsx
+msgid "Nachrichten werden geladen …"
+msgstr "Nachrichten werden geladen …"
+
+#: src/pages/Settings.tsx
+msgid "Name"
+msgstr "Name"
+
+#: src/pages/Settings.tsx
+msgid "Name und Basis-URL sind Pflichtfelder."
+msgstr "Name und Basis-URL sind Pflichtfelder."
+
+#: src/hooks/useEventNotifications.ts
+msgid "Neue Inbox-Nachricht"
+msgstr "Neue Inbox-Nachricht"
+
+#: src/hooks/useEventNotifications.ts
+msgid "Neue Session"
+msgstr "Neue Session"
+
+#: src/pages/ServerDetail.tsx
+msgid "Neuer Shell-Befehl"
+msgstr "Neuer Shell-Befehl"
+
+#: src/pages/Settings.tsx
+msgid "nicht angefragt"
+msgstr "nicht angefragt"
+
+#: src/components/Layout.tsx
+msgid "Noch keine Server angelegt."
+msgstr "Noch keine Server angelegt."
+
+#: src/pages/Dashboard.tsx
+#: src/pages/Settings.tsx
+msgid "Noch keine Server vorhanden."
+msgstr "Noch keine Server vorhanden."
+
+#: src/pages/SessionDetail.tsx
+msgid "Offline: zwischengespeicherte Nachrichten werden angezeigt ({error})."
+msgstr "Offline: zwischengespeicherte Nachrichten werden angezeigt ({error})."
+
+#: src/pages/Settings.tsx
+msgid "Passwort"
+msgstr "Passwort"
+
+#: src/pages/Settings.tsx
+msgid "Passwort (Basic Auth)"
+msgstr "Passwort (Basic Auth)"
+
+#: src/pages/ServerDetail.tsx
+msgid "Projekt"
+msgstr "Projekt"
+
+#: src/pages/Dashboard.tsx
+msgid "Projekte"
+msgstr "Projekte"
+
+#. placeholder {0}: projects.length
+#: src/pages/ServerDetail.tsx
+#~ msgid "Projekte ({0})"
+#~ msgstr "Projekte ({0})"
+
+#: src/pages/ServerDetail.tsx
+msgid "Projekte ({projectCount})"
+msgstr "Projekte ({projectCount})"
+
+#. placeholder {0}: ptys.length
+#: src/pages/ServerDetail.tsx
+#~ msgid "PTYs ({0})"
+#~ msgstr "PTYs ({0})"
+
+#: src/pages/ServerDetail.tsx
+msgid "PTYs ({ptyCount})"
+msgstr "PTYs ({ptyCount})"
+
+#: src/pages/SessionDetail.tsx
+msgid "Senden"
+msgstr "Senden"
+
+#: src/pages/SessionDetail.tsx
+msgid "Senden fehlgeschlagen: {sendError}"
+msgstr "Senden fehlgeschlagen: {sendError}"
+
+#: src/pages/SessionDetail.tsx
+msgid "Sendet …"
+msgstr "Sendet …"
+
+#: src/components/Layout.tsx
+msgid "Server"
+msgstr "Server"
+
+#: src/pages/Settings.tsx
+msgid "Server bearbeiten"
+msgstr "Server bearbeiten"
+
+#: src/pages/Settings.tsx
+msgid "Server hinzufügen"
+msgstr "Server hinzufügen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Server nicht gefunden"
+msgstr "Server nicht gefunden"
+
+#: src/pages/Dashboard.tsx
+#: src/pages/ServerDetail.tsx
+msgid "Server offline oder nicht erreichbar: {error}"
+msgstr "Server offline oder nicht erreichbar: {error}"
+
+#: src/components/Layout.tsx
+msgid "Server wählen"
+msgstr "Server wählen"
+
+#: src/pages/Settings.tsx
+msgid "Server werden lokal im Browser (localStorage) gespeichert. Pro Server ein Benutzer (Basic Auth)."
+msgstr "Server werden lokal im Browser (localStorage) gespeichert. Pro Server ein Benutzer (Basic Auth)."
+
+#. placeholder {0}: server.name
+#: src/pages/ServerDetail.tsx
+#: src/pages/SessionDetail.tsx
+#~ msgid "Server: {0}"
+#~ msgstr "Server: {0}"
+
+#: src/pages/ServerDetail.tsx
+#: src/pages/SessionDetail.tsx
+msgid "Server: {serverName}"
+msgstr "Server: {serverName}"
+
+#: src/components/Layout.tsx
+msgid "Serverdetails"
+msgstr "Serverdetails"
+
+#: src/pages/Settings.tsx
+msgid "Servername"
+msgstr "Servername"
+
+#: src/pages/SessionDetail.tsx
+msgid "Session"
+msgstr "Session"
+
+#. placeholder {0}: s.label
+#: src/pages/ServerDetail.tsx
+#~ msgid "Session {0} löschen"
+#~ msgstr "Session {0} löschen"
+
+#. placeholder {0}: s.label
+#: src/pages/ServerDetail.tsx
+#~ msgid "Session {0} unterbrechen"
+#~ msgstr "Session {0} unterbrechen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Session {label} löschen"
+msgstr "Session {label} löschen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Session {label} unterbrechen"
+msgstr "Session {label} unterbrechen"
+
+#: src/hooks/useEventNotifications.ts
+msgid "Session bereit"
+msgstr "Session bereit"
+
+#: src/hooks/useEventNotifications.ts
+msgid "Session entfernt{suffix}."
+msgstr "Session entfernt{suffix}."
+
+#: src/hooks/useEventNotifications.ts
+msgid "Session erstellt{suffix}."
+msgstr "Session erstellt{suffix}."
+
+#: src/hooks/useEventNotifications.ts
+msgid "Session gelöscht"
+msgstr "Session gelöscht"
+
+#: src/hooks/useEventNotifications.ts
+msgid "Session ist bereit{suffix}."
+msgstr "Session ist bereit{suffix}."
+
+#: src/hooks/useEventNotifications.ts
+msgid "Session kompaktiert{suffix}."
+msgstr "Session kompaktiert{suffix}."
+
+#: src/pages/ServerDetail.tsx
+#: src/pages/SessionDetail.tsx
+msgid "Session löschen"
+msgstr "Session löschen"
+
+#: src/hooks/useEventNotifications.ts
+msgid "Session wird kompaktiert{suffix}."
+msgstr "Session wird kompaktiert{suffix}."
+
+#: src/hooks/useEventNotifications.ts
+msgid "Session-Status"
+msgstr "Session-Status"
+
+#: src/pages/ServerDetail.tsx
+msgid "Sessions ({sessionCount})"
+msgstr "Sessions ({sessionCount})"
+
+#: src/pages/ServerDetail.tsx
+msgid "Sessions konnten nicht nachgeladen werden."
+msgstr "Sessions konnten nicht nachgeladen werden."
+
+#: src/pages/ServerDetail.tsx
+msgid "Sessions suchen"
+msgstr "Sessions suchen"
+
+#. placeholder {0}: s.label
+#: src/pages/ServerDetail.tsx
+#~ msgid "Shell {0} entfernen"
+#~ msgstr "Shell {0} entfernen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Shell {label} entfernen"
+msgstr "Shell {label} entfernen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Shell entfernen"
+msgstr "Shell entfernen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Shell starten"
+msgstr "Shell starten"
+
+#: src/hooks/useEventNotifications.ts
+msgid "Shell-Ereignis"
+msgstr "Shell-Ereignis"
+
+#. placeholder {0}: shells.length
+#: src/pages/ServerDetail.tsx
+#~ msgid "Shells ({0})"
+#~ msgstr "Shells ({0})"
+
+#: src/pages/ServerDetail.tsx
+msgid "Shells ({shellCount})"
+msgstr "Shells ({shellCount})"
+
+#: src/pages/Settings.tsx
+msgid "Speichern"
+msgstr "Speichern"
+
+#: src/hooks/useEventNotifications.ts
+msgid "Status geändert{suffix}."
+msgstr "Status geändert{suffix}."
+
+#: src/pages/Settings.tsx
+msgid "Status:"
+msgstr "Status:"
+
+#: src/pages/Settings.tsx
+msgid "Status: {permission}"
+msgstr "Status: {permission}"
+
+#: src/pages/ServerDetail.tsx
+msgid "Suche"
+msgstr "Suche"
+
+#: src/pages/ServerDetail.tsx
+msgid "Titel oder ID suchen"
+msgstr "Titel oder ID suchen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Token"
+msgstr "Token"
+
+#: src/pages/ServerDetail.tsx
+msgid "Token konnte nicht angefordert werden."
+msgstr "Token konnte nicht angefordert werden."
+
+#: src/components/Layout.tsx
+#: src/pages/Dashboard.tsx
+msgid "Übersicht"
+msgstr "Übersicht"
+
+#: src/lib/opencode.ts
+#: src/pages/Dashboard.tsx
+msgid "Unbekannter Fehler"
+msgstr "Unbekannter Fehler"
+
+#: src/pages/ServerDetail.tsx
+msgid "Unerwartete Token-Antwort vom Server."
+msgstr "Unerwartete Token-Antwort vom Server."
+
+#: src/pages/ServerDetail.tsx
+#: src/pages/SessionDetail.tsx
+msgid "Unterbrechen"
+msgstr "Unterbrechen"
+
+#: src/pages/Dashboard.tsx
+msgid "Version"
+msgstr "Version"
+
+#: src/components/Layout.tsx
+msgid "Web PWA for Opencode · <0>GitHub-Repository</0>"
+msgstr "Web PWA for Opencode · <0>GitHub-Repository</0>"
+
+#: src/pages/ServerDetail.tsx
+msgid "Weitere Sessions laden"
+msgstr "Weitere Sessions laden"
+
+#: src/pages/Settings.tsx
+msgid "z. B. Heimserver"
+msgstr "z. B. Heimserver"
+
+#: src/pages/ServerDetail.tsx
+msgid "Zurück zur Übersicht"
+msgstr "Zurück zur Übersicht"

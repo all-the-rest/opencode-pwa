@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import lingui from "eslint-plugin-lingui";
 import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import { defineConfig } from "eslint/config";
@@ -11,6 +12,13 @@ export default defineConfig([
   },
   js.configs.recommended,
   ...tseslint.configs.strict,
+  lingui.configs["flat/recommended"],
+  {
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+  },
   {
     files: ["**/*.{ts,tsx}"],
     languageOptions: {

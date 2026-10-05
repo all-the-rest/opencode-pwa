@@ -1,3 +1,5 @@
+import { Trans } from "@lingui/react/macro";
+
 interface ConfirmDialogProps {
   open: boolean;
   title: string;
@@ -43,7 +45,7 @@ export default function ConfirmDialog({
             onClick={onCancel}
             disabled={busy}
           >
-            Abbrechen
+            <Trans>Abbrechen</Trans>
           </button>
           <button
             type="button"
@@ -52,7 +54,7 @@ export default function ConfirmDialog({
             disabled={busy}
             aria-label={confirmLabel}
           >
-            {busy ? "Bitte warten …" : confirmLabel}
+            {busy ? <Trans>Bitte warten …</Trans> : confirmLabel}
           </button>
         </div>
       </div>

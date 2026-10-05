@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { Trans } from "@lingui/react/macro";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
@@ -7,10 +9,10 @@ import { interruptSession, removeSession, sendPrompt, type ServerConfig } from "
 import { useServers } from "../state/servers.tsx";
 
 function countLabel(total: number, source: SessionMessageSource): string {
-  const base = total === 1 ? "1 Nachricht" : `${total} Nachrichten`;
-  if (source === "live") return `${base} (live)`;
-  if (source === "cache") return `${base} (aus Zwischenspeicher)`;
-  return `${base} (offline aus Zwischenspeicher)`;
+  const base = total === 1 ? t`1 Nachricht` : t`${total} Nachrichten`;
+  if (source === "live") return t`${base} (live)`;
+  if (source === "cache") return t`${base} (aus Zwischenspeicher)`;
+  return t`${base} (offline aus Zwischenspeicher)`;
 }
 
 export default function SessionDetail() {
@@ -61,6 +63,8 @@ export default function SessionDetail() {
   const showInitialSpinner = loading && total === 0;
   const showEmpty = !loading && error === null && total === 0;
   const showList = !showInitialSpinner && (total > 0 || error !== null);
+  const serverName = server?.name ?? "";
+  const remaining = total - visible.length;
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -110,32 +114,34 @@ export default function SessionDetail() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-2xl font-bold flex-1">Session</h1>
+        <h1 className="text-2xl font-bold flex-1">
+          <Trans>Session</Trans>
+        </h1>
         {server !== null && server !== undefined && id !== undefined && (
           <>
             <button
               type="button"
               className="btn btn-sm btn-ghost"
-              title="Laufende Ausführung unterbrechen"
-              aria-label="Ausführung unterbrechen"
+              title={t`Laufende Ausführung unterbrechen`}
+              aria-label={t`Ausführung unterbrechen`}
               onClick={() => {
                 setConfirmError(null);
                 setConfirm("interrupt");
               }}
             >
-              <Icon name="stop" /> Unterbrechen
+              <Icon name="stop" /> <Trans>Unterbrechen</Trans>
             </button>
             <button
               type="button"
               className="btn btn-sm btn-ghost text-error"
-              title="Session löschen"
-              aria-label="Session löschen"
+              title={t`Session löschen`}
+              aria-label={t`Session löschen`}
               onClick={() => {
                 setConfirmError(null);
                 setConfirm("delete");
               }}
             >
-              <Icon name="trash" /> Löschen
+              <Icon name="trash" /> <Trans>Löschen</Trans>
             </button>
           </>
         )}
@@ -143,39 +149,63 @@ export default function SessionDetail() {
       <p className="text-sm opacity-70 font-mono break-all">{id}</p>
       {server === null || server === undefined ? (
         <div className="alert alert-info">
-          <span>Kein Server ausgewählt. Wähle oben einen Server.</span>
+          <span>
+            <Trans>Kein Server ausgewählt. Wähle oben einen Server.</Trans>
+          </span>
         </div>
       ) : (
         <>
-          <p className="text-sm opacity-70">Server: {server.name}</p>
+          <p className="text-sm opacity-70">
+            <Trans>Server: {serverName}</Trans>
+          </p>
           <p className="text-sm opacity-70" data-testid="cache-status">
             {loading && total === 0 ? (
-              "Nachrichten werden geladen …"
+              <Trans>Nachrichten werden geladen …</Trans>
             ) : (
               <>
                 {countLabel(total, source)}
-                {refreshing && total > 0 ? " – Aktualisiere …" : ""}
-                {liveCount > 0 ? ` · ${liveCount} neue` : ""}
+                {refreshing && total > 0 && (
+                  <>
+                    {" – "}
+                    <Trans>Aktualisiere …</Trans>
+                  </>
+                )}
+                {liveCount > 0 && (
+                  <>
+                    {" · "}
+                    <Trans>{liveCount} neue</Trans>
+                  </>
+                )}
               </>
             )}
           </p>
-          {showInitialSpinner && <span className="loading loading-spinner loading-md" aria-label="Lädt" />}
+          {showInitialSpinner && <span className="loading loading-spinner loading-md" aria-label={t`Lädt`} />}
           {error !== null && total === 0 && !loading && (
             <div className="alert alert-warning">
-              <span>Nachrichten konnten nicht geladen werden (offline?): {error}</span>
+              <span>
+                <Trans>Nachrichten konnten nicht geladen werden (offline?): {error}</Trans>
+              </span>
             </div>
           )}
           {error !== null && total > 0 && (
             <div className="alert alert-warning">
-              <span>Offline: zwischengespeicherte Nachrichten werden angezeigt ({error}).</span>
+              <span>
+                <Trans>Offline: zwischengespeicherte Nachrichten werden angezeigt ({error}).</Trans>
+              </span>
             </div>
           )}
           {sendError !== null && (
             <div className="alert alert-error">
-              <span>Senden fehlgeschlagen: {sendError}</span>
+              <span>
+                <Trans>Senden fehlgeschlagen: {sendError}</Trans>
+              </span>
             </div>
           )}
-          {showEmpty && <p className="opacity-70 text-sm">Keine Nachrichten vorhanden.</p>}
+          {showEmpty && (
+            <p className="opacity-70 text-sm">
+              <Trans>Keine Nachrichten vorhanden.</Trans>
+            </p>
+          )}
           {showList && total > 0 && (
             <ul className="flex flex-col gap-2" data-testid="message-list">
               {visible.map((m) => (
@@ -204,40 +234,40 @@ export default function SessionDetail() {
               type="button"
               className="btn btn-ghost btn-sm self-center"
               onClick={loadMore}
-              aria-label="Ältere Nachrichten laden"
+              aria-label={t`Ältere Nachrichten laden`}
             >
-              Ältere Nachrichten laden ({total - visible.length} weitere)
+              <Trans>Ältere Nachrichten laden ({remaining} weitere)</Trans>
             </button>
           )}
           <form className="flex gap-2 sticky bottom-4" onSubmit={(e) => void handleSend(e)}>
             <input
               className="input input-bordered flex-1"
-              placeholder="Nachricht schreiben"
+              placeholder={t`Nachricht schreiben`}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              aria-label="Nachricht schreiben"
+              aria-label={t`Nachricht schreiben`}
               disabled={sending}
             />
             <button
               className="btn btn-primary"
               type="submit"
               disabled={sending || draft.trim() === ""}
-              aria-label="Nachricht senden"
+              aria-label={t`Nachricht senden`}
             >
-              <Icon name="send" /> {sending ? "Sendet …" : "Senden"}
+              <Icon name="send" /> {sending ? <Trans>Sendet …</Trans> : <Trans>Senden</Trans>}
             </button>
           </form>
         </>
       )}
       <ConfirmDialog
         open={confirm !== null}
-        title={confirm === "delete" ? "Session löschen" : "Ausführung unterbrechen"}
+        title={confirm === "delete" ? t`Session löschen` : t`Ausführung unterbrechen`}
         message={
           confirm === "delete"
-            ? "Die Session wird endgültig gelöscht. Fortfahren?"
-            : "Die laufende Ausführung wird unterbrochen. Die Session selbst bleibt erhalten. Fortfahren?"
+            ? t`Die Session wird endgültig gelöscht. Fortfahren?`
+            : t`Die laufende Ausführung wird unterbrochen. Die Session selbst bleibt erhalten. Fortfahren?`
         }
-        confirmLabel={confirm === "delete" ? "Löschen" : "Unterbrechen"}
+        confirmLabel={confirm === "delete" ? t`Löschen` : t`Unterbrechen`}
         busy={confirmBusy}
         error={confirmError}
         onConfirm={() => void handleConfirm()}
