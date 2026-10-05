@@ -1,6 +1,9 @@
 import { useEffect } from "react";
+import { subscribeServerEvents } from "../lib/eventHub.ts";
+import { extractMessageFromEvent } from "../lib/eventMessages.ts";
+import { putMessages } from "../lib/messageCache.ts";
 import { notifySessionEvent } from "../lib/notify.ts";
-import { subscribeEvents, type ServerConfig } from "../lib/opencode.ts";
+import type { ServerConfig } from "../lib/opencode.ts";
 
 export interface EventSummary {
   title: string;
@@ -81,66 +84,28 @@ export function describeEvent(event: unknown): EventSummary | null {
   return null;
 }
 
-function delay(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal.aborted) {
-      reject(new DOMException("Aborted", "AbortError"));
-      return;
-    }
-    const timer = setTimeout(() => {
-      signal.removeEventListener("abort", onAbort);
-      resolve();
-    }, ms);
-    function onAbort() {
-      clearTimeout(timer);
-      reject(new DOMException("Aborted", "AbortError"));
-    }
-    signal.addEventListener("abort", onAbort, { once: true });
-  });
-}
-
 /**
- * Subscribe to the selected server's event stream and raise local
- * notifications for session/compaction/permission events.
- * One stream per server; AbortController cleanup on server change/unmount;
- * reconnect with capped backoff while mounted.
+ * Listen on the selected server's shared event stream: raise local
+ * notifications for session/compaction/permission events and cache incoming
+ * session messages in the background. The shared hub keeps exactly one
+ * stream per server (backoff reconnect, AbortController cleanup when the
+ * last listener leaves or the server changes).
  */
 export function useEventNotifications(server: ServerConfig | null): void {
   useEffect(() => {
     if (server === null) return;
     const activeServer: ServerConfig = server;
-    const controller = new AbortController();
-    const signal = controller.signal;
-    let backoff = 1000;
-
-    async function pump(): Promise<void> {
-      while (!signal.aborted) {
-        try {
-          for await (const event of subscribeEvents(activeServer, signal)) {
-            if (signal.aborted) return;
-            backoff = 1000;
-            const summary = describeEvent(event);
-            if (summary !== null) {
-              notifySessionEvent(summary.title, summary.body, summary.important);
-            }
-          }
-          return;
-        } catch (error) {
-          if (signal.aborted) return;
-          if (error instanceof DOMException && error.name === "AbortError") return;
-          try {
-            await delay(backoff, signal);
-          } catch {
-            return;
-          }
-          backoff = Math.min(backoff * 2, 30000);
-        }
+    return subscribeServerEvents(activeServer, (event: unknown) => {
+      const message = extractMessageFromEvent(event);
+      if (message !== null) {
+        void putMessages(activeServer.id, message.sessionID, [
+          { id: message.messageID, role: message.role, text: message.text, created: message.created },
+        ]);
       }
-    }
-
-    void pump();
-    return () => {
-      controller.abort();
-    };
+      const summary = describeEvent(event);
+      if (summary !== null) {
+        notifySessionEvent(summary.title, summary.body, summary.important);
+      }
+    });
   }, [server]);
 }

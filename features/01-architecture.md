@@ -20,7 +20,12 @@
 - The browser talks directly to each Opencode server's V2 HTTP API (CORS must allow it).
 - Offline/errors are first-class: every API helper returns `{ data, error }`, pages show
   warning banners instead of crashing.
-- PWA service worker caches the app shell; API data is not cached (network-only).
+- PWA service worker caches the app shell; session messages are cached
+  cache-first in IndexedDB (`src/lib/messageCache.ts`, key
+  `serverID:sessionID:messageID`, newest ~200 per session with eviction).
+  `SessionDetail` renders from the cache first, merges the network result,
+  and pages newest-first with infinite scroll (`useSessionMessages` +
+  IntersectionObserver).
 
 ## Routing
 
@@ -46,10 +51,15 @@
 
 ## Local Notifications (No Push Server)
 
-- Session/compaction/permission events from `GET /api/event` (SSE, per
-  selected server via `subscribeEvents`) are mapped to local notifications
+- Session/compaction/permission events from `GET /api/event` (SSE, exactly
+  one shared stream per server via `src/lib/eventHub.ts`: backoff reconnect,
+  AbortController cleanup when the last listener leaves or the server config
+  changes) are mapped to local notifications
   through the `Notification` API only (`src/lib/notify.ts`, hook
-  `src/hooks/useEventNotifications.ts`, mounted in `Layout`).
+  `src/hooks/useEventNotifications.ts`, mounted in `Layout`). Incoming
+  session-message events are also written to the IndexedDB message cache in
+  the background, so open sessions update live while offline history stays
+  available.
 - Permission is requested explicitly in Settings ("Benachrichtigungen
   aktivieren"); the status badge shows granted/denied/default.
 - Non-important events notify only when the document is hidden; important
