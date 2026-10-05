@@ -15,7 +15,7 @@ export default defineConfig({
     lingui(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["pwa-icon.svg"],
+      includeAssets: ["pwa-icon.svg", "pwa-maskable-512x512.png"],
       manifest: {
         name: "Web PWA for Opencode",
         short_name: "Opencode PWA",
@@ -30,11 +30,19 @@ export default defineConfig({
             src: "pwa-192x192.png",
             sizes: "192x192",
             type: "image/png",
+            purpose: "any",
           },
           {
             src: "pwa-512x512.png",
             sizes: "512x512",
             type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "pwa-maskable-512x512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
           },
           {
             src: "pwa-icon.svg",
@@ -46,6 +54,18 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
+        // SPA offline fallback: navigation requests serve the cached app
+        // shell (index.html) so the app boots offline. API calls are
+        // deliberately NOT cached here (NetworkOnly below); session messages
+        // fall back to the IndexedDB cache in useSessionMessages instead.
+        navigateFallback: "index.html",
+        runtimeCaching: [
+          {
+            urlPattern: /\/api\/.*/i,
+            handler: "NetworkOnly",
+            method: "GET",
+          },
+        ],
       },
     }),
   ],

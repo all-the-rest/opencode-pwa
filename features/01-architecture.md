@@ -27,6 +27,23 @@
   and pages newest-first with infinite scroll (`useSessionMessages` +
   IntersectionObserver).
 
+## PWA, Icons & Offline-Strategie
+
+- Icons: `public/pwa-icon.svg` ist die Quelle (dunkles Terminal-Motiv `>_`).
+  `scripts/generate-pwa-icons.mjs` (nur Node-Builtins, kein neuer Dep)
+  rastert daraus `pwa-192x192.png` + `pwa-512x512.png` (`purpose: any`) und
+  `pwa-maskable-512x512.png` (`purpose: maskable`, Safe-Zone-Padding, damit
+  OS-Masken die Glyphe nie beschneiden).
+- App-Shell offline: Workbox `navigateFallback: "index.html"` in
+  `vite.config.ts`; `globPatterns` cacht JS/CSS/HTML/PNG/SVG, also bootet die
+  Shell ohne Netz. API bleibt network-only (`runtimeCaching` Handler
+  `NetworkOnly` auf `/api/*`): keine HTTP-Caches für Live-Daten.
+- Nachrichten-Cache statt API-Cache: `useSessionMessages` liest zuerst
+  IndexedDB (`src/lib/messageCache.ts`, Key `serverID:sessionID:messageID`,
+  neueste ~200/Session mit Eviction), merged dann das Netz-Ergebnis und zeigt
+  bei Netzfehlern den `offline-cache`-Banner. Dashboard/ServerDetail zeigen
+  Warnbanner (`Server offline oder nicht erreichbar`) statt zu crashen.
+
 ## Routing
 
 - `/` dashboard: server list + active server status (version, session/agent/project counts).

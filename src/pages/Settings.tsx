@@ -107,24 +107,24 @@ export default function Settings() {
             {editingId === null ? <Trans>Server hinzufügen</Trans> : <Trans>Server bearbeiten</Trans>}
           </h2>
           <form className="flex flex-col gap-2" onSubmit={handleSubmit}>
-            <label className="form-control">
+            <label className="flex flex-col gap-1">
               <span className="label label-text">
                 <Trans>Name</Trans>
               </span>
               <input
-                className="input input-bordered"
+                className="input input-bordered w-full"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder={t`z. B. Heimserver`}
                 aria-label={t`Servername`}
               />
             </label>
-            <label className="form-control">
+            <label className="flex flex-col gap-1">
               <span className="label label-text">
                 <Trans>Basis-URL</Trans>
               </span>
               <input
-                className="input input-bordered"
+                className="input input-bordered w-full"
                 value={form.baseUrl}
                 onChange={(e) => setForm({ ...form, baseUrl: e.target.value })}
                 placeholder="https://opencode.example.com"
@@ -132,24 +132,24 @@ export default function Settings() {
                 aria-label={t`Basis-URL`}
               />
             </label>
-            <label className="form-control">
+            <label className="flex flex-col gap-1">
               <span className="label label-text">
                 <Trans>Benutzer (Basic Auth)</Trans>
               </span>
               <input
-                className="input input-bordered"
+                className="input input-bordered w-full"
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
                 autoComplete="username"
                 aria-label={t`Benutzer`}
               />
             </label>
-            <label className="form-control">
+            <label className="flex flex-col gap-1">
               <span className="label label-text">
                 <Trans>Passwort (Basic Auth)</Trans>
               </span>
               <input
-                className="input input-bordered"
+                className="input input-bordered w-full"
                 type="password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}

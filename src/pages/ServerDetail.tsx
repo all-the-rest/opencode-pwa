@@ -373,7 +373,7 @@ export default function ServerDetail() {
                 <Icon name="session" /> <Trans>Sessions ({sessionCount})</Trans>
               </h2>
               <div className="flex flex-col gap-2">
-                <label className="form-control">
+                <label className="flex flex-col gap-1">
                   <span className="label label-text">
                     <Trans>Suche</Trans>
                   </span>
@@ -386,7 +386,7 @@ export default function ServerDetail() {
                   />
                 </label>
                 <div className="flex gap-2">
-                  <label className="form-control flex-1">
+                  <label className="flex flex-col gap-1 flex-1">
                     <span className="label label-text">
                       <Trans>Agent</Trans>
                     </span>
@@ -406,7 +406,7 @@ export default function ServerDetail() {
                       ))}
                     </select>
                   </label>
-                  <label className="form-control flex-1">
+                  <label className="flex flex-col gap-1 flex-1">
                     <span className="label label-text">
                       <Trans>Projekt</Trans>
                     </span>
