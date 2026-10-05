@@ -22,7 +22,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
+        # No `cache: pnpm`: setup-node calls `pnpm store path --silent`,
+        # which fails on pnpm 10 ("packages field missing or empty",
+        # CI run 37372351400). pnpm/action-setup caches nothing; the
+        # install step is fast enough without cache.
 
       - name: Install dependencies
         # Build approvals for esbuild/msgpackr-extract come from pnpm-workspace.yaml.
