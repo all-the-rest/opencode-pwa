@@ -15,6 +15,7 @@
     "test:e2e:smoke": "playwright test --grep @smoke"
   },
   "dependencies": {
+    "@iconify/react": "^6.0.2",
     "@opencode/client": "^2.0.23",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

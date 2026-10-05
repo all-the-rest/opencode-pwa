@@ -1,6 +1,9 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
+import Icon from "./Icon.tsx";
 import { useEventNotifications } from "../hooks/useEventNotifications.ts";
 import { useServers } from "../state/servers.tsx";
+
+export const GITHUB_URL = "https://github.com/all-the-rest/opencode-pwa";
 
 function navClass(isActive: boolean): string {
   return isActive ? "menu-active" : "";
@@ -17,20 +20,7 @@ export default function Layout() {
         <header className="navbar bg-base-200 sticky top-0 z-10">
           <div className="flex-none lg:hidden">
             <label htmlFor="app-drawer" className="btn btn-square btn-ghost" aria-label="Menü öffnen">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
+              <Icon name="menu" className="h-5 w-5" />
             </label>
           </div>
           <div className="flex-1">
@@ -38,7 +28,17 @@ export default function Layout() {
               Web PWA for Opencode
             </Link>
           </div>
-          <div className="flex-none">
+          <div className="flex-none flex items-center gap-1">
+            <a
+              className="btn btn-square btn-ghost"
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="GitHub-Repository öffnen"
+              title="GitHub-Repository"
+            >
+              <Icon name="github" className="h-5 w-5" />
+            </a>
             <select
               className="select select-bordered select-sm max-w-44"
               aria-label="Server wählen"
@@ -57,6 +57,21 @@ export default function Layout() {
         <main className="flex-1 p-4">
           <Outlet />
         </main>
+        <footer className="footer footer-center p-4 bg-base-200 text-sm opacity-80">
+          <aside>
+            <p>
+              Web PWA for Opencode ·{" "}
+              <a
+                className="link"
+                href={GITHUB_URL}
+                target="_blank"
+                rel="noreferrer"
+              >
+                GitHub-Repository
+              </a>
+            </p>
+          </aside>
+        </footer>
       </div>
       <aside className="drawer-side">
         <label htmlFor="app-drawer" className="drawer-overlay" aria-label="Menü schließen" />

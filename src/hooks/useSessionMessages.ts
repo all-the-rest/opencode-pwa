@@ -6,6 +6,8 @@ import {
   mergeMessageLists,
   putMessages,
   readMessages,
+  sessionCacheKey,
+  cacheKey,
   toCachedMessages,
   type CachedMessage,
 } from "../lib/messageCache.ts";
@@ -29,6 +31,10 @@ export interface SessionMessageState {
   error: string | null;
   source: SessionMessageSource;
   liveCount: number;
+  /** Optimistically insert a local message (newest first); returns the temp id. */
+  addLocalMessage: (role: string, text: string) => string;
+  /** Drop a local message again (e.g. after a failed send). */
+  dropLocalMessage: (localID: string) => void;
 }
 
 /**
@@ -47,6 +53,7 @@ export function useSessionMessages(
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<SessionMessageSource>("live");
   const [liveCount, setLiveCount] = useState<number>(0);
+  const [local, setLocal] = useState<CachedMessage[]>([]);
 
   useEffect(() => {
     if (server === null || server === undefined || sessionID === undefined) {
@@ -62,6 +69,7 @@ export function useSessionMessages(
     setAll([]);
     setVisibleCount(pageSize);
     setLiveCount(0);
+    setLocal([]);
     setError(null);
     setSource("live");
     setLoading(true);
@@ -135,10 +143,36 @@ export function useSessionMessages(
     setVisibleCount((count) => count + pageSize);
   }, [pageSize]);
 
-  const visible = all.slice(0, visibleCount);
+  const addLocalMessage = useCallback(
+    (role: string, text: string): string => {
+      const now = Date.now();
+      const localID = `lokal-${now}`;
+      if (server === null || server === undefined || sessionID === undefined) return localID;
+      const message: CachedMessage = {
+        key: cacheKey(server.id, sessionID, localID),
+        sessionKey: sessionCacheKey(server.id, sessionID),
+        serverID: server.id,
+        sessionID,
+        messageID: localID,
+        role,
+        text,
+        created: now,
+      };
+      // Deliberately not persisted: the server echo arrives with its own id.
+      setLocal((prev) => [message, ...prev.filter((m) => m.messageID !== localID)]);
+      return localID;
+    },
+    [server, sessionID],
+  );
+
+  const dropLocalMessage = useCallback((localID: string) => {
+    setLocal((prev) => prev.filter((m) => m.messageID !== localID));
+  }, []);
+
+  const visible = [...local, ...all.slice(0, visibleCount)];
   return {
     visible,
-    total: all.length,
+    total: local.length + all.length,
     hasMore: visibleCount < all.length,
     loadMore,
     loading,
@@ -146,5 +180,7 @@ export function useSessionMessages(
     error,
     source,
     liveCount,
+    addLocalMessage,
+    dropLocalMessage,
   };
 }

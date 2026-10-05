@@ -1,57 +1,92 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getServerInfo, listAgents, listProjects, listSessions } from "../lib/opencode.ts";
+import { useLiveRefresh } from "../hooks/useLiveRefresh.ts";
+import {
+  getServerInfo,
+  listAgents,
+  listProjects,
+  listSessions,
+  listShells,
+  type ServerConfig,
+} from "../lib/opencode.ts";
 import { useServers } from "../state/servers.tsx";
+
+interface Counts {
+  info: string | null;
+  sessions: number | null;
+  shells: number | null;
+  agents: number | null;
+  projects: number | null;
+}
+
+async function loadCounts(server: ServerConfig): Promise<Counts> {
+  const [infoRes, sessionsRes, shellsRes, agentsRes, projectsRes] = await Promise.all([
+    getServerInfo(server),
+    listSessions(server),
+    listShells(server),
+    listAgents(server),
+    listProjects(server),
+  ]);
+  const firstError =
+    infoRes.error ?? sessionsRes.error ?? shellsRes.error ?? agentsRes.error ?? projectsRes.error;
+  if (firstError !== null) throw new Error(firstError);
+  const sessions = sessionsRes.data;
+  const shells = shellsRes.data;
+  const agents = agentsRes.data;
+  const shellsData: unknown = shells !== null && typeof shells === "object" ? (shells as { data?: unknown }).data : null;
+  // agent.list returns a raw `{ location, data }` envelope (no client unwrap).
+  const agentsData: unknown = agents !== null && typeof agents === "object" ? (agents as { data?: unknown }).data : null;
+  return {
+    info: infoRes.data ? `v${infoRes.data.version} (PID ${infoRes.data.pid})` : null,
+    sessions:
+      sessions !== null && typeof sessions === "object" && "data" in sessions
+        ? (sessions.data as unknown[]).length
+        : null,
+    shells: Array.isArray(shellsData) ? shellsData.length : null,
+    agents: Array.isArray(agentsData) ? agentsData.length : null,
+    projects: projectsRes.data === null ? null : projectsRes.data.length,
+  };
+}
 
 export default function Dashboard() {
   const { servers, selectedServer } = useServers();
-  const [info, setInfo] = useState<string | null>(null);
-  const [sessionCount, setSessionCount] = useState<number | null>(null);
-  const [agentCount, setAgentCount] = useState<number | null>(null);
-  const [projectCount, setProjectCount] = useState<number | null>(null);
+  const [counts, setCounts] = useState<Counts | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const reload = useCallback(() => {
+    if (selectedServer === null) return;
+    const active: ServerConfig = selectedServer;
+    void loadCounts(active)
+      .then((next) => {
+        setCounts(next);
+        setError(null);
+      })
+      .catch((failure: unknown) => {
+        setError(failure instanceof Error ? failure.message : "Unbekannter Fehler");
+        setCounts(null);
+      });
+  }, [selectedServer]);
+
   useEffect(() => {
     if (selectedServer === null) {
-      setInfo(null);
-      setSessionCount(null);
-      setAgentCount(null);
-      setProjectCount(null);
+      setCounts(null);
       setError(null);
+      setLoading(false);
       return;
     }
     let cancelled = false;
     setLoading(true);
     setError(null);
-    Promise.all([
-      getServerInfo(selectedServer),
-      listSessions(selectedServer),
-      listAgents(selectedServer),
-      listProjects(selectedServer),
-    ])
-      .then(([infoRes, sessionsRes, agentsRes, projectsRes]) => {
+    void loadCounts(selectedServer)
+      .then((next) => {
         if (cancelled) return;
-        const firstError =
-          infoRes.error ?? sessionsRes.error ?? agentsRes.error ?? projectsRes.error;
-        if (firstError !== null) {
-          setError(firstError);
-          setInfo(null);
-          setSessionCount(null);
-          setAgentCount(null);
-          setProjectCount(null);
-          return;
-        }
-        setInfo(infoRes.data ? `v${infoRes.data.version} (PID ${infoRes.data.pid})` : null);
-        const sessions = sessionsRes.data;
-        setSessionCount(
-          sessions !== null && typeof sessions === "object" && "data" in sessions
-            ? (sessions.data as unknown[]).length
-            : null,
-        );
-        const agents = agentsRes.data;
-        setAgentCount(Array.isArray(agents) ? agents.length : null);
-        setProjectCount(projectsRes.data === null ? null : projectsRes.data.length);
+        setCounts(next);
+      })
+      .catch((failure: unknown) => {
+        if (cancelled) return;
+        setError(failure instanceof Error ? failure.message : "Unbekannter Fehler");
+        setCounts(null);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -60,6 +95,9 @@ export default function Dashboard() {
       cancelled = true;
     };
   }, [selectedServer]);
+
+  // Live counters: poll every 5s + refresh on event-hub activity.
+  useLiveRefresh(selectedServer, reload);
 
   return (
     <div className="flex flex-col gap-4">
@@ -89,19 +127,29 @@ export default function Dashboard() {
               <dl className="stats stats-vertical sm:stats-horizontal shadow mt-2">
                 <div className="stat">
                   <div className="stat-title">Version</div>
-                  <div className="stat-value text-lg">{info ?? "–"}</div>
+                  <div className="stat-value text-lg">{counts?.info ?? "–"}</div>
                 </div>
                 <div className="stat">
                   <div className="stat-title">Laufende Sessions</div>
-                  <div className="stat-value text-lg">{sessionCount ?? "–"}</div>
+                  <div className="stat-value text-lg" data-testid="badge-sessions">
+                    {counts?.sessions ?? "–"}
+                  </div>
+                </div>
+                <div className="stat">
+                  <div className="stat-title">Laufende Shells</div>
+                  <div className="stat-value text-lg" data-testid="badge-shells">
+                    {counts?.shells ?? "–"}
+                  </div>
                 </div>
                 <div className="stat">
                   <div className="stat-title">Agenten</div>
-                  <div className="stat-value text-lg">{agentCount ?? "–"}</div>
+                  <div className="stat-value text-lg" data-testid="badge-agents">
+                    {counts?.agents ?? "–"}
+                  </div>
                 </div>
                 <div className="stat">
                   <div className="stat-title">Projekte</div>
-                  <div className="stat-value text-lg">{projectCount ?? "–"}</div>
+                  <div className="stat-value text-lg">{counts?.projects ?? "–"}</div>
                 </div>
               </dl>
             )}

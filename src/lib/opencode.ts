@@ -53,6 +53,54 @@ export function listSessions(server: ServerConfig) {
   return guarded(() => makeClient(server).session.list());
 }
 
+export interface SessionListOptions {
+  limit?: number;
+  cursor?: string;
+  project?: string;
+  search?: string;
+}
+
+export interface SessionPage {
+  rows: SessionRow[];
+  cursor: { next: string | null; previous: string | null };
+}
+
+function readCursor(value: unknown): string | null {
+  return typeof value === "string" && value !== "" ? value : null;
+}
+
+/** Split a `session.list` payload into rows plus the paging cursor. */
+export function extractSessionPage(value: unknown): SessionPage {
+  const rows = extractSessionRows(value);
+  let next: string | null = null;
+  let previous: string | null = null;
+  if (value !== null && typeof value === "object") {
+    const cursor: unknown = (value as { cursor?: unknown }).cursor;
+    if (cursor !== null && typeof cursor === "object") {
+      const record = cursor as Record<string, unknown>;
+      next = readCursor(record["next"]);
+      previous = readCursor(record["previous"]);
+    }
+  }
+  return { rows, cursor: { next, previous } };
+}
+
+/** Cursor-paged session list (server-side paging + optional project/search filter). */
+export function listSessionsPaged(
+  server: ServerConfig,
+  options: SessionListOptions = {},
+): Promise<ApiResult<SessionPage>> {
+  return guarded(async () => {
+    const payload = await makeClient(server).session.list({
+      ...(options.limit !== undefined ? { limit: options.limit } : {}),
+      ...(options.cursor !== undefined ? { cursor: options.cursor } : {}),
+      ...(options.project !== undefined ? { project: options.project } : {}),
+      ...(options.search !== undefined ? { search: options.search } : {}),
+    });
+    return extractSessionPage(payload);
+  });
+}
+
 export function listShells(server: ServerConfig) {
   // GET /api/shell
   return guarded(() => makeClient(server).shell.list());
@@ -125,6 +173,13 @@ export interface SessionRow {
   id: string;
   label: string;
   projectKey: string | null;
+  agent: string | null;
+}
+
+/** Raw agent of a session entry (`agent` / `agentID` / `agentId`), null when absent. */
+export function sessionAgentKey(entry: unknown): string | null {
+  if (entry === null || typeof entry !== "object") return null;
+  return readString(entry as Record<string, unknown>, ["agent", "agentID", "agentId"]);
 }
 
 export function extractSessionRows(value: unknown): SessionRow[] {
@@ -137,10 +192,110 @@ export function extractSessionRows(value: unknown): SessionRow[] {
       const id = readString(record, ["id"]) ?? `eintrag-${index}`;
       const label =
         readString(record, ["title", "name", "command"]) ?? id;
-      return { id, label, projectKey: sessionProjectKey(entry) };
+      return {
+        id,
+        label,
+        projectKey: sessionProjectKey(entry),
+        agent: sessionAgentKey(entry),
+      };
     }
-    return { id: `eintrag-${index}`, label: String(entry), projectKey: null };
+    return { id: `eintrag-${index}`, label: String(entry), projectKey: null, agent: null };
   });
+}
+
+export interface SessionFilter {
+  agent?: string | null;
+  projectKey?: string | null;
+  search?: string;
+}
+
+/** Client-side session filter (agent exact, project exact, search substring). */
+export function filterSessionRows(rows: SessionRow[], filter: SessionFilter): SessionRow[] {
+  const search = (filter.search ?? "").trim().toLowerCase();
+  return rows.filter((row) => {
+    if (filter.agent !== undefined && filter.agent !== null && filter.agent !== "") {
+      if ((row.agent ?? "").toLowerCase() !== filter.agent.toLowerCase()) return false;
+    }
+    if (filter.projectKey !== undefined && filter.projectKey !== null && filter.projectKey !== "") {
+      if (row.projectKey !== filter.projectKey) return false;
+    }
+    if (search !== "") {
+      const haystack = `${row.label} ${row.id}`.toLowerCase();
+      if (!haystack.includes(search)) return false;
+    }
+    return true;
+  });
+}
+
+/** POST /api/session/{sessionID}/interrupt — stop the running execution. */
+export function interruptSession(server: ServerConfig, sessionID: string) {
+  return guarded(() => makeClient(server).session.interrupt({ sessionID }));
+}
+
+/** DELETE /api/session/{sessionID} — delete the session. */
+export function removeSession(server: ServerConfig, sessionID: string) {
+  return guarded(() => makeClient(server).session.remove({ sessionID }));
+}
+
+/** POST /api/session/{sessionID}/prompt — send a prompt (returns the inbox entry). */
+export function sendPrompt(server: ServerConfig, sessionID: string, text: string) {
+  return guarded(() => makeClient(server).session.prompt({ sessionID, text }));
+}
+
+/** DELETE /api/shell/{id} — remove (abort) a shell. */
+export function removeShell(server: ServerConfig, id: string) {
+  return guarded(() => makeClient(server).shell.remove({ id }));
+}
+
+export interface ShellOutput {
+  output: string;
+  cursor: number;
+  truncated: boolean;
+}
+
+/** Normalize a `shell.output` payload (`{ data: { output, cursor, truncated } }`). */
+export function extractShellOutput(value: unknown): ShellOutput | null {
+  if (value === null || typeof value !== "object") return null;
+  const data: unknown = (value as { data?: unknown }).data;
+  if (data === null || typeof data !== "object") return null;
+  const record = data as Record<string, unknown>;
+  if (typeof record["output"] !== "string") return null;
+  return {
+    output: record["output"],
+    cursor: typeof record["cursor"] === "number" ? record["cursor"] : 0,
+    truncated: record["truncated"] === true,
+  };
+}
+
+/** GET /api/shell/{id}/output — live shell output with cursor paging. */
+export function getShellOutput(server: ServerConfig, id: string, cursor?: number) {
+  return guarded(async () => {
+    const payload = await makeClient(server).shell.output(
+      cursor === undefined ? { id } : { id, cursor },
+    );
+    return extractShellOutput(payload);
+  });
+}
+
+/** POST /api/shell — start a shell with the given command. */
+export function createShell(server: ServerConfig, command: string) {
+  return guarded(() => makeClient(server).shell.create({ command }));
+}
+
+/** GET /api/pty/{ptyID}/connect-token — ticket for attaching a terminal. */
+export function getPtyConnectToken(server: ServerConfig, ptyID: string) {
+  return guarded(() => makeClient(server).pty.connect.token({ ptyID }));
+}
+
+/** Pull the ticket string out of a `pty.connect.token` payload. */
+export function extractPtyTicket(value: unknown): string | null {
+  if (value === null || typeof value !== "object") return null;
+  const data: unknown = (value as { data?: unknown }).data;
+  if (typeof data === "string" && data !== "") return data;
+  if (data !== null && typeof data === "object") {
+    return readString(data as Record<string, unknown>, ["ticket", "token"]);
+  }
+  return null;
 }
 
 export interface ProjectGroup {
