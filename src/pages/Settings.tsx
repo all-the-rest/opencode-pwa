@@ -1,4 +1,10 @@
 import { useState } from "react";
+import {
+  ensurePermission,
+  getPermissionStatus,
+  isNotificationSupported,
+  type NotificationPermissionState,
+} from "../lib/notify.ts";
 import { useServers } from "../state/servers.tsx";
 
 interface FormState {
@@ -15,6 +21,19 @@ export default function Settings() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [permission, setPermission] = useState<NotificationPermissionState>(() =>
+    getPermissionStatus(),
+  );
+  const [permissionBusy, setPermissionBusy] = useState(false);
+
+  async function handleEnableNotifications() {
+    setPermissionBusy(true);
+    try {
+      setPermission(await ensurePermission());
+    } finally {
+      setPermissionBusy(false);
+    }
+  }
 
   function resetForm() {
     setForm(emptyForm);
@@ -137,6 +156,52 @@ export default function Settings() {
               )}
             </div>
           </form>
+        </div>
+      </section>
+
+      <section className="card bg-base-200 shadow">
+        <div className="card-body">
+          <h2 className="card-title">Benachrichtigungen</h2>
+          <p className="text-sm opacity-70">
+            Lokale Hinweise zu Session-, Kompaktierungs- und Freigabe-Ereignissen des
+            gewählten Servers. Kein Push-Server, alles bleibt im Browser.
+          </p>
+          {!isNotificationSupported() ? (
+            <div className="alert alert-warning">
+              <span>Dieser Browser unterstützt keine Benachrichtigungen.</span>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className="badge"
+                data-testid="notification-status"
+                aria-label={`Status: ${permission}`}
+              >
+                Status:{" "}
+                {permission === "granted"
+                  ? "aktiviert"
+                  : permission === "denied"
+                    ? "blockiert"
+                    : "nicht angefragt"}
+              </span>
+              {permission !== "granted" && (
+                <button
+                  className="btn btn-primary btn-sm"
+                  type="button"
+                  onClick={() => void handleEnableNotifications()}
+                  disabled={permissionBusy || permission === "denied"}
+                >
+                  {permissionBusy ? "Bitte warten …" : "Benachrichtigungen aktivieren"}
+                </button>
+              )}
+              {permission === "denied" && (
+                <p className="text-sm opacity-70 w-full">
+                  Benachrichtigungen sind blockiert. Bitte in den Browser-Einstellungen
+                  wieder zulassen.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </section>
 

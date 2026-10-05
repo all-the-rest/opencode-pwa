@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getServerInfo, listAgents, listSessions } from "../lib/opencode.ts";
+import { getServerInfo, listAgents, listProjects, listSessions } from "../lib/opencode.ts";
 import { useServers } from "../state/servers.tsx";
 
 export default function Dashboard() {
@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [info, setInfo] = useState<string | null>(null);
   const [sessionCount, setSessionCount] = useState<number | null>(null);
   const [agentCount, setAgentCount] = useState<number | null>(null);
+  const [projectCount, setProjectCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -16,6 +17,7 @@ export default function Dashboard() {
       setInfo(null);
       setSessionCount(null);
       setAgentCount(null);
+      setProjectCount(null);
       setError(null);
       return;
     }
@@ -26,16 +28,18 @@ export default function Dashboard() {
       getServerInfo(selectedServer),
       listSessions(selectedServer),
       listAgents(selectedServer),
+      listProjects(selectedServer),
     ])
-      .then(([infoRes, sessionsRes, agentsRes]) => {
+      .then(([infoRes, sessionsRes, agentsRes, projectsRes]) => {
         if (cancelled) return;
         const firstError =
-          infoRes.error ?? sessionsRes.error ?? agentsRes.error;
+          infoRes.error ?? sessionsRes.error ?? agentsRes.error ?? projectsRes.error;
         if (firstError !== null) {
           setError(firstError);
           setInfo(null);
           setSessionCount(null);
           setAgentCount(null);
+          setProjectCount(null);
           return;
         }
         setInfo(infoRes.data ? `v${infoRes.data.version} (PID ${infoRes.data.pid})` : null);
@@ -47,6 +51,7 @@ export default function Dashboard() {
         );
         const agents = agentsRes.data;
         setAgentCount(Array.isArray(agents) ? agents.length : null);
+        setProjectCount(projectsRes.data === null ? null : projectsRes.data.length);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -93,6 +98,10 @@ export default function Dashboard() {
                 <div className="stat">
                   <div className="stat-title">Agenten</div>
                   <div className="stat-value text-lg">{agentCount ?? "–"}</div>
+                </div>
+                <div className="stat">
+                  <div className="stat-title">Projekte</div>
+                  <div className="stat-value text-lg">{projectCount ?? "–"}</div>
                 </div>
               </dl>
             )}

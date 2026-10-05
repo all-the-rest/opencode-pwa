@@ -14,6 +14,7 @@ Client: `@opencode/client` promise entrypoint, `OpenCode.make({ baseUrl, headers
 | List shells   | `GET /api/shell`  | `shell.list()`         | returns `{ location, data }`   |
 | List ptys     | `GET /api/pty`    | `pty.list()`           | returns `{ location, data }`   |
 | List agents   | `GET /api/agent`  | `agent.list()`         | dashboard count                |
+| List projects | `GET /api/project` | `project.list()`      | project grouping + dashboard count (direct-fetch fallback with Basic header) |
 | Events        | `GET /api/event`  | `event.subscribe()`    | SSE AsyncIterable stream       |
 
 ## Error Handling

@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { listPtys, listSessions, listShells } from "../lib/opencode.ts";
+import {
+  extractProjects,
+  extractSessionRows,
+  groupSessionsByProject,
+  listProjects,
+  listPtys,
+  listSessions,
+  listShells,
+  type ProjectGroup,
+  type ProjectInfo,
+} from "../lib/opencode.ts";
 import { useServers } from "../state/servers.tsx";
 
 interface Row {
@@ -36,29 +46,38 @@ export default function ServerDetail() {
   const { servers } = useServers();
   const server = servers.find((s) => s.id === id) ?? null;
 
-  const [sessions, setSessions] = useState<Row[]>([]);
+  const [sessionGroups, setSessionGroups] = useState<ProjectGroup[]>([]);
+  const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [shells, setShells] = useState<Row[]>([]);
   const [ptys, setPtys] = useState<Row[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const sessionCount = sessionGroups.reduce((sum, g) => sum + g.sessions.length, 0);
 
   useEffect(() => {
     if (server === null) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
-    Promise.all([listSessions(server), listShells(server), listPtys(server)])
-      .then(([sessionsRes, shellsRes, ptysRes]) => {
+    Promise.all([listSessions(server), listShells(server), listPtys(server), listProjects(server)])
+      .then(([sessionsRes, shellsRes, ptysRes, projectsRes]) => {
         if (cancelled) return;
-        const firstError = sessionsRes.error ?? shellsRes.error ?? ptysRes.error;
+        const firstError =
+          sessionsRes.error ?? shellsRes.error ?? ptysRes.error ?? projectsRes.error;
         if (firstError !== null) {
           setError(firstError);
-          setSessions([]);
+          setSessionGroups([]);
+          setProjects([]);
           setShells([]);
           setPtys([]);
           return;
         }
-        setSessions(extractRows(sessionsRes.data));
+        const projectList =
+          projectsRes.data ?? extractProjects(sessionsRes.data);
+        setProjects(projectList);
+        setSessionGroups(
+          groupSessionsByProject(extractSessionRows(sessionsRes.data), projectList),
+        );
         setShells(extractRows(shellsRes.data));
         setPtys(extractRows(ptysRes.data));
       })
@@ -92,20 +111,45 @@ export default function ServerDetail() {
         </div>
       )}
       {!loading && error === null && (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <section className="card bg-base-200 shadow">
             <div className="card-body">
-              <h2 className="card-title">Sessions ({sessions.length})</h2>
-              {sessions.length === 0 ? (
-                <p className="opacity-70 text-sm">Keine Sessions.</p>
+              <h2 className="card-title">Projekte ({projects.length})</h2>
+              {projects.length === 0 ? (
+                <p className="opacity-70 text-sm">Keine Projekte.</p>
               ) : (
                 <ul className="menu gap-1">
-                  {sessions.map((s) => (
-                    <li key={s.id}>
-                      <Link to={`/sessions/${s.id}?server=${server.id}`}>{s.label}</Link>
+                  {projects.map((p) => (
+                    <li key={p.id}>
+                      <span title={p.id}>{p.name}</span>
                     </li>
                   ))}
                 </ul>
+              )}
+            </div>
+          </section>
+          <section className="card bg-base-200 shadow">
+            <div className="card-body">
+              <h2 className="card-title">Sessions ({sessionCount})</h2>
+              {sessionGroups.length === 0 ? (
+                <p className="opacity-70 text-sm">Keine Sessions.</p>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {sessionGroups.map((group) => (
+                    <div key={group.key}>
+                      <h3 className="text-sm font-semibold opacity-80 mb-1" title={group.key}>
+                        {group.label} ({group.sessions.length})
+                      </h3>
+                      <ul className="menu gap-1">
+                        {group.sessions.map((s) => (
+                          <li key={s.id}>
+                            <Link to={`/sessions/${s.id}?server=${server.id}`}>{s.label}</Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </section>

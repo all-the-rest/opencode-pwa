@@ -43,11 +43,31 @@ Via `@opencode/client` (`OpenCode.make({ baseUrl, headers })`), see `src/lib/ope
 | `listSessions` | `GET /api/session` (client: `session.list()`) |
 | `listMessages` | `GET /api/session/:id/message` (client: `message.list()`) |
 | `listAgents`   | `GET /api/agent` (client: `agent.list()`) |
+| `listProjects` | `GET /api/project` (client: `project.list()`, direct-fetch fallback with Basic header) |
 | `listShells`   | `GET /api/shell` (client: `shell.list()`) |
 | `listPtys`     | `GET /api/pty` (client: `pty.list()`) |
 | `subscribeEvents` | `GET /api/event` SSE stream (client: `event.subscribe()`) |
 
 All calls handle offline/errors gracefully (`{ data, error }` results, warning banners in UI).
+
+## Deploy (static)
+
+```bash
+pnpm build   # typecheck + production build into dist/
+```
+
+- Upload `dist/` to any static host (GitHub Pages, Netlify, nginx). The app needs
+  an SPA fallback to `index.html` for client-side routes (`/servers/:id`, …).
+- No secrets in the build: the only build-time input is `VITE_*` variables (see
+  `.env.example`). Server credentials always stay in browser `localStorage`.
+- `vite.config.ts` keeps the default `base` (no `base: "./"`): a Pages sub-path
+  stays a deploy-time concern, not a repo default.
+- Browsers call the Opencode servers directly, so each server must allow the
+  PWA origin via CORS. There is no backend or proxy (see
+  `features/01-architecture.md`, "Static-Only Invariant").
+- Local notifications use the `Notification` API only (permission opt-in under
+  **Einstellungen** → "Benachrichtigungen aktivieren"). No push server, no
+  service-worker push.
 
 ## Project Structure
 

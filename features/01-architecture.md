@@ -24,7 +24,34 @@
 
 ## Routing
 
-- `/` dashboard: server list + active server status (version, session/agent counts).
-- `/servers/:id`: sessions + shells + ptys of that server.
+- `/` dashboard: server list + active server status (version, session/agent/project counts).
+- `/servers/:id`: projects + sessions (grouped by project) + shells + ptys of that server.
 - `/sessions/:id`: message list, read-only prompt box (MVP).
-- `/settings`: add/edit/remove servers.
+- `/settings`: add/edit/remove servers, notification permission.
+
+## Static-Only Invariant (STRICT)
+
+- No backend, no server code, no proxy, no BFF. The only runtime environment
+  input is build-time `VITE_*` variables (e.g. `VITE_DEFAULT_SERVER_URL`);
+  there is no runtime config, no secret injection, no server-side rendering.
+- Once built, `dist/` is deployed to any static host (GitHub Pages, Netlify,
+  nginx, plain file hosting). The browser talks directly to each Opencode
+  server's V2 HTTP API.
+- CORS note: each Opencode server must allow the PWA origin (the static host
+  origin), otherwise the browser blocks API calls. There is deliberately no
+  same-origin proxy to work around this.
+- `vite.config.ts` intentionally keeps the default `base` (no `base: "./"`):
+  a sub-path deployment (e.g. GitHub Pages `/repo/`) is a deploy-time concern
+  and is configured per deployment, not baked into the repo default.
+
+## Local Notifications (No Push Server)
+
+- Session/compaction/permission events from `GET /api/event` (SSE, per
+  selected server via `subscribeEvents`) are mapped to local notifications
+  through the `Notification` API only (`src/lib/notify.ts`, hook
+  `src/hooks/useEventNotifications.ts`, mounted in `Layout`).
+- Permission is requested explicitly in Settings ("Benachrichtigungen
+  aktivieren"); the status badge shows granted/denied/default.
+- Non-important events notify only when the document is hidden; important
+  events (permission requests, execution/compaction failures) always notify.
+- No service-worker push, no push subscription, no server-side code.

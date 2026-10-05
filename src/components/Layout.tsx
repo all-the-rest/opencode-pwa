@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
+import { useEventNotifications } from "../hooks/useEventNotifications.ts";
 import { useServers } from "../state/servers.tsx";
 
 function navClass(isActive: boolean): string {
@@ -7,6 +8,7 @@ function navClass(isActive: boolean): string {
 
 export default function Layout() {
   const { servers, selectedServer, selectServer } = useServers();
+  useEventNotifications(selectedServer);
 
   return (
     <div className="drawer min-h-screen lg:drawer-open">
