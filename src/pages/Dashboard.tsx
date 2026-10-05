@@ -3,6 +3,7 @@ import { Trans } from "@lingui/react/macro";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useLiveRefresh } from "../hooks/useLiveRefresh.ts";
+import { reachability } from "../lib/offline.ts";
 import {
   getServerInfo,
   listAgents,
@@ -36,8 +37,7 @@ async function loadCounts(server: ServerConfig): Promise<Counts> {
   const shells = shellsRes.data;
   const agents = agentsRes.data;
   const shellsData: unknown = shells !== null && typeof shells === "object" ? (shells as { data?: unknown }).data : null;
-  // agent.list returns a raw `{ location, data }` envelope (no client unwrap).
-  const agentsData: unknown = agents !== null && typeof agents === "object" ? (agents as { data?: unknown }).data : null;
+  // agent.list is normalized to `AgentOption[]` by `listAgents`.
   return {
     info: infoRes.data ? `v${infoRes.data.version} (PID ${infoRes.data.pid})` : null,
     sessions:
@@ -45,7 +45,7 @@ async function loadCounts(server: ServerConfig): Promise<Counts> {
         ? (sessions.data as unknown[]).length
         : null,
     shells: Array.isArray(shellsData) ? shellsData.length : null,
-    agents: Array.isArray(agentsData) ? agentsData.length : null,
+    agents: Array.isArray(agents) ? agents.length : null,
     projects: projectsRes.data === null ? null : projectsRes.data.length,
   };
 }
@@ -102,6 +102,10 @@ export default function Dashboard() {
 
   // Live counters: poll every 5s + refresh on event-hub activity.
   useLiveRefresh(selectedServer, reload);
+
+  // Owner requirement: a server that stops answering is never removed from
+  // the list — it stays configured and is badged as offline instead.
+  const { offline } = reachability(error);
 
   return (
     <div className="flex flex-col gap-4">
@@ -197,11 +201,18 @@ export default function Dashboard() {
           </p>
         ) : (
           <ul className="grid gap-2 md:grid-cols-2">
-            {servers.map((s) => (
+            {servers.map((s) => {
+              const isOffline = offline && s.id === selectedServer?.id;
+              return (
               <li key={s.id} className="card bg-base-200 shadow">
                 <div className="card-body p-4">
                   <span className="font-semibold">{s.name}</span>
                   <span className="text-sm opacity-70">{s.baseUrl}</span>
+                  {isOffline && (
+                    <span className="badge badge-warning w-fit" data-testid="dashboard-offline-badge">
+                      <Trans>Offline</Trans>
+                    </span>
+                  )}
                   <div className="card-actions">
                     <Link className="btn btn-sm btn-ghost" to={`/servers/${s.id}`}>
                       <Trans>Anzeigen</Trans>
@@ -209,7 +220,8 @@ export default function Dashboard() {
                   </div>
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </section>

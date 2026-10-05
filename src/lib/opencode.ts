@@ -112,8 +112,138 @@ export function listPtys(server: ServerConfig) {
   return guarded(() => makeClient(server).pty.list());
 }
 
-export function listAgents(server: ServerConfig) {
-  return guarded(() => makeClient(server).agent.list());
+/** GET /api/agent — normalized to `AgentOption[]` (see `extractAgents`). */
+export function listAgents(server: ServerConfig): Promise<ApiResult<AgentOption[]>> {
+  return guarded(async () => {
+    try {
+      // Verified against the installed package: `agent.list()` exists
+      // (node_modules/@opencode/client `agent: { list, get }`).
+      return extractAgents(await makeClient(server).agent.list());
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const headers: Record<string, string> = { accept: "application/json" };
+      if (server.username !== "" || server.password !== "") {
+        headers["Authorization"] = basicAuthHeader(server);
+      }
+      const response = await fetch(`${baseUrl}/api/agent`, { headers });
+      if (!response.ok) {
+        throw new Error(`GET /api/agent failed with status ${response.status}`);
+      }
+      return extractAgents(await response.json());
+    }
+  });
+}
+
+export function listModels(server: ServerConfig): Promise<ApiResult<ModelOption[]>> {
+  return guarded(async () => {
+    try {
+      // Verified against the installed package: `model.list()` exists
+      // (node_modules/@opencode/client `model: { list, default }`).
+      return extractModels(await makeClient(server).model.list());
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const headers: Record<string, string> = { accept: "application/json" };
+      if (server.username !== "" || server.password !== "") {
+        headers["Authorization"] = basicAuthHeader(server);
+      }
+      const response = await fetch(`${baseUrl}/api/model`, { headers });
+      if (!response.ok) {
+        throw new Error(`GET /api/model failed with status ${response.status}`);
+      }
+      const body: unknown = await response.json();
+      return extractModels(body);
+    }
+  });
+}
+
+export interface AgentOption {
+  id: string;
+  name: string;
+  mode: string;
+}
+
+export interface ModelOption {
+  /** Bare model id (used as `ModelRef.id` when switching). */
+  id: string;
+  providerID: string;
+  name: string;
+  variant?: string;
+}
+
+/**
+ * Normalize an `agent.list` payload (`{ location, data: [...] }` or a plain
+ * array). `hidden: true` agents are dropped — they are not offered for picking.
+ */
+export function extractAgents(value: unknown): AgentOption[] {
+  const list = Array.isArray(value)
+    ? value
+    : value !== null && typeof value === "object" && Array.isArray((value as { data?: unknown }).data)
+      ? (value as { data: unknown[] }).data
+      : [];
+  const options: AgentOption[] = [];
+  list.forEach((entry, index) => {
+    if (entry !== null && typeof entry === "object") {
+      const record = entry as Record<string, unknown>;
+      if (record["hidden"] === true) return;
+      const id = readString(record, ["id"]) ?? `agent-${index}`;
+      options.push({
+        id,
+        name: readString(record, ["name"]) ?? id,
+        mode: readString(record, ["mode"]) ?? "all",
+      });
+      return;
+    }
+    options.push({ id: `agent-${index}`, name: String(entry), mode: "all" });
+  });
+  return options;
+}
+
+/**
+ * Normalize a `model.list` payload (`{ location, data: [...] }` or a plain
+ * array). A model with `variants` becomes one option per variant, because the
+ * variant is part of what `POST /api/session/{id}/model` needs.
+ */
+export function extractModels(value: unknown): ModelOption[] {
+  const list = Array.isArray(value)
+    ? value
+    : value !== null && typeof value === "object" && Array.isArray((value as { data?: unknown }).data)
+      ? (value as { data: unknown[] }).data
+      : [];
+  const options: ModelOption[] = [];
+  list.forEach((entry, index) => {
+    if (entry === null || typeof entry !== "object") {
+      options.push({ id: `modell-${index}`, providerID: "", name: String(entry) });
+      return;
+    }
+    const record = entry as Record<string, unknown>;
+    const providerID = readString(record, ["providerID", "providerId"]) ?? "";
+    // `modelID` is the bare id that `ModelRef.id` expects; `id` may be
+    // provider-qualified, so it is only the last resort.
+    const id = readString(record, ["modelID", "modelId", "id"]) ?? `modell-${index}`;
+    const name = readString(record, ["name", "canonical"]) ?? id;
+    const single = readString(record, ["variant"]) ?? undefined;
+    const variants = Array.isArray(record["variants"]) ? (record["variants"] as unknown[]) : [];
+    if (variants.length === 0) {
+      options.push({ id, providerID, name, ...(single !== undefined ? { variant: single } : {}) });
+      return;
+    }
+    const expanded: ModelOption[] = [];
+    for (const variant of variants) {
+      const variantID =
+        variant !== null && typeof variant === "object"
+          ? readString(variant as Record<string, unknown>, ["id"])
+          : null;
+      if (variantID === null) continue;
+      expanded.push({ id, providerID, name: `${name} (${variantID})`, variant: variantID });
+    }
+    // Never drop the model just because its variants were unusable.
+    if (expanded.length === 0) {
+      options.push({ id, providerID, name, ...(single !== undefined ? { variant: single } : {}) });
+      return;
+    }
+    options.push(...expanded);
+  });
+  return options;
 }
 
 export interface ProjectInfo {
@@ -241,6 +371,150 @@ export function removeSession(server: ServerConfig, sessionID: string) {
 /** POST /api/session/{sessionID}/prompt — send a prompt (returns the inbox entry). */
 export function sendPrompt(server: ServerConfig, sessionID: string, text: string) {
   return guarded(() => makeClient(server).session.prompt({ sessionID, text }));
+}
+
+export interface SessionModelRef {
+  id: string;
+  providerID: string;
+  variant?: string;
+}
+
+/**
+ * Stable `<select>` value for a model option. The bare `id` is ambiguous once a
+ * model expands into one option per variant, so the variant joins the value.
+ * Only the ref fields matter, so a current session model works without a name.
+ */
+export function modelOptionValue(model: Pick<ModelOption, "id" | "providerID" | "variant">): string {
+  const base = `${model.providerID}/${model.id}`;
+  return model.variant === undefined ? base : `${base}#${model.variant}`;
+}
+
+/** Inverse of `modelOptionValue`; `null` for a value this app never produced. */
+export function parseModelOptionValue(value: string): SessionModelRef | null {
+  const hash = value.indexOf("#");
+  const head = hash === -1 ? value : value.slice(0, hash);
+  const variant = hash === -1 ? undefined : value.slice(hash + 1);
+  const slash = head.indexOf("/");
+  if (slash === -1) return null;
+  const providerID = head.slice(0, slash);
+  const id = head.slice(slash + 1);
+  if (providerID === "" || id === "") return null;
+  return { id, providerID, ...(variant !== undefined && variant !== "" ? { variant } : {}) };
+}
+
+export interface SessionInfo {
+  id: string;
+  agent: string | null;
+  model: SessionModelRef | null;
+}
+
+export function extractSessionInfo(value: unknown): SessionInfo | null {
+  if (value === null || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const data =
+    record["data"] !== null && typeof record["data"] === "object"
+      ? (record["data"] as Record<string, unknown>)
+      : record;
+  const id = readString(data, ["id"]);
+  if (id === null) return null;
+  const agent = readString(data, ["agent"]);
+  const modelRaw: unknown = data["model"];
+  let model: SessionModelRef | null = null;
+  if (modelRaw !== null && typeof modelRaw === "object") {
+    const modelRecord = modelRaw as Record<string, unknown>;
+    const modelID = readString(modelRecord, ["id", "modelID"]);
+    const providerID = readString(modelRecord, ["providerID", "providerId"]);
+    if (modelID !== null && providerID !== null) {
+      const variant = readString(modelRecord, ["variant"]) ?? undefined;
+      model = { id: modelID, providerID, ...(variant !== undefined ? { variant } : {}) };
+    }
+  }
+  return { id, agent, model };
+}
+
+async function fetchSessionInfoRaw(server: ServerConfig, sessionID: string): Promise<unknown> {
+  try {
+    // Verified against the installed package: `session.get()` exists
+    // (node_modules/@opencode/client `session: { ..., get, ... }`).
+    return await makeClient(server).session.get({ sessionID });
+  } catch {
+    const baseUrl = server.baseUrl.replace(/\/$/, "");
+    const headers: Record<string, string> = { accept: "application/json" };
+    if (server.username !== "" || server.password !== "") {
+      headers["Authorization"] = basicAuthHeader(server);
+    }
+    const response = await fetch(
+      `${baseUrl}/api/session/${encodeURIComponent(sessionID)}`,
+      { headers },
+    );
+    if (!response.ok) {
+      throw new Error(`GET /api/session/${sessionID} failed with status ${response.status}`);
+    }
+    return response.json();
+  }
+}
+
+/** GET /api/session/{sessionID} — current agent/model of one session. */
+export function getSessionInfo(server: ServerConfig, sessionID: string) {
+  return guarded(async () => {
+    const info = extractSessionInfo(await fetchSessionInfoRaw(server, sessionID));
+    if (info === null) throw new Error(t`Unerwartete Session-Antwort vom Server.`);
+    return info;
+  });
+}
+
+/** POST /api/session/{sessionID}/agent — switch the session's agent. */
+export function switchSessionAgent(server: ServerConfig, sessionID: string, agent: string) {
+  return guarded(async () => {
+    try {
+      // Verified against the installed package: `session.switchAgent()` exists
+      // (node_modules/@opencode/client `session: { ..., switchAgent, ... }`).
+      await makeClient(server).session.switchAgent({ sessionID, agent });
+      return;
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const headers: Record<string, string> = { "content-type": "application/json" };
+      if (server.username !== "" || server.password !== "") {
+        headers["Authorization"] = basicAuthHeader(server);
+      }
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/agent`,
+        { method: "POST", headers, body: JSON.stringify({ agent }) },
+      );
+      if (!response.ok) {
+        throw new Error(`POST /api/session/${sessionID}/agent failed with status ${response.status}`);
+      }
+    }
+  });
+}
+
+/** POST /api/session/{sessionID}/model — switch the session's model. */
+export function switchSessionModel(
+  server: ServerConfig,
+  sessionID: string,
+  model: SessionModelRef,
+) {
+  return guarded(async () => {
+    try {
+      // Verified against the installed package: `session.switchModel()` exists
+      // (node_modules/@opencode/client `session: { ..., switchModel, ... }`).
+      await makeClient(server).session.switchModel({ sessionID, model });
+      return;
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const headers: Record<string, string> = { "content-type": "application/json" };
+      if (server.username !== "" || server.password !== "") {
+        headers["Authorization"] = basicAuthHeader(server);
+      }
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/model`,
+        { method: "POST", headers, body: JSON.stringify({ model }) },
+      );
+      if (!response.ok) {
+        throw new Error(`POST /api/session/${sessionID}/model failed with status ${response.status}`);
+      }
+    }
+  });
 }
 
 /** DELETE /api/shell/{id} — remove (abort) a shell. */

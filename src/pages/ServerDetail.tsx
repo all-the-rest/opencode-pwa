@@ -5,13 +5,14 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import Icon from "../components/Icon.tsx";
 import { useLiveRefresh } from "../hooks/useLiveRefresh.ts";
+import { useShellOutputStream } from "../hooks/useShellOutputStream.ts";
+import { isActionEnabled, reachability } from "../lib/offline.ts";
 import {
   createShell,
   extractProjects,
   extractPtyTicket,
   filterSessionRows,
   getPtyConnectToken,
-  getShellOutput,
   groupSessionsByProject,
   interruptSession,
   listProjects,
@@ -23,7 +24,6 @@ import {
   type ProjectInfo,
   type ServerConfig,
   type SessionRow,
-  type ShellOutput,
 } from "../lib/opencode.ts";
 import { useServers } from "../state/servers.tsx";
 
@@ -87,6 +87,105 @@ function killConfirmLabel(target: KillTarget): string {
   return t`Entfernen`;
 }
 
+interface ShellRowProps {
+  server: ServerConfig;
+  shell: Row;
+  expanded: boolean;
+  /** Server unreachable: output tail and removal are disabled. */
+  offline: boolean;
+  onToggle: () => void;
+  onRequestRemove: (id: string, label: string) => void;
+}
+
+/**
+ * One shell row with a tail-polled output panel: while expanded, the output
+ * is fetched from the start and then polled every 2s (cursor-paged); polling
+ * stops on collapse and unmount. A "Live" badge shows while the tail runs.
+ *
+ * While `offline` the row is marked offline and every action is disabled —
+ * the shell itself is never removed on reachability loss.
+ */
+function ShellRow({
+  server,
+  shell,
+  expanded,
+  offline,
+  onToggle,
+  onRequestRemove,
+}: ShellRowProps) {
+  const { output, loading, error, live } = useShellOutputStream(server, shell.id, expanded);
+  const label = shell.label;
+  const canTail = isActionEnabled(offline, "shell-output");
+  const canRemove = isActionEnabled(offline, "shell-remove");
+  return (
+    <li>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-1">
+          <span className="flex-1">{shell.label}</span>
+          {offline && <OfflineBadge />}
+          {live && (
+            <span className="badge badge-success" data-testid={`shell-live-${shell.id}`}>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
+              </span>
+              <Trans>Live</Trans>
+            </span>
+          )}
+          <button
+            type="button"
+            className="btn btn-xs btn-ghost"
+            disabled={!canTail}
+            aria-label={
+              expanded
+                ? t`Ausgabe von ${label} ausblenden`
+                : t`Ausgabe von ${label} anzeigen`
+            }
+            onClick={onToggle}
+          >
+            {expanded ? <Trans>Ausblenden</Trans> : <Trans>Ausgabe</Trans>}
+          </button>
+          <button
+            type="button"
+            className="btn btn-xs btn-ghost text-error"
+            disabled={!canRemove}
+            title={t`Shell entfernen`}
+            aria-label={t`Shell ${label} entfernen`}
+            onClick={() => onRequestRemove(shell.id, shell.label)}
+          >
+            <Icon name="trash" />
+          </button>
+        </div>
+        {expanded && (
+          <pre
+            className="text-xs bg-base-300 rounded p-2 whitespace-pre-wrap break-words max-h-48 overflow-auto"
+            data-testid={`shell-output-${shell.id}`}
+          >
+            {loading && output === "" ? t`Ausgabe wird geladen …` : output}
+          </pre>
+        )}
+        {expanded && error !== null && (
+          <div className="alert alert-warning">
+            <span>{error}</span>
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
+
+/**
+ * Visual "offline" marker. Paired with `disabled` on every action button so
+ * screen readers get `aria-disabled` for free from the disabled state.
+ */
+function OfflineBadge({ testId = "offline-badge" }: { testId?: string }) {
+  return (
+    <span className="badge badge-warning gap-1" data-testid={testId}>
+      <Trans>Offline</Trans>
+    </span>
+  );
+}
+
 export default function ServerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -110,8 +209,6 @@ export default function ServerDetail() {
   const [killBusy, setKillBusy] = useState(false);
   const [killError, setKillError] = useState<string | null>(null);
 
-  const [shellOutputs, setShellOutputs] = useState<Record<string, ShellOutput>>({});
-  const [shellOutputError, setShellOutputError] = useState<string | null>(null);
   const [expandedShell, setExpandedShell] = useState<string | null>(null);
   const [newCommand, setNewCommand] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
@@ -157,7 +254,6 @@ export default function ServerDetail() {
     setAgentFilter("");
     setProjectFilter("");
     setSearch("");
-    setShellOutputs({});
     setExpandedShell(null);
     setPtyTickets({});
     Promise.all([
@@ -217,9 +313,17 @@ export default function ServerDetail() {
   const projectCount = projects.length;
   const shellCount = shells.length;
   const ptyCount = ptys.length;
+  // Owner requirement: an unreachable server stays in the list (never removed,
+  // never a delete prompt). Its rows stay visible but disabled + badged.
+  const { offline } = reachability(error);
+  const canInterrupt = isActionEnabled(offline, "session-interrupt");
+  const canDeleteSession = isActionEnabled(offline, "session-delete");
+  const canLoadMore = isActionEnabled(offline, "sessions-load-more");
+  const canCreateShell = isActionEnabled(offline, "shell-create");
+  const canPtyToken = isActionEnabled(offline, "pty-token");
 
   async function loadMoreSessions() {
-    if (nextCursor === null || loadingMore) return;
+    if (nextCursor === null || loadingMore || !canLoadMore) return;
     setLoadingMore(true);
     const result = await listSessionsPaged(activeServer, {
       limit: SESSION_PAGE_LIMIT,
@@ -238,6 +342,11 @@ export default function ServerDetail() {
 
   async function confirmKill() {
     if (killTarget === null || killBusy) return;
+    // Offline guard: never delete anything on reachability loss.
+    if (offline) {
+      setKillError(t`Server ist offline – Aktionen sind deaktiviert.`);
+      return;
+    }
     const target = killTarget;
     setKillBusy(true);
     setKillError(null);
@@ -262,39 +371,14 @@ export default function ServerDetail() {
     reload();
   }
 
-  async function toggleShellOutput(shellId: string) {
-    if (expandedShell === shellId) {
-      setExpandedShell(null);
-      return;
-    }
-    setExpandedShell(shellId);
-    setShellOutputError(null);
-    const cached = shellOutputs[shellId];
-    const result = await getShellOutput(
-      activeServer,
-      shellId,
-      cached === undefined ? undefined : cached.cursor,
-    );
-    if (result.error !== null || result.data === null) {
-      setShellOutputError(result.error ?? t`Ausgabe konnte nicht geladen werden.`);
-      return;
-    }
-    const fresh = result.data;
-    const startedAtZero = fresh.cursor === 0;
-    setShellOutputs((prev) => {
-      const previous = prev[shellId];
-      const merged: ShellOutput =
-        previous === undefined || startedAtZero
-          ? fresh
-          : { output: previous.output + fresh.output, cursor: fresh.cursor, truncated: fresh.truncated };
-      return { ...prev, [shellId]: merged };
-    });
+  function toggleShellOutput(shellId: string) {
+    setExpandedShell((current) => (current === shellId ? null : shellId));
   }
 
   async function handleCreateShell(e: React.FormEvent) {
     e.preventDefault();
     const command = newCommand.trim();
-    if (command === "" || creating) return;
+    if (command === "" || creating || !canCreateShell) return;
     setCreating(true);
     setCreateError(null);
     const result = await createShell(activeServer, command);
@@ -308,6 +392,7 @@ export default function ServerDetail() {
   }
 
   async function handlePtyTicket(ptyID: string) {
+    if (!canPtyToken) return;
     setPtyTicketError(null);
     const result = await getPtyConnectToken(activeServer, ptyID);
     if (result.error !== null || result.data === null) {
@@ -339,13 +424,19 @@ export default function ServerDetail() {
       <p className="text-sm opacity-70">{server.baseUrl}</p>
       {loading && <span className="loading loading-spinner loading-md" aria-label={t`Lädt`} />}
       {error !== null && (
-        <div className="alert alert-warning">
+        <div className="alert alert-warning" data-testid="offline-alert">
           <span>
             <Trans>Server offline oder nicht erreichbar: {error}</Trans>
           </span>
+          <span className="text-xs">
+            <Trans>
+              Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions und
+              Aktionen sind bis dahin deaktiviert.
+            </Trans>
+          </span>
         </div>
       )}
-      {!loading && error === null && (
+      {!loading && (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <section className="card bg-base-200 shadow">
             <div className="card-body">
@@ -367,10 +458,11 @@ export default function ServerDetail() {
               )}
             </div>
           </section>
-          <section className="card bg-base-200 shadow">
+          <section className="card bg-base-200 shadow" data-testid="sessions-card">
             <div className="card-body">
               <h2 className="card-title">
                 <Icon name="session" /> <Trans>Sessions ({sessionCount})</Trans>
+                {offline && <OfflineBadge testId="sessions-offline-badge" />}
               </h2>
               <div className="flex flex-col gap-2">
                 <label className="flex flex-col gap-1">
@@ -443,17 +535,26 @@ export default function ServerDetail() {
                         {group.sessions.map((s) => {
                           const label = s.label;
                           return (
-                          <li key={s.id}>
-                            <div className="flex items-center gap-1">
+                          <li key={s.id} data-testid={`session-row-${s.id}`}>
+                            <div
+                              className={`flex items-center gap-1${
+                                offline ? " opacity-50 pointer-events-none" : ""
+                              }`}
+                              aria-disabled={offline}
+                            >
                               <Link
                                 className="flex-1"
                                 to={`/sessions/${s.id}?server=${server.id}`}
+                                tabIndex={offline ? -1 : 0}
+                                aria-disabled={offline}
                               >
                                 {s.label}
                               </Link>
+                              {offline && <OfflineBadge />}
                               <button
                                 type="button"
                                 className="btn btn-xs btn-ghost"
+                                disabled={!canInterrupt}
                                 title={t`Ausführung unterbrechen`}
                                 aria-label={t`Session ${label} unterbrechen`}
                                 onClick={() =>
@@ -465,6 +566,7 @@ export default function ServerDetail() {
                               <button
                                 type="button"
                                 className="btn btn-xs btn-ghost text-error"
+                                disabled={!canDeleteSession}
                                 title={t`Session löschen`}
                                 aria-label={t`Session ${label} löschen`}
                                 onClick={() =>
@@ -487,7 +589,7 @@ export default function ServerDetail() {
                   type="button"
                   className="btn btn-ghost btn-sm mt-2"
                   onClick={() => void loadMoreSessions()}
-                  disabled={loadingMore}
+                  disabled={loadingMore || !canLoadMore}
                 >
                   {loadingMore ? <Trans>Lädt …</Trans> : <Trans>Weitere Sessions laden</Trans>}
                 </button>
@@ -498,6 +600,7 @@ export default function ServerDetail() {
             <div className="card-body">
               <h2 className="card-title">
                 <Icon name="shell" /> <Trans>Shells ({shellCount})</Trans>
+                {offline && <OfflineBadge />}
               </h2>
               <form className="flex gap-2" onSubmit={(e) => void handleCreateShell(e)}>
                 <input
@@ -506,11 +609,12 @@ export default function ServerDetail() {
                   onChange={(e) => setNewCommand(e.target.value)}
                   placeholder={t`Befehl starten, z. B. sleep 60`}
                   aria-label={t`Neuer Shell-Befehl`}
+                  disabled={!canCreateShell}
                 />
                 <button
                   type="submit"
                   className="btn btn-primary btn-sm"
-                  disabled={creating || newCommand.trim() === ""}
+                  disabled={creating || newCommand.trim() === "" || !canCreateShell}
                   aria-label={t`Shell starten`}
                 >
                   <Icon name="plus" />
@@ -521,62 +625,26 @@ export default function ServerDetail() {
                   <span>{createError}</span>
                 </div>
               )}
-              {shellOutputError !== null && (
-                <div className="alert alert-warning">
-                  <span>{shellOutputError}</span>
-                </div>
-              )}
               {shells.length === 0 ? (
                 <p className="opacity-70 text-sm">
                   <Trans>Keine Shells.</Trans>
                 </p>
               ) : (
                 <ul className="menu gap-1">
-                  {shells.map((s) => {
-                    const label = s.label;
-                    const shellExpanded = expandedShell === s.id;
-                    return (
-                    <li key={s.id}>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1">
-                          <span className="flex-1">{s.label}</span>
-                          <button
-                            type="button"
-                            className="btn btn-xs btn-ghost"
-                            aria-label={
-                              shellExpanded
-                                ? t`Ausgabe von ${label} ausblenden`
-                                : t`Ausgabe von ${label} anzeigen`
-                            }
-                            onClick={() => void toggleShellOutput(s.id)}
-                          >
-                            {shellExpanded ? <Trans>Ausblenden</Trans> : <Trans>Ausgabe</Trans>}
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-xs btn-ghost text-error"
-                            title={t`Shell entfernen`}
-                            aria-label={t`Shell ${label} entfernen`}
-                            onClick={() => {
-                              setKillError(null);
-                              setKillTarget({ kind: "shell-remove", id: s.id, label: s.label });
-                            }}
-                          >
-                            <Icon name="trash" />
-                          </button>
-                        </div>
-                        {shellExpanded && (
-                          <pre
-                            className="text-xs bg-base-300 rounded p-2 whitespace-pre-wrap break-words max-h-48 overflow-auto"
-                            data-testid={`shell-output-${s.id}`}
-                          >
-                            {shellOutputs[s.id]?.output ?? t`Ausgabe wird geladen …`}
-                          </pre>
-                        )}
-                      </div>
-                    </li>
-                    );
-                  })}
+                  {shells.map((s) => (
+                    <ShellRow
+                      key={s.id}
+                      server={activeServer}
+                      shell={s}
+                      expanded={expandedShell === s.id}
+                      offline={offline}
+                      onToggle={() => toggleShellOutput(s.id)}
+                      onRequestRemove={(id, label) => {
+                        setKillError(null);
+                        setKillTarget({ kind: "shell-remove", id, label });
+                      }}
+                    />
+                  ))}
                 </ul>
               )}
             </div>
@@ -613,6 +681,7 @@ export default function ServerDetail() {
                           <button
                             type="button"
                             className="btn btn-xs btn-ghost"
+                            disabled={!canPtyToken}
                             aria-label={t`Connect-Token für ${label} anfordern`}
                             onClick={() => void handlePtyTicket(p.id)}
                           >

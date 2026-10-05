@@ -5,7 +5,21 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import Icon from "../components/Icon.tsx";
 import { SESSION_PAGE_SIZE, useSessionMessages, type SessionMessageSource } from "../hooks/useSessionMessages.ts";
-import { interruptSession, removeSession, sendPrompt, type ServerConfig } from "../lib/opencode.ts";
+import {
+  getSessionInfo,
+  interruptSession,
+  listAgents,
+  listModels,
+  modelOptionValue,
+  parseModelOptionValue,
+  removeSession,
+  sendPrompt,
+  switchSessionAgent,
+  switchSessionModel,
+  type AgentOption,
+  type ModelOption,
+  type ServerConfig,
+} from "../lib/opencode.ts";
 import { useServers } from "../state/servers.tsx";
 
 function countLabel(total: number, source: SessionMessageSource): string {
@@ -44,6 +58,13 @@ export default function SessionDetail() {
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
+  const [agents, setAgents] = useState<AgentOption[]>([]);
+  const [models, setModels] = useState<ModelOption[]>([]);
+  const [currentAgent, setCurrentAgent] = useState<string | null>(null);
+  const [currentModelValue, setCurrentModelValue] = useState<string>("");
+  const [pickerError, setPickerError] = useState<string | null>(null);
+  const [switching, setSwitching] = useState(false);
+
   useEffect(() => {
     const node = sentinelRef.current;
     if (node === null || !hasMore) return;
@@ -59,6 +80,42 @@ export default function SessionDetail() {
       observer.disconnect();
     };
   }, [hasMore, loadMore]);
+
+  useEffect(() => {
+    if (server === null || server === undefined || id === undefined) return;
+    const activeServer: ServerConfig = server;
+    const activeSession: string = id;
+    let cancelled = false;
+    setPickerError(null);
+    void Promise.all([
+      listAgents(activeServer),
+      listModels(activeServer),
+      getSessionInfo(activeServer, activeSession),
+    ]).then(([agentsRes, modelsRes, infoRes]) => {
+      if (cancelled) return;
+      const firstError = agentsRes.error ?? modelsRes.error ?? infoRes.error;
+      if (firstError !== null) {
+        setPickerError(firstError);
+        return;
+      }
+      setAgents(agentsRes.data ?? []);
+      setModels(modelsRes.data ?? []);
+      const info = infoRes.data;
+      setCurrentAgent(info?.agent ?? null);
+      setCurrentModelValue(
+        info?.model === null || info?.model === undefined
+          ? ""
+          : modelOptionValue({
+              id: info.model.id,
+              providerID: info.model.providerID,
+              ...(info.model.variant !== undefined ? { variant: info.model.variant } : {}),
+            }),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [server, id]);
 
   const showInitialSpinner = loading && total === 0;
   const showEmpty = !loading && error === null && total === 0;
@@ -86,6 +143,38 @@ export default function SessionDetail() {
       setSendError(result.error);
       setDraft(text);
     }
+  }
+
+  async function handleAgentChange(value: string) {
+    if (server === null || server === undefined || id === undefined || value === "" || switching) return;
+    const activeServer: ServerConfig = server;
+    const activeSession: string = id;
+    setSwitching(true);
+    setPickerError(null);
+    const result = await switchSessionAgent(activeServer, activeSession, value);
+    setSwitching(false);
+    if (result.error !== null) {
+      setPickerError(result.error);
+      return;
+    }
+    setCurrentAgent(value);
+  }
+
+  async function handleModelChange(value: string) {
+    if (server === null || server === undefined || id === undefined || value === "" || switching) return;
+    const model = parseModelOptionValue(value);
+    if (model === null) return;
+    const activeServer: ServerConfig = server;
+    const activeSession: string = id;
+    setSwitching(true);
+    setPickerError(null);
+    const result = await switchSessionModel(activeServer, activeSession, model);
+    setSwitching(false);
+    if (result.error !== null) {
+      setPickerError(result.error);
+      return;
+    }
+    setCurrentModelValue(value);
   }
 
   async function handleConfirm() {
@@ -158,6 +247,62 @@ export default function SessionDetail() {
           <p className="text-sm opacity-70">
             <Trans>Server: {serverName}</Trans>
           </p>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="flex flex-col gap-1">
+              <span className="label label-text">
+                <Trans>Agent</Trans>
+              </span>
+              <select
+                className="select select-bordered select-sm"
+                value={currentAgent ?? ""}
+                onChange={(e) => void handleAgentChange(e.target.value)}
+                disabled={switching || agents.length === 0}
+                aria-label={t`Agent der Session`}
+                data-testid="session-agent-select"
+              >
+                <option value="">
+                  <Trans>Keiner</Trans>
+                </option>
+                {agents.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="label label-text">
+                <Trans>Modell</Trans>
+              </span>
+              <select
+                className="select select-bordered select-sm"
+                value={currentModelValue}
+                onChange={(e) => void handleModelChange(e.target.value)}
+                disabled={switching || models.length === 0}
+                aria-label={t`Modell der Session`}
+                data-testid="session-model-select"
+              >
+                <option value="">
+                  <Trans>Keines</Trans>
+                </option>
+                {models.map((m) => {
+                  const optionValue = modelOptionValue(m);
+                  return (
+                    <option key={optionValue} value={optionValue}>
+                      {m.name}
+                    </option>
+                  );
+                })}
+              </select>
+            </label>
+          </div>
+          {pickerError !== null && (
+            <div className="alert alert-error">
+              <span>
+                <Trans>Agent/Modell konnte nicht gewechselt werden: {pickerError}</Trans>
+              </span>
+            </div>
+          )}
           <p className="text-sm opacity-70" data-testid="cache-status">
             {loading && total === 0 ? (
               <Trans>Nachrichten werden geladen …</Trans>

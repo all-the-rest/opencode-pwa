@@ -5,6 +5,7 @@ import { extractMessageFromEvent } from "../lib/eventMessages.ts";
 import { putMessages } from "../lib/messageCache.ts";
 import { notifySessionEvent } from "../lib/notify.ts";
 import type { ServerConfig } from "../lib/opencode.ts";
+import { useServers } from "../state/servers.tsx";
 
 export interface EventSummary {
   title: string;
@@ -91,10 +92,17 @@ export function describeEvent(event: unknown): EventSummary | null {
  * session messages in the background. The shared hub keeps exactly one
  * stream per server (backoff reconnect, AbortController cleanup when the
  * last listener leaves or the server changes).
+ *
+ * The per-server toggle (`serverEventPrefs`, default on) gates the whole
+ * subscription; the global notification permission in Settings stays the
+ * master switch on top of it.
  */
 export function useEventNotifications(server: ServerConfig | null): void {
+  const { serverEventPrefs } = useServers();
+  const enabled = server !== null && (serverEventPrefs[server.id] ?? true);
+
   useEffect(() => {
-    if (server === null) return;
+    if (server === null || !enabled) return;
     const activeServer: ServerConfig = server;
     return subscribeServerEvents(activeServer, (event: unknown) => {
       const message = extractMessageFromEvent(event);
@@ -108,5 +116,5 @@ export function useEventNotifications(server: ServerConfig | null): void {
         notifySessionEvent(summary.title, summary.body, summary.important);
       }
     });
-  }, [server]);
+  }, [server, enabled]);
 }

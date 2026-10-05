@@ -19,7 +19,8 @@ interface FormState {
 const emptyForm: FormState = { name: "", baseUrl: "", username: "", password: "" };
 
 export default function Settings() {
-  const { servers, addServer, updateServer, removeServer } = useServers();
+  const { servers, addServer, updateServer, removeServer, serverEventPrefs, toggleServerEventNotifications } =
+    useServers();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -242,30 +243,47 @@ export default function Settings() {
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {servers.map((s) => (
-              <li key={s.id} className="card bg-base-200 shadow">
-                <div className="card-body p-4 flex-row items-center justify-between gap-2">
-                  <div>
-                    <div className="font-semibold">{s.name}</div>
-                    <div className="text-sm opacity-70">{s.baseUrl}</div>
+            {servers.map((s) => {
+              const notificationsOn = serverEventPrefs[s.id] ?? true;
+              const serverName = s.name;
+              return (
+                <li key={s.id} className="card bg-base-200 shadow">
+                  <div className="card-body p-4 flex-row items-center justify-between gap-2">
+                    <div>
+                      <div className="font-semibold">{s.name}</div>
+                      <div className="text-sm opacity-70">{s.baseUrl}</div>
+                      <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="toggle toggle-sm"
+                          checked={notificationsOn}
+                          onChange={() => toggleServerEventNotifications(s.id)}
+                          aria-label={t`Benachrichtigungen für ${serverName}`}
+                          data-testid={`server-notifications-${s.id}`}
+                        />
+                        <span className="text-sm">
+                          <Trans>Benachrichtigungen</Trans>
+                        </span>
+                      </label>
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="btn btn-sm btn-ghost" onClick={() => handleEdit(s.id)}>
+                        <Trans>Bearbeiten</Trans>
+                      </button>
+                      <button
+                        className="btn btn-sm btn-error btn-outline"
+                        onClick={() => {
+                          if (editingId === s.id) resetForm();
+                          removeServer(s.id);
+                        }}
+                      >
+                        <Trans>Entfernen</Trans>
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button className="btn btn-sm btn-ghost" onClick={() => handleEdit(s.id)}>
-                      <Trans>Bearbeiten</Trans>
-                    </button>
-                    <button
-                      className="btn btn-sm btn-error btn-outline"
-                      onClick={() => {
-                        if (editingId === s.id) resetForm();
-                        removeServer(s.id);
-                      }}
-                    >
-                      <Trans>Entfernen</Trans>
-                    </button>
-                  </div>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

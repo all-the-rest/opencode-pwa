@@ -18,14 +18,18 @@ Legend: ✅ in this app · 🚧 partial · ❌ missing (post-MVP unless noted).
 - ✅ Message history cache-first (IndexedDB) + infinite scroll + live events.
 - ✅ Send prompt (`POST /api/session/{id}/prompt`) with optimistic insert.
 - ✅ Interrupt (`POST /api/session/{id}/interrupt`) + delete (`DELETE /api/session/{id}`) with German confirm.
-- ❌ Model/agent picker per session (`session.switchAgent/switchModel`, `model.list`, `agent.list` read-only count only).
+- ✅ Model/agent picker per session (`session.switchAgent/switchModel`,
+  options from `GET /api/agent` + `GET /api/model`; hidden agents dropped,
+  model variants expanded into one option each).
 - ❌ Fork/compact/revert/share, session stats, diff view, file attachments in prompts.
 
 ## Shells & Tasks
 
 - ✅ List always visible with counts (dashboard badge + server card), live refresh (5s poll + event-hub).
 - ✅ Live output (`GET /api/shell/{id}/output`), create (`POST /api/shell`), remove (`DELETE /api/shell/{id}`) with confirm.
-- ❌ Streaming output (one fetch per open; no tail-poll yet).
+- ✅ Tail-polled output (`src/hooks/useShellOutputStream.ts`): initial fetch,
+  then cursor-paged poll every 2s while the panel is open, stops on
+  collapse/unmount, `Live` badge while tailing.
 
 ## PTY / Terminal (decision)
 
@@ -39,8 +43,10 @@ Legend: ✅ in this app · 🚧 partial · ❌ missing (post-MVP unless noted).
 ## Projects, Agents, Models
 
 - ✅ Projects listed + counted, sessions grouped/filtered by project.
-- 🚧 Agents: counted on dashboard, usable as session filter; no picker/detail.
-- ❌ Models/providers: not surfaced yet.
+- ✅ Agents: counted on dashboard, usable as session filter, and selectable per
+  session (`GET /api/agent`).
+- ✅ Models: selectable per session (`GET /api/model`), variants included.
+- 🚧 Providers (`GET /api/provider`) and agent detail: not surfaced yet.
 
 ## Files, VCS, Worktrees
 
@@ -53,6 +59,13 @@ Legend: ✅ in this app · 🚧 partial · ❌ missing (post-MVP unless noted).
 ## App-Level
 
 - ✅ Multi-server with Basic Auth, offline-tolerant UI, local notifications.
+- ✅ Offline-server policy (`src/lib/offline.ts`): an unreachable server is
+  never removed and never triggers a delete prompt — it stays in the list
+  badged `Offline`, its sessions stay visible but disabled, and every
+  round-trip action is disabled until the server answers again.
+- ✅ Notifications per server: opt-out toggle in Settings, persisted in
+  `localStorage`, honoured by `useEventNotifications` (Settings stays the
+  master switch).
 - ✅ Iconify icons (`src/components/Icon.tsx`, no inline SVGs), GitHub link
   (header + footer → `https://github.com/all-the-rest/opencode-pwa`).
 - ❌ Real terminal, push notifications, server-side rendering: out of scope

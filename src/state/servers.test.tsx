@@ -1,6 +1,6 @@
 import { act, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
-import { ServerProvider, STORAGE_KEY, useServers } from "./servers.tsx";
+import { SERVER_EVENT_PREFS_KEY, ServerProvider, STORAGE_KEY, useServers } from "./servers.tsx";
 
 function Probe() {
   const { servers } = useServers();
@@ -143,6 +143,95 @@ describe("ServerProvider", () => {
         <Probe />
       </ServerProvider>,
     );
+    expect(screen.getByTestId("count")).toHaveTextContent("0");
+  });
+});
+
+describe("serverEventPrefs", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  function ToggleProbe() {
+    const { servers, serverEventPrefs, toggleServerEventNotifications } = useServers();
+    const first = servers[0];
+    return (
+      <div>
+        <span data-testid="count">{servers.length}</span>
+        <span data-testid="pref">
+          {first === undefined ? "kein-server" : String(serverEventPrefs[first.id] ?? true)}
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            if (first !== undefined) toggleServerEventNotifications(first.id);
+          }}
+        >
+          toggle
+        </button>
+      </div>
+    );
+  }
+
+  it("defaults to on when no pref is stored", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([{ id: "server-1", name: "Lokal", baseUrl: "http://lokal.local" }]),
+    );
+    render(
+      <ServerProvider>
+        <ToggleProbe />
+      </ServerProvider>,
+    );
+    expect(screen.getByTestId("pref")).toHaveTextContent("true");
+    expect(localStorage.getItem(SERVER_EVENT_PREFS_KEY)).toBe("{}");
+  });
+
+  it("flips the pref and persists it (roundtrip across remount)", () => {
+    const { unmount: unmountAdder } = render(
+      <ServerProvider>
+        <Adder input={{ name: "Heimserver", baseUrl: "http://heim.local", username: "", password: "" }} />
+      </ServerProvider>,
+    );
+    act(() => {
+      screen.getByRole("button", { name: "add" }).click();
+    });
+    unmountAdder();
+
+    const { unmount: unmountFirst } = render(
+      <ServerProvider>
+        <ToggleProbe />
+      </ServerProvider>,
+    );
+    expect(screen.getByTestId("pref")).toHaveTextContent("true");
+
+    act(() => {
+      screen.getByRole("button", { name: "toggle" }).click();
+    });
+    expect(screen.getByTestId("pref")).toHaveTextContent("false");
+    const raw = localStorage.getItem(SERVER_EVENT_PREFS_KEY);
+    expect(raw).not.toBeNull();
+    const parsed = JSON.parse(raw as string) as Record<string, boolean>;
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) as string) as Array<{ id: string }>;
+    expect(parsed[stored[0]?.id ?? ""]).toBe(false);
+
+    unmountFirst();
+    render(
+      <ServerProvider>
+        <ToggleProbe />
+      </ServerProvider>,
+    );
+    expect(screen.getByTestId("pref")).toHaveTextContent("false");
+  });
+
+  it("ignores non-boolean stored values on load", () => {
+    localStorage.setItem(SERVER_EVENT_PREFS_KEY, JSON.stringify({ "server-1": "nein" }));
+    render(
+      <ServerProvider>
+        <Probe />
+      </ServerProvider>,
+    );
+    // The provider still mounts; the invalid entry is dropped on load.
     expect(screen.getByTestId("count")).toHaveTextContent("0");
   });
 });

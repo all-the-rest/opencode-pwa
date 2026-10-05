@@ -10,6 +10,7 @@ import {
 import type { ServerConfig } from "../lib/opencode.ts";
 
 const STORAGE_KEY = "opencode-pwa:servers";
+const SERVER_EVENT_PREFS_KEY = "opencode-pwa:server-event-notifications";
 
 function createId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -37,6 +38,22 @@ function loadServers(): ServerConfig[] {
   }
 }
 
+function loadServerEventPrefs(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(SERVER_EVENT_PREFS_KEY);
+    if (raw === null || raw === "") return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const prefs: Record<string, boolean> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (typeof value === "boolean") prefs[key] = value;
+    }
+    return prefs;
+  } catch {
+    return {};
+  }
+}
+
 interface ServerContextValue {
   servers: ServerConfig[];
   selectedServerId: string | null;
@@ -45,6 +62,9 @@ interface ServerContextValue {
   addServer: (input: Omit<ServerConfig, "id">) => ServerConfig;
   updateServer: (id: string, input: Omit<ServerConfig, "id">) => void;
   removeServer: (id: string) => void;
+  /** Per-server event-notification opt-out, persisted in localStorage. Default: on. */
+  serverEventPrefs: Record<string, boolean>;
+  toggleServerEventNotifications: (id: string) => void;
 }
 
 const ServerContext = createContext<ServerContextValue | null>(null);
@@ -64,6 +84,9 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const [selectedServerId, setSelectedServerId] = useState<string | null>(() =>
     defaultSelectedId(loadServers(), null),
   );
+  const [serverEventPrefs, setServerEventPrefs] = useState<Record<string, boolean>>(() =>
+    loadServerEventPrefs(),
+  );
 
   useEffect(() => {
     try {
@@ -72,6 +95,14 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       // storage full or unavailable: keep in-memory state
     }
   }, [servers]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SERVER_EVENT_PREFS_KEY, JSON.stringify(serverEventPrefs));
+    } catch {
+      // storage full or unavailable: keep in-memory state
+    }
+  }, [serverEventPrefs]);
 
   const selectServer = useCallback((id: string | null) => {
     setSelectedServerId(id);
@@ -102,6 +133,10 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const toggleServerEventNotifications = useCallback((id: string) => {
+    setServerEventPrefs((prev) => ({ ...prev, [id]: !(prev[id] ?? true) }));
+  }, []);
+
   const value = useMemo<ServerContextValue>(() => {
     const selectedServer = servers.find((s) => s.id === selectedServerId) ?? null;
     return {
@@ -112,8 +147,19 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       addServer,
       updateServer,
       removeServer,
+      serverEventPrefs,
+      toggleServerEventNotifications,
     };
-  }, [servers, selectedServerId, selectServer, addServer, updateServer, removeServer]);
+  }, [
+    servers,
+    selectedServerId,
+    selectServer,
+    addServer,
+    updateServer,
+    removeServer,
+    serverEventPrefs,
+    toggleServerEventNotifications,
+  ]);
 
   return <ServerContext.Provider value={value}>{children}</ServerContext.Provider>;
 }
@@ -126,4 +172,4 @@ export function useServers(): ServerContextValue {
   return ctx;
 }
 
-export { STORAGE_KEY };
+export { SERVER_EVENT_PREFS_KEY, STORAGE_KEY };

@@ -41,8 +41,17 @@ msgid "Abbrechen"
 msgstr "Abbrechen"
 
 #: src/pages/ServerDetail.tsx
+#: src/pages/SessionDetail.tsx
 msgid "Agent"
 msgstr "Agent"
+
+#: src/pages/SessionDetail.tsx
+msgid "Agent der Session"
+msgstr "Agent der Session"
+
+#: src/pages/SessionDetail.tsx
+msgid "Agent/Modell konnte nicht gewechselt werden: {pickerError}"
+msgstr "Agent/Modell konnte nicht gewechselt werden: {pickerError}"
 
 #: src/pages/Dashboard.tsx
 msgid "Agenten"
@@ -124,7 +133,7 @@ msgstr "Ausführung unterbrochen"
 msgid "Ausgabe"
 msgstr "Ausgabe"
 
-#: src/pages/ServerDetail.tsx
+#: src/hooks/useShellOutputStream.ts
 msgid "Ausgabe konnte nicht geladen werden."
 msgstr "Ausgabe konnte nicht geladen werden."
 
@@ -179,6 +188,10 @@ msgid "Benachrichtigungen aktivieren"
 msgstr "Benachrichtigungen aktivieren"
 
 #: src/pages/Settings.tsx
+msgid "Benachrichtigungen für {serverName}"
+msgstr "Benachrichtigungen für {serverName}"
+
+#: src/pages/Settings.tsx
 msgid "Benachrichtigungen sind blockiert. Bitte in den Browser-Einstellungen wieder zulassen."
 msgstr "Benachrichtigungen sind blockiert. Bitte in den Browser-Einstellungen wieder zulassen."
 
@@ -207,6 +220,10 @@ msgstr "blockiert"
 #: src/pages/ServerDetail.tsx
 msgid "Connect-Token für {label} anfordern"
 msgstr "Connect-Token für {label} anfordern"
+
+#: src/pages/ServerDetail.tsx
+msgid "Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions und Aktionen sind bis dahin deaktiviert."
+msgstr "Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions und Aktionen sind bis dahin deaktiviert."
 
 #: src/pages/Dashboard.tsx
 msgid "Details öffnen"
@@ -346,6 +363,14 @@ msgstr "Keine Sessions."
 msgid "Keine Shells."
 msgstr "Keine Shells."
 
+#: src/pages/SessionDetail.tsx
+msgid "Keiner"
+msgstr "Keiner"
+
+#: src/pages/SessionDetail.tsx
+msgid "Keines"
+msgstr "Keines"
+
 #: src/hooks/useEventNotifications.ts
 msgid "Kompaktierung fehlgeschlagen"
 msgstr "Kompaktierung fehlgeschlagen"
@@ -384,6 +409,10 @@ msgstr "Laufende Sessions"
 msgid "Laufende Shells"
 msgstr "Laufende Shells"
 
+#: src/pages/ServerDetail.tsx
+msgid "Live"
+msgstr "Live"
+
 #: src/pages/Settings.tsx
 msgid "Lokale Hinweise zu Session-, Kompaktierungs- und Freigabe-Ereignissen des gewählten Servers. Kein Push-Server, alles bleibt im Browser."
 msgstr "Lokale Hinweise zu Session-, Kompaktierungs- und Freigabe-Ereignissen des gewählten Servers. Kein Push-Server, alles bleibt im Browser."
@@ -400,6 +429,14 @@ msgstr "Menü öffnen"
 #: src/components/Layout.tsx
 msgid "Menü schließen"
 msgstr "Menü schließen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Modell"
+msgstr "Modell"
+
+#: src/pages/SessionDetail.tsx
+msgid "Modell der Session"
+msgstr "Modell der Session"
 
 #: src/pages/ServerDetail.tsx
 msgid "Nach Agent filtern"
@@ -457,6 +494,11 @@ msgstr "Noch keine Server angelegt."
 #: src/pages/Settings.tsx
 msgid "Noch keine Server vorhanden."
 msgstr "Noch keine Server vorhanden."
+
+#: src/pages/Dashboard.tsx
+#: src/pages/ServerDetail.tsx
+msgid "Offline"
+msgstr "Offline"
 
 #: src/pages/SessionDetail.tsx
 msgid "Offline: zwischengespeicherte Nachrichten werden angezeigt ({error})."
@@ -519,6 +561,10 @@ msgstr "Server bearbeiten"
 #: src/pages/Settings.tsx
 msgid "Server hinzufügen"
 msgstr "Server hinzufügen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Server ist offline – Aktionen sind deaktiviert."
+msgstr "Server ist offline – Aktionen sind deaktiviert."
 
 #: src/pages/ServerDetail.tsx
 msgid "Server nicht gefunden"
@@ -698,6 +744,10 @@ msgstr "Übersicht"
 #: src/pages/Dashboard.tsx
 msgid "Unbekannter Fehler"
 msgstr "Unbekannter Fehler"
+
+#: src/lib/opencode.ts
+msgid "Unerwartete Session-Antwort vom Server."
+msgstr "Unerwartete Session-Antwort vom Server."
 
 #: src/pages/ServerDetail.tsx
 msgid "Unerwartete Token-Antwort vom Server."
