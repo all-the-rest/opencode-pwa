@@ -1,8 +1,15 @@
 # AGENTS.todo.md
 
-Stand: 2026-10-05. Nur offene TODOs.
+Stand: 2026-10-05. Nur offene TODOs. Priorität: P0 = Stream-Cache (Worker + lokal + Infinite Scroll), P1 = Rest MVP, P2 = Tests/UI-Review.
 
-## App
+## P0 – Streams im Hintergrund cachen + Infinite Scroll (eingeplant, priorisiert)
+
+- [ ] P0: Event-Worker (Web Worker + `event.subscribe`, SSE): pro Server genau ein Stream, Reconnect mit Backoff, AbortSignal-Cleanup bei Serverwechsel. Quelle: `src/lib/opencode.ts:74 subscribeEvents`.
+- [ ] P0: Lokaler Message-Cache (IndexedDB, Key `serverID:sessionID:messageID`): nur neueste N (z.B. 200/Session) halten, ältere verwerfen; App-Shell bleibt offline nutzbar.
+- [ ] P0: Session-Seite auf Cache umstellen: initial aus IndexedDB rendern, dann Netzwerk nachladen; Infinite Scroll (neueste zuerst, nach oben nachladen), kein Full-Reload. Ist: `src/pages/SessionDetail.tsx:49` macht nur einen Fetch, kein Worker, kein Cache.
+- [ ] P0: Tests dazu: Vitest für Cache-Eviction + Merge (Event über Fetch), E2E `@feature:stream-cache` mit gemocktem Event-Stream (Offline + Reconnect).
+
+## App (P1)
 
 - [ ] Sessions list: pagination via cursor, filter by agent/project.
 - [ ] Shells view: show live output (`shell.output`), create/remove actions.
