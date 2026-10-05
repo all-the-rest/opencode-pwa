@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#1d232a"/>
+  <text x="256" y="300" font-family="monospace" font-size="160" fill="#a6adbb" text-anchor="middle">&gt;_</text>
+  <text x="256" y="400" font-family="monospace" font-size="48" fill="#4b5563" text-anchor="middle">opencode</text>
+</svg>

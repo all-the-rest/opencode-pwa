@@ -1,0 +1,7 @@
+allowBuilds:
+  esbuild: true
+  msgpackr-extract: true
+minimumReleaseAgeExclude:
+  - '@opencode/client@2.0.23'
+  - '@opencode/protocol@2.0.23'
+  - '@opencode/schema@2.0.23'
