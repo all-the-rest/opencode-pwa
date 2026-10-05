@@ -4,8 +4,11 @@ Stand: 2026-10-05. MVP-Wellen W0–W4 umgesetzt und verifiziert (lint 0, vitest 
 
 ## Offen (nach MVP)
 
+- [ ] Offline-Server: nicht entfernen, Sessions disablen (Server bleibt in Liste, Sessions als offline/disabled markieren, keine Lösch-Aktion bei Erreichbarkeitsverlust).
+- [ ] Kommandos: Shell-Befehle direkt ausführen (createShell existiert; Ausführung + Live-Output prüfen/ausbauen).
+- [ ] Verschiedene Agents: Agent-Auswahl pro Session (Picker läuft im Subagent `ses_ef2046d0`).
 - [ ] Echter Geräte-Test: PWA-Install + Offline/SW auf realem Handy (nur Config + `dist` verifiziert).
-- [ ] Shell-Output: Fetch-pro-Öffnen → Streaming/Tail-Poll prüfen.
+- [ ] Shell-Output: Fetch-pro-Öffnen → Streaming/Tail-Poll prüfen (läuft im Subagent).
 - [ ] PTY: nur Liste + Token-Anzeige; Terminal-Rendering bei Bedarf (Entscheidung in `features/05-parity.md`).
 - [ ] Parität-Rest aus `features/05-parity.md` (❌-Markierungen): Notifications pro Server (Toggle/persistiert), Model/Agent-Picker, Files/VCS/Worktrees/MCP/Permissions.
 - [ ] E2E-Paging vs. 5-s-Poll: Reload setzt auf Seite 1 zurück – bei langsamen Runnern beobachten.
