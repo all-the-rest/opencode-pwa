@@ -15,8 +15,8 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
+        # No `version:` key: package.json `packageManager: pnpm@10.0.0` wins.
+        # Setting both fails with ERR_PNPM_BAD_PM_VERSION (CI run 37371470039).
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
