@@ -421,7 +421,12 @@ export default function ServerDetail() {
       <h1 className="text-2xl font-bold">
         <Trans>Server: {serverName}</Trans>
       </h1>
-      <p className="text-sm opacity-70">{server.baseUrl}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm opacity-70">{server.baseUrl}</p>
+        <Link className="btn btn-sm btn-ghost" to={`/servers/${server.id}/tools`}>
+          <Trans>Server-Werkzeuge</Trans>
+        </Link>
+      </div>
       {loading && <span className="loading loading-spinner loading-md" aria-label={t`Lädt`} />}
       {error !== null && (
         <div className="alert alert-warning" data-testid="offline-alert">

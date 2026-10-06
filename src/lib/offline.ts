@@ -15,7 +15,9 @@ export type ServerAction =
   | "shell-create"
   | "shell-remove"
   | "shell-output"
-  | "pty-token";
+  | "pty-token"
+  | "file-read"
+  | "permission-reply";
 
 /** Actions that need a live round-trip and are therefore disabled while offline. */
 const ACTIONS_REQUIRING_SERVER: ReadonlySet<ServerAction> = new Set<ServerAction>([
@@ -26,6 +28,8 @@ const ACTIONS_REQUIRING_SERVER: ReadonlySet<ServerAction> = new Set<ServerAction
   "shell-remove",
   "shell-output",
   "pty-token",
+  "file-read",
+  "permission-reply",
 ]);
 
 /**

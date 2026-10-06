@@ -7,6 +7,7 @@
  * cleanup) once the last listener unsubscribes or the server config changes.
  */
 
+import { credentialRevision } from "./credentialVault.ts";
 import { subscribeEvents, type ServerConfig } from "./opencode.ts";
 
 export type ServerEventListener = (event: unknown) => void;
@@ -25,8 +26,13 @@ interface HubEntry {
 
 const hubs = new Map<string, HubEntry>();
 
+/**
+ * The password is sealed in the credential vault, so it cannot take part in
+ * the fingerprint directly. Its revision counter changes whenever the
+ * credential is written or removed, which is what the hub has to react to.
+ */
 function fingerprint(server: ServerConfig): string {
-  return `${server.baseUrl} ${server.username} ${server.password}`;
+  return `${server.baseUrl} ${server.username} ${credentialRevision(server.id)}`;
 }
 
 function delay(ms: number, signal: AbortSignal): Promise<void> {

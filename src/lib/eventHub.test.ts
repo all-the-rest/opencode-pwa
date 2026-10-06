@@ -27,7 +27,6 @@ const server = {
   name: "Hub",
   baseUrl: "http://localhost:4096",
   username: "",
-  password: "",
 };
 
 afterEach(() => {

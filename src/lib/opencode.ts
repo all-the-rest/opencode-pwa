@@ -1,30 +1,62 @@
 import { t } from "@lingui/core/macro";
 import { OpenCode } from "@opencode/client";
+import { readCredential } from "./credentialVault.ts";
 
+/**
+ * A server as it is persisted (`localStorage`) and passed around the app:
+ * identity and endpoint, never a secret. The password lives encrypted in the
+ * credential vault and is resolved per request.
+ */
 export interface ServerConfig {
   id: string;
   name: string;
   baseUrl: string;
   username: string;
+}
+
+export interface ServerCredentials {
+  username: string;
   password: string;
 }
 
+/** A {@link ServerConfig} with its password resolved from the vault. */
+export type ResolvedServerConfig = ServerConfig & ServerCredentials;
+
 export type OpencodeClient = ReturnType<typeof OpenCode.make>;
 
-export function basicAuthHeader(server: Pick<ServerConfig, "username" | "password">): string {
-  return `Basic ${btoa(`${server.username}:${server.password}`)}`;
+export function basicAuthHeader(credentials: ServerCredentials): string {
+  return `Basic ${btoa(`${credentials.username}:${credentials.password}`)}`;
 }
 
-export function makeClient(server: ServerConfig): OpencodeClient {
-  const headers: Record<string, string> = {};
-  if (server.username !== "" || server.password !== "") {
-    headers["Authorization"] = basicAuthHeader(server);
-  }
-  const normalizedBaseUrl = server.baseUrl.replace(/\/$/, "");
+/** Open the password of `server` and return a config that can build a client. */
+export async function getDecryptedConfig(server: ServerConfig): Promise<ResolvedServerConfig> {
+  return { ...server, password: await readCredential(server.id) };
+}
+
+function authHeaders({ username, password }: ServerCredentials): Record<string, string> {
+  return username !== "" || password !== ""
+    ? { Authorization: basicAuthHeader({ username, password }) }
+    : {};
+}
+
+function makeClientFor(resolved: ResolvedServerConfig): OpencodeClient {
   return OpenCode.make({
-    baseUrl: normalizedBaseUrl,
-    headers,
+    baseUrl: resolved.baseUrl.replace(/\/$/, ""),
+    headers: authHeaders(resolved),
   });
+}
+
+/**
+ * Build an authenticated API client. Async because the password is sealed in
+ * the credential vault and has to be opened first.
+ */
+export async function makeClient(server: ServerConfig): Promise<OpencodeClient> {
+  return makeClientFor(await getDecryptedConfig(server));
+}
+
+/** Auth headers for the direct-fetch fallbacks (same credentials as the client). */
+async function fetchAuthHeaders(server: ServerConfig): Promise<Record<string, string>> {
+  return authHeaders(await getDecryptedConfig(server));
 }
 
 function toErrorMessage(error: unknown): string {
@@ -47,11 +79,11 @@ async function guarded<T>(fn: () => Promise<T>): Promise<ApiResult<T>> {
 }
 
 export function getServerInfo(server: ServerConfig) {
-  return guarded(() => makeClient(server).server.info());
+  return guarded(async () => (await makeClient(server)).server.info());
 }
 
 export function listSessions(server: ServerConfig) {
-  return guarded(() => makeClient(server).session.list());
+  return guarded(async () => (await makeClient(server)).session.list());
 }
 
 export interface SessionListOptions {
@@ -92,7 +124,7 @@ export function listSessionsPaged(
   options: SessionListOptions = {},
 ): Promise<ApiResult<SessionPage>> {
   return guarded(async () => {
-    const payload = await makeClient(server).session.list({
+    const payload = await (await makeClient(server)).session.list({
       ...(options.limit !== undefined ? { limit: options.limit } : {}),
       ...(options.cursor !== undefined ? { cursor: options.cursor } : {}),
       ...(options.project !== undefined ? { project: options.project } : {}),
@@ -104,12 +136,12 @@ export function listSessionsPaged(
 
 export function listShells(server: ServerConfig) {
   // GET /api/shell
-  return guarded(() => makeClient(server).shell.list());
+  return guarded(async () => (await makeClient(server)).shell.list());
 }
 
 export function listPtys(server: ServerConfig) {
   // GET /api/pty
-  return guarded(() => makeClient(server).pty.list());
+  return guarded(async () => (await makeClient(server)).pty.list());
 }
 
 /** GET /api/agent — normalized to `AgentOption[]` (see `extractAgents`). */
@@ -118,14 +150,12 @@ export function listAgents(server: ServerConfig): Promise<ApiResult<AgentOption[
     try {
       // Verified against the installed package: `agent.list()` exists
       // (node_modules/@opencode/client `agent: { list, get }`).
-      return extractAgents(await makeClient(server).agent.list());
+      return extractAgents(await (await makeClient(server)).agent.list());
     } catch {
       const baseUrl = server.baseUrl.replace(/\/$/, "");
-      const headers: Record<string, string> = { accept: "application/json" };
-      if (server.username !== "" || server.password !== "") {
-        headers["Authorization"] = basicAuthHeader(server);
-      }
-      const response = await fetch(`${baseUrl}/api/agent`, { headers });
+      const response = await fetch(`${baseUrl}/api/agent`, {
+        headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) },
+      });
       if (!response.ok) {
         throw new Error(`GET /api/agent failed with status ${response.status}`);
       }
@@ -139,14 +169,12 @@ export function listModels(server: ServerConfig): Promise<ApiResult<ModelOption[
     try {
       // Verified against the installed package: `model.list()` exists
       // (node_modules/@opencode/client `model: { list, default }`).
-      return extractModels(await makeClient(server).model.list());
+      return extractModels(await (await makeClient(server)).model.list());
     } catch {
       const baseUrl = server.baseUrl.replace(/\/$/, "");
-      const headers: Record<string, string> = { accept: "application/json" };
-      if (server.username !== "" || server.password !== "") {
-        headers["Authorization"] = basicAuthHeader(server);
-      }
-      const response = await fetch(`${baseUrl}/api/model`, { headers });
+      const response = await fetch(`${baseUrl}/api/model`, {
+        headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) },
+      });
       if (!response.ok) {
         throw new Error(`GET /api/model failed with status ${response.status}`);
       }
@@ -360,17 +388,17 @@ export function filterSessionRows(rows: SessionRow[], filter: SessionFilter): Se
 
 /** POST /api/session/{sessionID}/interrupt — stop the running execution. */
 export function interruptSession(server: ServerConfig, sessionID: string) {
-  return guarded(() => makeClient(server).session.interrupt({ sessionID }));
+  return guarded(async () => (await makeClient(server)).session.interrupt({ sessionID }));
 }
 
 /** DELETE /api/session/{sessionID} — delete the session. */
 export function removeSession(server: ServerConfig, sessionID: string) {
-  return guarded(() => makeClient(server).session.remove({ sessionID }));
+  return guarded(async () => (await makeClient(server)).session.remove({ sessionID }));
 }
 
 /** POST /api/session/{sessionID}/prompt — send a prompt (returns the inbox entry). */
 export function sendPrompt(server: ServerConfig, sessionID: string, text: string) {
-  return guarded(() => makeClient(server).session.prompt({ sessionID, text }));
+  return guarded(async () => (await makeClient(server)).session.prompt({ sessionID, text }));
 }
 
 export interface SessionModelRef {
@@ -436,16 +464,12 @@ async function fetchSessionInfoRaw(server: ServerConfig, sessionID: string): Pro
   try {
     // Verified against the installed package: `session.get()` exists
     // (node_modules/@opencode/client `session: { ..., get, ... }`).
-    return await makeClient(server).session.get({ sessionID });
+    return await (await makeClient(server)).session.get({ sessionID });
   } catch {
     const baseUrl = server.baseUrl.replace(/\/$/, "");
-    const headers: Record<string, string> = { accept: "application/json" };
-    if (server.username !== "" || server.password !== "") {
-      headers["Authorization"] = basicAuthHeader(server);
-    }
     const response = await fetch(
       `${baseUrl}/api/session/${encodeURIComponent(sessionID)}`,
-      { headers },
+      { headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) } },
     );
     if (!response.ok) {
       throw new Error(`GET /api/session/${sessionID} failed with status ${response.status}`);
@@ -469,17 +493,17 @@ export function switchSessionAgent(server: ServerConfig, sessionID: string, agen
     try {
       // Verified against the installed package: `session.switchAgent()` exists
       // (node_modules/@opencode/client `session: { ..., switchAgent, ... }`).
-      await makeClient(server).session.switchAgent({ sessionID, agent });
+      await (await makeClient(server)).session.switchAgent({ sessionID, agent });
       return;
     } catch {
       const baseUrl = server.baseUrl.replace(/\/$/, "");
-      const headers: Record<string, string> = { "content-type": "application/json" };
-      if (server.username !== "" || server.password !== "") {
-        headers["Authorization"] = basicAuthHeader(server);
-      }
       const response = await fetch(
         `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/agent`,
-        { method: "POST", headers, body: JSON.stringify({ agent }) },
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
+          body: JSON.stringify({ agent }),
+        },
       );
       if (!response.ok) {
         throw new Error(`POST /api/session/${sessionID}/agent failed with status ${response.status}`);
@@ -498,17 +522,17 @@ export function switchSessionModel(
     try {
       // Verified against the installed package: `session.switchModel()` exists
       // (node_modules/@opencode/client `session: { ..., switchModel, ... }`).
-      await makeClient(server).session.switchModel({ sessionID, model });
+      await (await makeClient(server)).session.switchModel({ sessionID, model });
       return;
     } catch {
       const baseUrl = server.baseUrl.replace(/\/$/, "");
-      const headers: Record<string, string> = { "content-type": "application/json" };
-      if (server.username !== "" || server.password !== "") {
-        headers["Authorization"] = basicAuthHeader(server);
-      }
       const response = await fetch(
         `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/model`,
-        { method: "POST", headers, body: JSON.stringify({ model }) },
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
+          body: JSON.stringify({ model }),
+        },
       );
       if (!response.ok) {
         throw new Error(`POST /api/session/${sessionID}/model failed with status ${response.status}`);
@@ -519,7 +543,7 @@ export function switchSessionModel(
 
 /** DELETE /api/shell/{id} — remove (abort) a shell. */
 export function removeShell(server: ServerConfig, id: string) {
-  return guarded(() => makeClient(server).shell.remove({ id }));
+  return guarded(async () => (await makeClient(server)).shell.remove({ id }));
 }
 
 export interface ShellOutput {
@@ -545,7 +569,7 @@ export function extractShellOutput(value: unknown): ShellOutput | null {
 /** GET /api/shell/{id}/output — live shell output with cursor paging. */
 export function getShellOutput(server: ServerConfig, id: string, cursor?: number) {
   return guarded(async () => {
-    const payload = await makeClient(server).shell.output(
+    const payload = await (await makeClient(server)).shell.output(
       cursor === undefined ? { id } : { id, cursor },
     );
     return extractShellOutput(payload);
@@ -554,12 +578,12 @@ export function getShellOutput(server: ServerConfig, id: string, cursor?: number
 
 /** POST /api/shell — start a shell with the given command. */
 export function createShell(server: ServerConfig, command: string) {
-  return guarded(() => makeClient(server).shell.create({ command }));
+  return guarded(async () => (await makeClient(server)).shell.create({ command }));
 }
 
 /** GET /api/pty/{ptyID}/connect-token — ticket for attaching a terminal. */
 export function getPtyConnectToken(server: ServerConfig, ptyID: string) {
-  return guarded(() => makeClient(server).pty.connect.token({ ptyID }));
+  return guarded(async () => (await makeClient(server)).pty.connect.token({ ptyID }));
 }
 
 /** Pull the ticket string out of a `pty.connect.token` payload. */
@@ -610,14 +634,12 @@ export function listProjects(server: ServerConfig): Promise<ApiResult<ProjectInf
     try {
       // Verified against the installed package: `project.list()` exists
       // (node_modules/@opencode/client `project: { list, update }`).
-      return extractProjects(await makeClient(server).project.list());
+      return extractProjects(await (await makeClient(server)).project.list());
     } catch {
       const baseUrl = server.baseUrl.replace(/\/$/, "");
-      const headers: Record<string, string> = {};
-      if (server.username !== "" || server.password !== "") {
-        headers["Authorization"] = basicAuthHeader(server);
-      }
-      const response = await fetch(`${baseUrl}/api/project`, { headers });
+      const response = await fetch(`${baseUrl}/api/project`, {
+        headers: await fetchAuthHeaders(server),
+      });
       if (!response.ok) {
         throw new Error(`GET /api/project failed with status ${response.status}`);
       }
@@ -628,16 +650,260 @@ export function listProjects(server: ServerConfig): Promise<ApiResult<ProjectInf
 }
 
 export function listMessages(server: ServerConfig, sessionID: string) {
-  return guarded(() => makeClient(server).message.list({ sessionID }));
+  return guarded(async () => (await makeClient(server)).message.list({ sessionID }));
 }
 
 export async function* subscribeEvents(
   server: ServerConfig,
   signal: AbortSignal,
 ): AsyncGenerator<unknown, void, void> {
-  const client = makeClient(server);
+  const client = await makeClient(server);
   const stream = client.event.subscribe({ signal });
   for await (const event of stream) {
     yield event;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Parity: files, VCS, worktrees, MCP servers, permissions
+//
+// All read-only except the permission reply. Row extraction follows the same
+// envelope-tolerant pattern as the rest of this module (`{ data: [...] }` or
+// a plain array), because the client returns list endpoints verbatim.
+// ---------------------------------------------------------------------------
+
+/** Rows of a list endpoint, tolerating both `{ data: [...] }` and a plain array. */
+export function extractListRows(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (value !== null && typeof value === "object") {
+    const data: unknown = (value as { data?: unknown }).data;
+    if (Array.isArray(data)) return data;
+  }
+  return [];
+}
+
+export interface FileEntryRow {
+  path: string;
+  type: "file" | "directory";
+}
+
+/** Normalize a `file.list` payload into browsable entries. */
+export function extractFileEntries(value: unknown): FileEntryRow[] {
+  return extractListRows(value).map((entry, index) => {
+    if (entry !== null && typeof entry === "object") {
+      const record = entry as Record<string, unknown>;
+      const path = readString(record, ["path", "name"]) ?? `eintrag-${index}`;
+      return { path, type: record["type"] === "directory" ? "directory" : "file" };
+    }
+    return { path: String(entry), type: "file" };
+  });
+}
+
+/** GET /api/fs/list — directory listing of one server. Read-only. */
+export function listFiles(server: ServerConfig, path?: string): Promise<ApiResult<FileEntryRow[]>> {
+  return guarded(async () =>
+    extractFileEntries(
+      await (await makeClient(server)).file.list(path === undefined ? {} : { path }),
+    ),
+  );
+}
+
+/** Longest file preview kept in the DOM; longer content is cut and flagged. */
+export const MAX_FILE_PREVIEW_CHARS = 200_000;
+
+export interface FileContent {
+  text: string;
+  truncated: boolean;
+}
+
+/** Decode the binary `file.read` payload into a bounded text preview. */
+export function decodeFileContent(bytes: Uint8Array): FileContent {
+  const decoded = new TextDecoder().decode(bytes);
+  if (decoded.length <= MAX_FILE_PREVIEW_CHARS) {
+    return { text: decoded, truncated: false };
+  }
+  return { text: decoded.slice(0, MAX_FILE_PREVIEW_CHARS), truncated: true };
+}
+
+/** GET /api/fs/read/{path} — file content, read-only. */
+export function readFile(server: ServerConfig, path: string): Promise<ApiResult<FileContent>> {
+  return guarded(async () => decodeFileContent(await (await makeClient(server)).file.read({ path })));
+}
+
+export type VcsChangeKind = "added" | "deleted" | "modified";
+
+export interface VcsStatusRow {
+  file: string;
+  status: VcsChangeKind;
+  additions: number;
+  deletions: number;
+}
+
+/** Normalize a `vcs.status` payload into changed-file rows. */
+export function extractVcsStatus(value: unknown): VcsStatusRow[] {
+  return extractListRows(value).map((entry, index) => {
+    if (entry !== null && typeof entry === "object") {
+      const record = entry as Record<string, unknown>;
+      const raw = readString(record, ["status"]);
+      const status: VcsChangeKind =
+        raw === "added" || raw === "deleted" || raw === "modified" ? raw : "modified";
+      const additions = record["additions"];
+      const deletions = record["deletions"];
+      return {
+        file: readString(record, ["file", "path", "name"]) ?? `datei-${index}`,
+        status,
+        additions: typeof additions === "number" ? additions : 0,
+        deletions: typeof deletions === "number" ? deletions : 0,
+      };
+    }
+    return { file: String(entry), status: "modified", additions: 0, deletions: 0 };
+  });
+}
+
+/** GET /api/vcs/status — working-tree changes of the server location. */
+export function listVcsStatus(server: ServerConfig): Promise<ApiResult<VcsStatusRow[]>> {
+  return guarded(async () => extractVcsStatus(await (await makeClient(server)).vcs.status()));
+}
+
+export interface WorktreeRow {
+  directory: string;
+  strategy: string | null;
+}
+
+/** Normalize a `worktree.list` payload into worktree rows. */
+export function extractWorktrees(value: unknown): WorktreeRow[] {
+  return extractListRows(value).map((entry, index) => {
+    if (entry !== null && typeof entry === "object") {
+      const record = entry as Record<string, unknown>;
+      return {
+        directory: readString(record, ["directory", "path", "name"]) ?? `worktree-${index}`,
+        strategy: readString(record, ["strategy"]),
+      };
+    }
+    return { directory: String(entry), strategy: null };
+  });
+}
+
+/** GET /api/worktree?projectID= — worktrees of one project. Read-only. */
+export function listWorktrees(
+  server: ServerConfig,
+  projectID: string,
+): Promise<ApiResult<WorktreeRow[]>> {
+  return guarded(async () =>
+    extractWorktrees(await (await makeClient(server)).worktree.list({ projectID })),
+  );
+}
+
+export type McpServerState =
+  | "connected"
+  | "pending"
+  | "disabled"
+  | "failed"
+  | "needs_auth";
+
+export interface McpServerRow {
+  name: string;
+  status: McpServerState;
+  error: string | null;
+}
+
+const MCP_STATES: readonly McpServerState[] = [
+  "connected",
+  "pending",
+  "disabled",
+  "failed",
+  "needs_auth",
+];
+
+function toMcpState(value: unknown): McpServerState {
+  return MCP_STATES.includes(value as McpServerState) ? (value as McpServerState) : "pending";
+}
+
+/** Normalize an `mcp.list` payload (`status` is a nested object). */
+export function extractMcpServers(value: unknown): McpServerRow[] {
+  return extractListRows(value).map((entry, index) => {
+    if (entry === null || typeof entry !== "object") {
+      return { name: String(entry), status: "pending", error: null };
+    }
+    const record = entry as Record<string, unknown>;
+    const statusRaw: unknown = record["status"];
+    const statusRecord =
+      statusRaw !== null && typeof statusRaw === "object"
+        ? (statusRaw as Record<string, unknown>)
+        : null;
+    return {
+      name: readString(record, ["name", "server", "id"]) ?? `mcp-${index}`,
+      status: toMcpState(statusRecord === null ? statusRaw : statusRecord["status"]),
+      error: statusRecord === null ? null : readString(statusRecord, ["error", "message"]),
+    };
+  });
+}
+
+/** GET /api/mcp — configured MCP servers with their connection state. */
+export function listMcpServers(server: ServerConfig): Promise<ApiResult<McpServerRow[]>> {
+  return guarded(async () => extractMcpServers(await (await makeClient(server)).mcp.list()));
+}
+
+export interface PermissionRequestRow {
+  id: string;
+  sessionID: string;
+  action: string;
+  resources: string[];
+  message: string | null;
+}
+
+function toStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === "string" && entry !== "");
+}
+
+/** Normalize a `permission.request.list` payload into pending requests. */
+export function extractPermissionRequests(value: unknown): PermissionRequestRow[] {
+  return extractListRows(value).map((entry, index) => {
+    if (entry === null || typeof entry !== "object") {
+      return { id: `anfrage-${index}`, sessionID: "", action: String(entry), resources: [], message: null };
+    }
+    const record = entry as Record<string, unknown>;
+    return {
+      id: readString(record, ["id", "requestID"]) ?? `anfrage-${index}`,
+      sessionID: readString(record, ["sessionID", "sessionId"]) ?? "",
+      action: readString(record, ["action", "type", "title"]) ?? "unbekannt",
+      resources: toStringList(record["resources"]),
+      message: readString(record, ["message", "title"]),
+    };
+  });
+}
+
+/** GET /api/permission/request — permission requests waiting for a decision. */
+export function listPendingPermissions(
+  server: ServerConfig,
+): Promise<ApiResult<PermissionRequestRow[]>> {
+  return guarded(async () =>
+    extractPermissionRequests(await (await makeClient(server)).permission.request.list()),
+  );
+}
+
+/** Answer of the server's question: allow once, allow permanently, deny. */
+export type PermissionReplyDecision = "once" | "always" | "reject";
+
+/**
+ * POST /api/session/{sessionID}/permission/{requestID}/reply — answer one
+ * pending permission request.
+ */
+export function replyPermission(
+  server: ServerConfig,
+  request: PermissionRequestRow,
+  decision: PermissionReplyDecision,
+): Promise<ApiResult<boolean>> {
+  return guarded(async () => {
+    if (request.sessionID === "") {
+      throw new Error(t`Diese Berechtigungsanfrage hat keine Session und kann nicht beantwortet werden.`);
+    }
+    await (await makeClient(server)).permission.reply({
+      sessionID: request.sessionID,
+      requestID: request.id,
+      decision,
+    });
+    return true;
+  });
 }

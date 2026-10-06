@@ -91,6 +91,14 @@ export default function Layout() {
             </NavLink>
           </li>
           <li>
+            <NavLink
+              to={selectedServer ? `/servers/${selectedServer.id}/tools` : "/"}
+              className={({ isActive }) => navClass(isActive)}
+            >
+              <Trans>Server-Werkzeuge</Trans>
+            </NavLink>
+          </li>
+          <li>
             <NavLink to="/settings" className={({ isActive }) => navClass(isActive)}>
               <Trans>Einstellungen</Trans>
             </NavLink>

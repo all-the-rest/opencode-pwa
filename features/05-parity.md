@@ -48,17 +48,75 @@ Legend: ✅ in this app · 🚧 partial · ❌ missing (post-MVP unless noted).
 - ✅ Models: selectable per session (`GET /api/model`), variants included.
 - 🚧 Providers (`GET /api/provider`) and agent detail: not surfaced yet.
 
-## Files, VCS, Worktrees
+## Files, VCS, Worktrees, MCP, Permissions
 
-- ❌ File browser/read/write (`file.*`), VCS status/diff (`vcs.*`),
-  worktrees (`worktree.*`), commands/skills (`command.*`, `skill.*`),
-  MCP/integrations, permissions UI, config editing, websearch, forms.
-  All are post-MVP: the V2 API supports them, the PWA shows their
-  effects (sessions/messages) but does not manage them yet.
+Read-only parity under the route **`/servers/:id/tools`** ("Server-Werkzeuge",
+reachable from the drawer nav and from a link on `/servers/:id`). One page, five
+cards, rows extracted with the `{ data: [...] }`-tolerant patterns in
+`src/lib/opencode.ts`.
+
+- ✅ File browser (read-only): `GET /api/fs/list` per path, directories
+  navigate, `GET /api/fs/read/{path}` shows the content in a `<pre>` (capped at
+  `MAX_FILE_PREVIEW_CHARS` = 200 000 characters, a cut is flagged in the UI).
+  No write, no delete, no rename — deliberately.
+- ✅ VCS status: `GET /api/vcs/status` lists changed files with
+  added/modified/deleted and +/- line counts.
+- ✅ Worktrees: `GET /api/worktree?projectID=` per project (project `<select>`,
+  first project preselected). Read-only — no create/remove.
+- ✅ MCP servers: `GET /api/mcp` lists the configured servers with their
+  connection state (verbunden/wartet/deaktiviert/fehlgeschlagen/Anmeldung
+  nötig) and the server-side error text. Read-only — no add/connect/remove.
+- ✅ Permissions: `GET /api/permission/request` lists the requests waiting for a
+  decision, answered with
+  `POST /api/session/{sessionID}/permission/{requestID}/reply`
+  (`decision: "once"` = "Einmal erlauben", `decision: "reject"` = "Ablehnen").
+  Deliberately **not** implemented: `always` (would persist a grant) and
+  `permission.saved` (stored grants).
+- 🚧 The page follows the offline policy of `src/lib/offline.ts`: the banner
+  appears on reachability loss and the new actions `file-read` /
+  `permission-reply` are disabled, so nothing is written to an unreachable
+  server. VCS/MCP/permissions reload on the 5 s live refresh.
+
+Still missing in this section: commands/skills (`command.*`, `skill.*`),
+integration management, config editing, websearch, forms, diff view, session
+stats.
+
+## Credential Vault (AES-GCM + Web Crypto)
+
+Server passwords are **never** in `localStorage` any more.
+
+- `localStorage` key `opencode-pwa:servers` holds `id`, `name`, `baseUrl`,
+  `username` only — `ServerConfig` (`src/lib/opencode.ts`) no longer has a
+  `password` field.
+- One random data encryption key per install lives in IndexedDB
+  (`opencode-pwa-credential-vault`, object store `entries`, row `dek`) as a
+  **non-extractable** `CryptoKey` (AES-GCM 256). Script cannot read it back
+  out of the vault. It is created lazily on the first seal, so an install
+  without any password never touches WebCrypto or IndexedDB.
+- Every password is sealed with its own random 96-bit IV; IV and ciphertext are
+  stored next to each other as row `secret:<serverID>`.
+- `makeClient(server)` is async now: it resolves the password per request via
+  `getDecryptedConfig(server)` (`src/lib/credentialVault.ts` +
+  `src/lib/opencode.ts`), so no component ever holds a password.
+- Startup migration: reading the server list hands any plaintext `password` of
+  an older version to the vault (`adoptPlaintextCredentials`, registered
+  synchronously during the first render), and the password-free list is
+  persisted right after — which wipes the plaintext. Reads wait for the
+  migration (`whenVaultReady`), so the first paint still authenticates.
+- Fallback: without WebCrypto or IndexedDB the credentials live in a
+  module-local map for the current session only — never persisted — and
+  Settings shows a German notice (`vault-fallback-notice`). After a reload the
+  password has to be entered again.
+- Covered by `src/lib/credentialVault.test.ts` (roundtrip, fresh IV, tampered
+  ciphertext, restart, migration, fallback) plus E2E `@feature:vault-migration`
+  and `@feature:vault-fallback` in `tests/e2e/w6-vault-tools.spec.ts`.
 
 ## App-Level
 
 - ✅ Multi-server with Basic Auth, offline-tolerant UI, local notifications.
+- ✅ Credential vault: passwords sealed with AES-GCM in IndexedDB (see the
+  section above), plain `localStorage` list, German notice when no persistent
+  vault is available.
 - ✅ Offline-server policy (`src/lib/offline.ts`): an unreachable server is
   never removed and never triggers a delete prompt — it stays in the list
   badged `Offline`, its sessions stay visible but disabled, and every

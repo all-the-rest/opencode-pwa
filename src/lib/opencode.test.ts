@@ -1,31 +1,34 @@
 import { describe, expect, it } from "vitest";
 import {
   basicAuthHeader,
+  decodeFileContent,
   extractAgents,
+  extractFileEntries,
+  extractListRows,
+  extractMcpServers,
   extractModels,
+  extractPermissionRequests,
   extractProjects,
   extractPtyTicket,
   extractSessionInfo,
   extractSessionPage,
   extractSessionRows,
   extractShellOutput,
+  extractVcsStatus,
+  extractWorktrees,
   filterSessionRows,
   groupSessionsByProject,
+  MAX_FILE_PREVIEW_CHARS,
   modelOptionValue,
   parseModelOptionValue,
   sessionAgentKey,
   sessionProjectKey,
   UNASSIGNED_PROJECT_KEY,
-  type ServerConfig,
+  type ServerCredentials,
 } from "./opencode.ts";
 
-const server: ServerConfig = {
-  id: "s1",
-  name: "Lokal",
-  baseUrl: "http://localhost:4096",
-  username: "user",
-  password: "secret",
-};
+// A server never carries its password any more — it is sealed in the vault.
+const server: ServerCredentials = { username: "user", password: "secret" };
 
 describe("basicAuthHeader", () => {
   it("encodes user:pass as Basic header", () => {
@@ -354,5 +357,179 @@ describe("extractSessionInfo", () => {
     expect(extractSessionInfo(null)).toBeNull();
     expect(extractSessionInfo({ agent: "coder" })).toBeNull();
     expect(extractSessionInfo({ data: { agent: "coder" } })).toBeNull();
+  });
+});
+
+describe("extractListRows", () => {
+  it("accepts a { data } envelope and a plain array", () => {
+    expect(extractListRows({ location: {}, data: [1, 2] })).toEqual([1, 2]);
+    expect(extractListRows([1, 2])).toEqual([1, 2]);
+  });
+
+  it("returns nothing for shapes that carry no rows", () => {
+    expect(extractListRows(null)).toEqual([]);
+    expect(extractListRows({ data: "nope" })).toEqual([]);
+    expect(extractListRows("text")).toEqual([]);
+  });
+});
+
+describe("extractFileEntries", () => {
+  it("reads path and directory type", () => {
+    expect(
+      extractFileEntries({
+        location: { directory: "/repo" },
+        data: [
+          { path: "src", type: "directory" },
+          { path: "README.md", type: "file" },
+          { path: "ohne-typ" },
+        ],
+      }),
+    ).toEqual([
+      { path: "src", type: "directory" },
+      { path: "README.md", type: "file" },
+      { path: "ohne-typ", type: "file" },
+    ]);
+  });
+
+  it("tolerates non-objects and missing paths", () => {
+    expect(extractFileEntries([null, "README.md"])).toEqual([
+      { path: "null", type: "file" },
+      { path: "README.md", type: "file" },
+    ]);
+    expect(extractFileEntries([{}])).toEqual([{ path: "eintrag-0", type: "file" }]);
+  });
+});
+
+describe("decodeFileContent", () => {
+  it("decodes UTF-8 bytes", () => {
+    const bytes = new TextEncoder().encode("Zeile eins\nZeile zwei\n");
+    expect(decodeFileContent(bytes)).toEqual({
+      text: "Zeile eins\nZeile zwei\n",
+      truncated: false,
+    });
+  });
+
+  it("caps very large files and flags the cut", () => {
+    const bytes = new TextEncoder().encode("x".repeat(MAX_FILE_PREVIEW_CHARS + 500));
+    const decoded = decodeFileContent(bytes);
+    expect(decoded.truncated).toBe(true);
+    expect(decoded.text).toHaveLength(MAX_FILE_PREVIEW_CHARS);
+  });
+
+  it("handles an empty file", () => {
+    expect(decodeFileContent(new Uint8Array(0))).toEqual({ text: "", truncated: false });
+  });
+});
+
+describe("extractVcsStatus", () => {
+  it("normalizes changed files with their line counts", () => {
+    expect(
+      extractVcsStatus({
+        location: {},
+        data: [
+          { file: "src/a.ts", additions: 3, deletions: 1, status: "modified" },
+          { file: "src/b.ts", additions: 9, deletions: 0, status: "added" },
+          { file: "src/c.ts", additions: 0, deletions: 7, status: "deleted" },
+        ],
+      }),
+    ).toEqual([
+      { file: "src/a.ts", status: "modified", additions: 3, deletions: 1 },
+      { file: "src/b.ts", status: "added", additions: 9, deletions: 0 },
+      { file: "src/c.ts", status: "deleted", additions: 0, deletions: 7 },
+    ]);
+  });
+
+  it("falls back to a safe row for unusable entries", () => {
+    expect(extractVcsStatus([{ file: "x", status: "quatsch" }, null])).toEqual([
+      { file: "x", status: "modified", additions: 0, deletions: 0 },
+      { file: "null", status: "modified", additions: 0, deletions: 0 },
+    ]);
+  });
+});
+
+describe("extractWorktrees", () => {
+  it("reads directory and strategy from a { data } envelope", () => {
+    expect(
+      extractWorktrees({
+        location: {},
+        data: [
+          { directory: "/repo", strategy: "copy" },
+          { directory: "/repo-wt" },
+        ],
+      }),
+    ).toEqual([
+      { directory: "/repo", strategy: "copy" },
+      { directory: "/repo-wt", strategy: null },
+    ]);
+  });
+
+  it("returns an empty list for missing shapes", () => {
+    expect(extractWorktrees(null)).toEqual([]);
+    expect(extractWorktrees({ data: {} })).toEqual([]);
+  });
+});
+
+describe("extractMcpServers", () => {
+  it("reads the nested status object and its error", () => {
+    expect(
+      extractMcpServers({
+        location: {},
+        data: [
+          { name: "filesystem", status: { status: "connected" } },
+          { name: "github", status: { status: "failed", error: "401 unauthorized" } },
+          { name: "linear", status: { status: "needs_auth", error: "token fehlt" } },
+          { name: "atlassian", status: { status: "disabled" } },
+          { name: "vercel", status: { status: "pending" } },
+        ],
+      }),
+    ).toEqual([
+      { name: "filesystem", status: "connected", error: null },
+      { name: "github", status: "failed", error: "401 unauthorized" },
+      { name: "linear", status: "needs_auth", error: "token fehlt" },
+      { name: "atlassian", status: "disabled", error: null },
+      { name: "vercel", status: "pending", error: null },
+    ]);
+  });
+
+  it("falls back to pending for unknown states", () => {
+    expect(extractMcpServers([{ name: "x", status: { status: "unbekannt" } }])).toEqual([
+      { name: "x", status: "pending", error: null },
+    ]);
+    expect(extractMcpServers(null)).toEqual([]);
+  });
+});
+
+describe("extractPermissionRequests", () => {
+  it("normalizes pending requests", () => {
+    expect(
+      extractPermissionRequests({
+        location: {},
+        data: [
+          {
+            id: "per-1",
+            sessionID: "ses-1",
+            action: "bash",
+            resources: ["rm -rf /tmp/x"],
+            message: "Shell-Befehl erlauben?",
+          },
+          { id: "per-2", action: "edit", resources: [] },
+        ],
+      }),
+    ).toEqual([
+      {
+        id: "per-1",
+        sessionID: "ses-1",
+        action: "bash",
+        resources: ["rm -rf /tmp/x"],
+        message: "Shell-Befehl erlauben?",
+      },
+      { id: "per-2", sessionID: "", action: "edit", resources: [], message: null },
+    ]);
+  });
+
+  it("keeps only string resources and tolerates junk", () => {
+    expect(extractPermissionRequests([{ resources: ["a", 1, "", null] }])).toEqual([
+      { id: "anfrage-0", sessionID: "", action: "unbekannt", resources: ["a"], message: null },
+    ]);
   });
 });

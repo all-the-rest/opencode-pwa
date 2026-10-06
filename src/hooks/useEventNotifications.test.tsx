@@ -20,7 +20,6 @@ const server: ServerConfig = {
   name: "Lokal",
   baseUrl: "http://localhost:4096",
   username: "",
-  password: "",
 };
 
 function Harness() {

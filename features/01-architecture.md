@@ -2,17 +2,41 @@
 
 ## Multi-Server
 
-- The app manages N Opencode servers. Each server: `{ id, name, baseUrl, username, password }`.
+- The app manages N Opencode servers. Each server: `{ id, name, baseUrl, username }`
+  (`ServerConfig`) — **no password**. The password lives encrypted in the
+  credential vault (see below).
 - Server list lives in React context (`src/state/servers.tsx`), persisted to
-  `localStorage` key `opencode-pwa:servers`.
+  `localStorage` key `opencode-pwa:servers` (identity + endpoint + username).
 - A header dropdown selects the active server. Detail pages resolve the server from the
-  route (`/servers/:id`) or the `?server=` query param (`/sessions/:id`).
+  route (`/servers/:id`, `/servers/:id/tools`) or the `?server=` query param
+  (`/sessions/:id`).
 
 ## Single User per Server
 
-- Exactly one Basic Auth credential pair per server. Sent as
-  `Authorization: Basic base64(user:pass)` on every request via `makeClient(server)`.
+- Exactly one Basic Auth credential pair per server. The password is opened from the
+  vault per request and sent as `Authorization: Basic base64(user:pass)`; `makeClient`
+  is therefore async.
 - No roles, no teams, no sharing in MVP.
+
+## Credential Vault
+
+- `src/lib/credentialVault.ts`: one random AES-GCM-256 data encryption key (DEK) per
+  install, stored in IndexedDB (`opencode-pwa-credential-vault` / store `entries` /
+  row `dek`) as a **non-extractable** `CryptoKey`. Passwords are sealed per entry with
+  a fresh random 96-bit IV (row `secret:<serverID>`, IV + ciphertext side by side).
+- Invariant: a password is never written to `localStorage` or any other plaintext
+  store. Legacy entries with a `password` field are migrated transparently on the
+  first load (registered synchronously during the first render) and the persisted
+  server list — password-free — replaces them.
+- Readers go through `whenVaultReady()` (`readCredential`), which also awaits a
+  running startup migration; so a first paint after an app update still
+  authenticates. `credentialRevision(serverID)` lets consumers (the event hub)
+  notice a changed password without ever seeing it.
+- Fallback without WebCrypto or IndexedDB: session-only in-memory credentials
+  (never persisted) + a German notice in Settings. `ServerProvider` exposes this as
+  `credentialStorage: "persistent" | "memory" | null`.
+- Storage is behind the `VaultStorage` interface, so tests inject an in-memory backend
+  (`setVaultStorageForTests`) instead of needing IndexedDB.
 
 ## Client-Side Only, No Backend
 
@@ -48,6 +72,8 @@
 
 - `/` dashboard: server list + active server status (version, session/agent/project counts).
 - `/servers/:id`: projects + sessions (grouped by project) + shells + ptys of that server.
+- `/servers/:id/tools`: "Server-Werkzeuge" — file browser (read-only), VCS status,
+  worktrees, MCP servers, pending permissions (allow once / deny).
 - `/sessions/:id`: message list, read-only prompt box (MVP).
 - `/settings`: add/edit/remove servers, notification permission.
 

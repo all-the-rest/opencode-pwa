@@ -9,6 +9,8 @@ const ALL_ACTIONS: ServerAction[] = [
   "shell-remove",
   "shell-output",
   "pty-token",
+  "file-read",
+  "permission-reply",
 ];
 
 describe("reachability", () => {

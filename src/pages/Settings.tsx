@@ -1,6 +1,7 @@
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
 import { useState } from "react";
+import { readCredential } from "../lib/credentialVault.ts";
 import {
   ensurePermission,
   getPermissionStatus,
@@ -19,16 +20,25 @@ interface FormState {
 const emptyForm: FormState = { name: "", baseUrl: "", username: "", password: "" };
 
 export default function Settings() {
-  const { servers, addServer, updateServer, removeServer, serverEventPrefs, toggleServerEventNotifications } =
-    useServers();
+  const {
+    servers,
+    addServer,
+    updateServer,
+    removeServer,
+    serverEventPrefs,
+    toggleServerEventNotifications,
+    credentialStorage,
+  } = useServers();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [permission, setPermission] = useState<NotificationPermissionState>(() =>
     getPermissionStatus(),
   );
   const [permissionBusy, setPermissionBusy] = useState(false);
   const serverCount = servers.length;
+  const memoryOnly = credentialStorage === "memory";
 
   async function handleEnableNotifications() {
     setPermissionBusy(true);
@@ -45,8 +55,9 @@ export default function Settings() {
     setFormError(null);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (saving) return;
     const name = form.name.trim();
     const baseUrl = form.baseUrl.trim().replace(/\/$/, "");
     if (name === "" || baseUrl === "") {
@@ -69,22 +80,28 @@ export default function Settings() {
       username: form.username.trim(),
       password: form.password,
     };
-    if (editingId === null) {
-      addServer(payload);
-    } else {
-      updateServer(editingId, payload);
+    setSaving(true);
+    try {
+      if (editingId === null) {
+        await addServer(payload);
+      } else {
+        await updateServer(editingId, payload);
+      }
+      resetForm();
+    } finally {
+      setSaving(false);
     }
-    resetForm();
   }
 
-  function handleEdit(id: string) {
+  /** The password is sealed in the vault, so editing reads it back first. */
+  async function handleEdit(id: string) {
     const server = servers.find((s) => s.id === id);
     if (!server) return;
     setForm({
       name: server.name,
       baseUrl: server.baseUrl,
       username: server.username,
-      password: server.password,
+      password: await readCredential(id),
     });
     setEditingId(id);
     setFormError(null);
@@ -97,10 +114,22 @@ export default function Settings() {
       </h1>
       <p className="text-sm opacity-70">
         <Trans>
-          Server werden lokal im Browser (localStorage) gespeichert. Pro Server ein Benutzer
-          (Basic Auth).
+          Server werden lokal im Browser gespeichert: Name, Basis-URL und Benutzer im
+          localStorage, das Passwort (Basic Auth) verschlüsselt mit AES-GCM in der
+          IndexedDB-Datenbank. Pro Server ein Benutzer.
         </Trans>
       </p>
+      {memoryOnly && (
+        <div className="alert alert-warning" data-testid="vault-fallback-notice">
+          <span>
+            <Trans>
+              Sicherer Passwortspeicher nicht verfügbar (WebCrypto oder IndexedDB fehlt).
+              Passwörter bleiben nur für diese Sitzung im Arbeitsspeicher und werden nicht
+              dauerhaft gespeichert. Nach einem Neuladen bitte neu eingeben.
+            </Trans>
+          </span>
+        </div>
+      )}
 
       <section className="card bg-base-200 shadow">
         <div className="card-body">
@@ -164,7 +193,7 @@ export default function Settings() {
               </div>
             )}
             <div className="flex gap-2 mt-2">
-              <button className="btn btn-primary" type="submit">
+              <button className="btn btn-primary" type="submit" disabled={saving}>
                 {editingId === null ? <Trans>Hinzufügen</Trans> : <Trans>Speichern</Trans>}
               </button>
               {editingId !== null && (
@@ -267,7 +296,7 @@ export default function Settings() {
                       </label>
                     </div>
                     <div className="flex gap-2">
-                      <button className="btn btn-sm btn-ghost" onClick={() => handleEdit(s.id)}>
+                      <button className="btn btn-sm btn-ghost" onClick={() => void handleEdit(s.id)}>
                         <Trans>Bearbeiten</Trans>
                       </button>
                       <button

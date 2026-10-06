@@ -19,7 +19,6 @@ const server: ServerConfig = {
   name: "Lokal",
   baseUrl: "http://localhost:4096",
   username: "",
-  password: "",
 };
 
 function shellOutput(output: string, cursor: number, truncated = false): ShellOutput {

@@ -40,6 +40,10 @@ msgstr "1 Nachricht"
 msgid "Abbrechen"
 msgstr "Abbrechen"
 
+#: src/pages/ServerTools.tsx
+msgid "Ablehnen"
+msgstr "Ablehnen"
+
 #: src/pages/ServerDetail.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Agent"
@@ -103,6 +107,26 @@ msgstr "Ältere Nachrichten laden"
 #: src/pages/SessionDetail.tsx
 msgid "Ältere Nachrichten laden ({remaining} weitere)"
 msgstr "Ältere Nachrichten laden ({remaining} weitere)"
+
+#: src/pages/ServerTools.tsx
+msgid "Anfrage {requestId} ablehnen"
+msgstr "Anfrage {requestId} ablehnen"
+
+#: src/pages/ServerTools.tsx
+msgid "Anfrage {requestId} einmalig erlauben"
+msgstr "Anfrage {requestId} einmalig erlauben"
+
+#: src/pages/ServerTools.tsx
+msgid "Anfragen des Servers, die auf eine Entscheidung warten. Erlaubt wird einmalig („Einmal erlauben“) oder abgelehnt."
+msgstr "Anfragen des Servers, die auf eine Entscheidung warten. Erlaubt wird einmalig („Einmal erlauben“) oder abgelehnt."
+
+#: src/pages/ServerTools.tsx
+#~ msgid "Anzeige auf {MAX_FILE_PREVIEW_CHARS} Zeichen gekürzt."
+#~ msgstr "Anzeige auf {MAX_FILE_PREVIEW_CHARS} Zeichen gekürzt."
+
+#: src/pages/ServerTools.tsx
+msgid "Anzeige auf {previewLimit} Zeichen gekürzt."
+msgstr "Anzeige auf {previewLimit} Zeichen gekürzt."
 
 #: src/pages/Dashboard.tsx
 msgid "Anzeigen"
@@ -221,6 +245,26 @@ msgstr "blockiert"
 msgid "Connect-Token für {label} anfordern"
 msgstr "Connect-Token für {label} anfordern"
 
+#: src/pages/ServerTools.tsx
+msgid "Datei"
+msgstr "Datei"
+
+#: src/pages/ServerTools.tsx
+msgid "Datei konnte nicht gelesen werden."
+msgstr "Datei konnte nicht gelesen werden."
+
+#: src/pages/ServerTools.tsx
+msgid "Dateien"
+msgstr "Dateien"
+
+#: src/pages/ServerTools.tsx
+msgid "Dateien konnten nicht geladen werden."
+msgstr "Dateien konnten nicht geladen werden."
+
+#: src/pages/ServerTools.tsx
+msgid "Dateivorschau schließen"
+msgstr "Dateivorschau schließen"
+
 #: src/pages/ServerDetail.tsx
 msgid "Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions und Aktionen sind bis dahin deaktiviert."
 msgstr "Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions und Aktionen sind bis dahin deaktiviert."
@@ -276,9 +320,17 @@ msgstr "Die Session wird endgültig gelöscht. Fortfahren?"
 msgid "Die Shell „{label}“ wird abgebrochen und entfernt. Fortfahren?"
 msgstr "Die Shell „{label}“ wird abgebrochen und entfernt. Fortfahren?"
 
+#: src/lib/opencode.ts
+msgid "Diese Berechtigungsanfrage hat keine Session und kann nicht beantwortet werden."
+msgstr "Diese Berechtigungsanfrage hat keine Session und kann nicht beantwortet werden."
+
 #: src/pages/Settings.tsx
 msgid "Dieser Browser unterstützt keine Benachrichtigungen."
 msgstr "Dieser Browser unterstützt keine Benachrichtigungen."
+
+#: src/pages/ServerTools.tsx
+msgid "Ein Verzeichnis zurück"
+msgstr "Ein Verzeichnis zurück"
 
 #: src/hooks/useEventNotifications.ts
 msgid "Eine Aktion wartet auf Freigabe{suffix}."
@@ -287,6 +339,10 @@ msgstr "Eine Aktion wartet auf Freigabe{suffix}."
 #: src/hooks/useEventNotifications.ts
 msgid "Eingang für Session{suffix}."
 msgstr "Eingang für Session{suffix}."
+
+#: src/pages/ServerTools.tsx
+msgid "Einmal erlauben"
+msgstr "Einmal erlauben"
 
 #: src/components/Layout.tsx
 #: src/pages/Settings.tsx
@@ -315,6 +371,10 @@ msgstr "Freigabe erforderlich"
 msgid "Gespeicherte Server ({serverCount})"
 msgstr "Gespeicherte Server ({serverCount})"
 
+#: src/pages/ServerTools.tsx
+msgid "Git-Status"
+msgstr "Git-Status"
+
 #: src/components/Layout.tsx
 msgid "GitHub-Repository"
 msgstr "GitHub-Repository"
@@ -331,6 +391,10 @@ msgstr "Hinweis: Terminal-Rendering folgt nach MVP. Ein Connect-Token kann pro P
 msgid "Hinzufügen"
 msgstr "Hinzufügen"
 
+#: src/pages/ServerTools.tsx
+msgid "Kein Projekt ausgewählt."
+msgstr "Kein Projekt ausgewählt."
+
 #: src/components/Layout.tsx
 msgid "Kein Server"
 msgstr "Kein Server"
@@ -343,9 +407,29 @@ msgstr "Kein Server ausgewählt. Lege unter <0>Einstellungen</0> einen Server an
 msgid "Kein Server ausgewählt. Wähle oben einen Server."
 msgstr "Kein Server ausgewählt. Wähle oben einen Server."
 
+#: src/pages/ServerTools.tsx
+msgid "Keine Änderungen."
+msgstr "Keine Änderungen."
+
+#: src/pages/ServerTools.tsx
+msgid "Keine Einträge."
+msgstr "Keine Einträge."
+
+#: src/pages/ServerTools.tsx
+msgid "Keine MCP-Server konfiguriert."
+msgstr "Keine MCP-Server konfiguriert."
+
 #: src/pages/SessionDetail.tsx
 msgid "Keine Nachrichten vorhanden."
 msgstr "Keine Nachrichten vorhanden."
+
+#: src/pages/ServerTools.tsx
+msgid "Keine offenen Anfragen."
+msgstr "Keine offenen Anfragen."
+
+#: src/pages/ServerTools.tsx
+msgid "Keine Projekte"
+msgstr "Keine Projekte"
 
 #: src/pages/ServerDetail.tsx
 msgid "Keine Projekte."
@@ -362,6 +446,10 @@ msgstr "Keine Sessions."
 #: src/pages/ServerDetail.tsx
 msgid "Keine Shells."
 msgstr "Keine Shells."
+
+#: src/pages/ServerTools.tsx
+msgid "Keine Worktrees."
+msgstr "Keine Worktrees."
 
 #: src/pages/SessionDetail.tsx
 msgid "Keiner"
@@ -389,6 +477,7 @@ msgstr "Kompaktierung läuft"
 
 #: src/pages/Dashboard.tsx
 #: src/pages/ServerDetail.tsx
+#: src/pages/ServerTools.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Lädt"
 msgstr "Lädt"
@@ -409,6 +498,10 @@ msgstr "Laufende Sessions"
 msgid "Laufende Shells"
 msgstr "Laufende Shells"
 
+#: src/pages/ServerTools.tsx
+msgid "Leere Datei."
+msgstr "Leere Datei."
+
 #: src/pages/ServerDetail.tsx
 msgid "Live"
 msgstr "Live"
@@ -421,6 +514,10 @@ msgstr "Lokale Hinweise zu Session-, Kompaktierungs- und Freigabe-Ereignissen de
 #: src/pages/SessionDetail.tsx
 msgid "Löschen"
 msgstr "Löschen"
+
+#: src/pages/ServerTools.tsx
+msgid "MCP-Server"
+msgstr "MCP-Server"
 
 #: src/components/Layout.tsx
 msgid "Menü öffnen"
@@ -495,6 +592,22 @@ msgstr "Noch keine Server angelegt."
 msgid "Noch keine Server vorhanden."
 msgstr "Noch keine Server vorhanden."
 
+#: src/pages/ServerTools.tsx
+msgid "Nur lesend: geänderte Dateien des Server-Verzeichnisses."
+msgstr "Nur lesend: geänderte Dateien des Server-Verzeichnisses."
+
+#: src/pages/ServerTools.tsx
+msgid "Nur lesend: konfigurierte MCP-Server und ihr Verbindungsstatus."
+msgstr "Nur lesend: konfigurierte MCP-Server und ihr Verbindungsstatus."
+
+#: src/pages/ServerTools.tsx
+msgid "Nur lesend: Verzeichnisse durchsuchen und Dateien ansehen."
+msgstr "Nur lesend: Verzeichnisse durchsuchen und Dateien ansehen."
+
+#: src/pages/ServerTools.tsx
+msgid "Offene Berechtigungen"
+msgstr "Offene Berechtigungen"
+
 #: src/pages/Dashboard.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Offline"
@@ -504,6 +617,14 @@ msgstr "Offline"
 msgid "Offline: zwischengespeicherte Nachrichten werden angezeigt ({error})."
 msgstr "Offline: zwischengespeicherte Nachrichten werden angezeigt ({error})."
 
+#: src/pages/ServerTools.tsx
+msgid "Öffnen"
+msgstr "Öffnen"
+
+#: src/pages/ServerTools.tsx
+msgid "Ordner"
+msgstr "Ordner"
+
 #: src/pages/Settings.tsx
 msgid "Passwort"
 msgstr "Passwort"
@@ -512,9 +633,26 @@ msgstr "Passwort"
 msgid "Passwort (Basic Auth)"
 msgstr "Passwort (Basic Auth)"
 
+#: src/pages/ServerTools.tsx
+msgid "Pfad im Projekt"
+msgstr "Pfad im Projekt"
+
+#: src/pages/ServerTools.tsx
+msgid "Pfad im Projekt, z. B. src"
+msgstr "Pfad im Projekt, z. B. src"
+
+#: src/pages/ServerTools.tsx
+msgid "Pfad öffnen"
+msgstr "Pfad öffnen"
+
 #: src/pages/ServerDetail.tsx
+#: src/pages/ServerTools.tsx
 msgid "Projekt"
 msgstr "Projekt"
+
+#: src/pages/ServerTools.tsx
+msgid "Projekt für Worktrees"
+msgstr "Projekt für Worktrees"
 
 #: src/pages/Dashboard.tsx
 msgid "Projekte"
@@ -537,6 +675,10 @@ msgstr "Projekte ({projectCount})"
 #: src/pages/ServerDetail.tsx
 msgid "PTYs ({ptyCount})"
 msgstr "PTYs ({ptyCount})"
+
+#: src/pages/ServerTools.tsx
+msgid "Schließen"
+msgstr "Schließen"
 
 #: src/pages/SessionDetail.tsx
 msgid "Senden"
@@ -567,11 +709,13 @@ msgid "Server ist offline – Aktionen sind deaktiviert."
 msgstr "Server ist offline – Aktionen sind deaktiviert."
 
 #: src/pages/ServerDetail.tsx
+#: src/pages/ServerTools.tsx
 msgid "Server nicht gefunden"
 msgstr "Server nicht gefunden"
 
 #: src/pages/Dashboard.tsx
 #: src/pages/ServerDetail.tsx
+#: src/pages/ServerTools.tsx
 msgid "Server offline oder nicht erreichbar: {error}"
 msgstr "Server offline oder nicht erreichbar: {error}"
 
@@ -580,8 +724,21 @@ msgid "Server wählen"
 msgstr "Server wählen"
 
 #: src/pages/Settings.tsx
-msgid "Server werden lokal im Browser (localStorage) gespeichert. Pro Server ein Benutzer (Basic Auth)."
-msgstr "Server werden lokal im Browser (localStorage) gespeichert. Pro Server ein Benutzer (Basic Auth)."
+#~ msgid "Server werden lokal im Browser (localStorage) gespeichert. Pro Server ein Benutzer (Basic Auth)."
+#~ msgstr "Server werden lokal im Browser (localStorage) gespeichert. Pro Server ein Benutzer (Basic Auth)."
+
+#: src/pages/Settings.tsx
+msgid "Server werden lokal im Browser gespeichert: Name, Basis-URL und Benutzer im localStorage, das Passwort (Basic Auth) verschlüsselt mit AES-GCM in der IndexedDB-Datenbank. Pro Server ein Benutzer."
+msgstr "Server werden lokal im Browser gespeichert: Name, Basis-URL und Benutzer im localStorage, das Passwort (Basic Auth) verschlüsselt mit AES-GCM in der IndexedDB-Datenbank. Pro Server ein Benutzer."
+
+#: src/components/Layout.tsx
+#: src/pages/ServerDetail.tsx
+msgid "Server-Werkzeuge"
+msgstr "Server-Werkzeuge"
+
+#: src/pages/ServerTools.tsx
+msgid "Server-Werkzeuge: {serverName}"
+msgstr "Server-Werkzeuge: {serverName}"
 
 #. placeholder {0}: server.name
 #: src/pages/ServerDetail.tsx
@@ -704,6 +861,10 @@ msgid "Shells ({shellCount})"
 msgstr "Shells ({shellCount})"
 
 #: src/pages/Settings.tsx
+msgid "Sicherer Passwortspeicher nicht verfügbar (WebCrypto oder IndexedDB fehlt). Passwörter bleiben nur für diese Sitzung im Arbeitsspeicher und werden nicht dauerhaft gespeichert. Nach einem Neuladen bitte neu eingeben."
+msgstr "Sicherer Passwortspeicher nicht verfügbar (WebCrypto oder IndexedDB fehlt). Passwörter bleiben nur für diese Sitzung im Arbeitsspeicher und werden nicht dauerhaft gespeichert. Nach einem Neuladen bitte neu eingeben."
+
+#: src/pages/Settings.tsx
 msgid "Speichern"
 msgstr "Speichern"
 
@@ -770,10 +931,23 @@ msgstr "Web PWA for Opencode · <0>GitHub-Repository</0>"
 msgid "Weitere Sessions laden"
 msgstr "Weitere Sessions laden"
 
+#: src/pages/ServerTools.tsx
+msgid "Worktrees"
+msgstr "Worktrees"
+
 #: src/pages/Settings.tsx
 msgid "z. B. Heimserver"
 msgstr "z. B. Heimserver"
 
+#: src/pages/ServerTools.tsx
+msgid "Zurück"
+msgstr "Zurück"
+
+#: src/pages/ServerTools.tsx
+msgid "Zurück zu den Serverdetails"
+msgstr "Zurück zu den Serverdetails"
+
 #: src/pages/ServerDetail.tsx
+#: src/pages/ServerTools.tsx
 msgid "Zurück zur Übersicht"
 msgstr "Zurück zur Übersicht"
