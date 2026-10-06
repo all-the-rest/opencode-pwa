@@ -21,7 +21,22 @@ Legend: ✅ in this app · 🚧 partial · ❌ missing (post-MVP unless noted).
 - ✅ Model/agent picker per session (`session.switchAgent/switchModel`,
   options from `GET /api/agent` + `GET /api/model`; hidden agents dropped,
   model variants expanded into one option each).
-- ❌ Fork/compact/revert/share, session stats, diff view, file attachments in prompts.
+- ✅ Fork (`POST /api/session/{id}/fork`, German confirm, opens the new
+  session) + compact (`POST /api/session/{id}/compact`, German confirm, start
+  notice) on SessionDetail.
+- ✅ Session stats card on SessionDetail: per-session tokens/cache/cost from
+  `session.get` (`SessionInfo.tokens`, `SessionInfo.cost`), tool totals from
+  the global `GET /api/experimental/session/stats` (labelled "alle Sessions").
+  Note: `session.stats` is a *global* aggregate (from/to/project/timezone
+  filter, no session id) — there is no per-session stats endpoint, so the card
+  combines both sources instead of pretending the aggregate is per-session.
+- ✅ Session diff view (`GET /api/session/{id}/diff`): collapsible section on
+  SessionDetail, per-file `<details>` with +/- counts and the patch in
+  `<pre>`, read-only.
+- ✅ File attachments in prompts: workspace paths attached in the prompt box
+  (mention input + chips), sent as `SessionPromptInput.files` (`file://` URIs
+  — verified in the installed client package, so no UI-only limitation).
+- ❌ Revert/share: not surfaced yet.
 
 ## Shells & Tasks
 
@@ -45,8 +60,14 @@ Legend: ✅ in this app · 🚧 partial · ❌ missing (post-MVP unless noted).
 - ✅ Projects listed + counted, sessions grouped/filtered by project.
 - ✅ Agents: counted on dashboard, usable as session filter, and selectable per
   session (`GET /api/agent`).
+- ✅ Agent detail (`GET /api/agent/{id}`, route `/servers/:id/agents/:agentId`,
+  linked from the agent list on Server-Werkzeuge): description, mode, model
+  ref plus the model's capabilities (tool use, I/O formats, resolved over
+  `GET /api/model`).
 - ✅ Models: selectable per session (`GET /api/model`), variants included.
-- 🚧 Providers (`GET /api/provider`) and agent detail: not surfaced yet.
+- ✅ Providers (`GET /api/provider`) + model overview on Server-Werkzeuge:
+  read-only provider list (activation badge) with their models grouped by
+  `providerID`; models without a known provider under "Ohne Anbieter".
 
 ## Files, VCS, Worktrees, MCP, Permissions
 
@@ -78,8 +99,7 @@ cards, rows extracted with the `{ data: [...] }`-tolerant patterns in
   server. VCS/MCP/permissions reload on the 5 s live refresh.
 
 Still missing in this section: commands/skills (`command.*`, `skill.*`),
-integration management, config editing, websearch, forms, diff view, session
-stats.
+integration management, config editing, websearch, forms, revert/share.
 
 ## Credential Vault (AES-GCM + Web Crypto)
 

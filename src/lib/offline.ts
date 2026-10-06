@@ -12,6 +12,12 @@ export type ServerAction =
   | "session-interrupt"
   | "session-delete"
   | "sessions-load-more"
+  | "session-fork"
+  | "session-compact"
+  | "session-diff"
+  | "session-stats"
+  | "agent-detail"
+  | "provider-list"
   | "shell-create"
   | "shell-remove"
   | "shell-output"
@@ -24,6 +30,12 @@ const ACTIONS_REQUIRING_SERVER: ReadonlySet<ServerAction> = new Set<ServerAction
   "session-interrupt",
   "session-delete",
   "sessions-load-more",
+  "session-fork",
+  "session-compact",
+  "session-diff",
+  "session-stats",
+  "agent-detail",
+  "provider-list",
   "shell-create",
   "shell-remove",
   "shell-output",

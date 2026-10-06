@@ -15,7 +15,10 @@ export type AppIconName =
   | "refresh"
   | "plus"
   | "close"
-  | "search";
+  | "search"
+  | "fork"
+  | "compact"
+  | "file";
 
 const ICONS: Record<AppIconName, string> = {
   menu: "mdi:menu",
@@ -33,6 +36,9 @@ const ICONS: Record<AppIconName, string> = {
   plus: "mdi:plus",
   close: "mdi:close",
   search: "mdi:magnify",
+  fork: "mdi:source-fork",
+  compact: "mdi:compress",
+  file: "mdi:file-outline",
 };
 
 interface IconProps {

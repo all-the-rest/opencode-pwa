@@ -6,21 +6,27 @@ import Icon from "../components/Icon.tsx";
 import { useLiveRefresh } from "../hooks/useLiveRefresh.ts";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
 import {
+  listAgents,
   listFiles,
   listMcpServers,
+  listModels,
   listPendingPermissions,
   listProjects,
+  listProviders,
   listVcsStatus,
   listWorktrees,
   readFile,
   replyPermission,
   MAX_FILE_PREVIEW_CHARS,
+  type AgentOption,
   type FileContent,
   type FileEntryRow,
   type McpServerRow,
   type McpServerState,
+  type ModelOption,
   type PermissionRequestRow,
   type ProjectInfo,
+  type ProviderRow,
   type VcsChangeKind,
   type VcsStatusRow,
   type WorktreeRow,
@@ -59,6 +65,12 @@ const VCS_LABELS: Record<VcsChangeKind, string> = {
   added: "neu",
   modified: "geändert",
   deleted: "gelöscht",
+};
+
+const ACTIVATION_LABELS: Record<string, string> = {
+  auto: "automatisch",
+  enabled: "aktiviert",
+  disabled: "deaktiviert",
 };
 
 function vcsBadgeClass(status: VcsChangeKind): string {
@@ -113,6 +125,10 @@ export default function ServerTools() {
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [projectId, setProjectId] = useState("");
   const [worktrees, setWorktrees] = useState<WorktreeRow[]>([]);
+  const [agents, setAgents] = useState<AgentOption[]>([]);
+  const [providers, setProviders] = useState<ProviderRow[]>([]);
+  const [models, setModels] = useState<ModelOption[]>([]);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [replying, setReplying] = useState<string | null>(null);
@@ -173,6 +189,36 @@ export default function ServerTools() {
   // Live view: poll every 5s + refresh on event-hub activity.
   useLiveRefresh(activeServer, reloadOverview);
 
+  // Agent/provider/model catalog: read-only overview, loaded once per server.
+  // Failures stay local to the cards — they must not trip the page-wide
+  // offline banner, which belongs to the live overview above.
+  useEffect(() => {
+    if (activeServer === null) return;
+    let cancelled = false;
+    setCatalogError(null);
+    setAgents([]);
+    setProviders([]);
+    setModels([]);
+    void Promise.all([
+      listAgents(activeServer),
+      listProviders(activeServer),
+      listModels(activeServer),
+    ]).then(([agentsRes, providersRes, modelsRes]) => {
+      if (cancelled) return;
+      const firstError = agentsRes.error ?? providersRes.error ?? modelsRes.error;
+      if (firstError !== null) {
+        setCatalogError(firstError);
+        return;
+      }
+      setAgents(agentsRes.data ?? []);
+      setProviders(providersRes.data ?? []);
+      setModels(modelsRes.data ?? []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeServer]);
+
   // File browser: only the listing, refetched when the path changes.
   useEffect(() => {
     if (activeServer === null) return;
@@ -221,6 +267,8 @@ export default function ServerTools() {
   const { offline } = reachability(error);
   const canReadFile = isActionEnabled(offline, "file-read");
   const canReplyPermission = isActionEnabled(offline, "permission-reply");
+  const canAgentDetail = isActionEnabled(offline, "agent-detail");
+  const canProviderList = isActionEnabled(offline, "provider-list");
   const serverName = server.name;
   const previewLimit = MAX_FILE_PREVIEW_CHARS.toLocaleString("de");
   const parent = parentPath(path);
@@ -228,6 +276,14 @@ export default function ServerTools() {
     if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
     return a.path.localeCompare(b.path);
   });
+  const providerIds = new Set(providers.map((p) => p.id));
+  const modelsByProvider = new Map<string, ModelOption[]>();
+  for (const model of models) {
+    const list = modelsByProvider.get(model.providerID) ?? [];
+    list.push(model);
+    modelsByProvider.set(model.providerID, list);
+  }
+  const orphanModels = models.filter((m) => !providerIds.has(m.providerID));
 
   async function openFile(filePath: string) {
     if (activeServer === null || !canReadFile) return;
@@ -507,6 +563,115 @@ export default function ServerTools() {
                     </div>
                   </li>
                 ))}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <section className="card bg-base-200 shadow" data-testid="agents-card">
+          <div className="card-body">
+            <h2 className="card-title">
+              <Icon name="session" /> <Trans>Agenten</Trans>
+            </h2>
+            <p className="text-xs opacity-70">
+              <Trans>Nur lesend: konfigurierte Agenten mit Detailansicht.</Trans>
+            </p>
+            {catalogError !== null ? (
+              <div className="alert alert-warning">
+                <span>{catalogError}</span>
+              </div>
+            ) : agents.length === 0 ? (
+              <p className="opacity-70 text-sm">
+                <Trans>Keine Agenten.</Trans>
+              </p>
+            ) : (
+              <ul className="menu gap-1" data-testid="agent-list">
+                {agents.map((agent) => {
+                  const agentLabel = agent.name;
+                  return (
+                  <li key={agent.id} data-testid={`agent-row-${agent.id}`}>
+                    {canAgentDetail ? (
+                      <Link
+                        className="justify-between"
+                        to={`/servers/${server.id}/agents/${agent.id}`}
+                        aria-label={t`Details zu Agent ${agentLabel} anzeigen`}
+                      >
+                        <span className="truncate">{agent.name}</span>
+                        <span className="badge badge-ghost text-xs">{agent.mode}</span>
+                      </Link>
+                    ) : (
+                      <div className="flex items-center justify-between opacity-50">
+                        <span className="truncate">{agent.name}</span>
+                        <span className="badge badge-ghost text-xs">{agent.mode}</span>
+                      </div>
+                    )}
+                  </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <section className="card bg-base-200 shadow" data-testid="providers-card">
+          <div className="card-body">
+            <h2 className="card-title">
+              <Icon name="server" /> <Trans>Anbieter &amp; Modelle</Trans>
+            </h2>
+            <p className="text-xs opacity-70">
+              <Trans>Nur lesend: konfigurierte Anbieter mit ihren Modellen.</Trans>
+            </p>
+            {catalogError !== null ? (
+              <div className="alert alert-warning">
+                <span>{catalogError}</span>
+              </div>
+            ) : !canProviderList ? (
+              <p className="opacity-70 text-sm">
+                <Trans>Server offline – Anbieterliste ist deaktiviert.</Trans>
+              </p>
+            ) : providers.length === 0 ? (
+              <p className="opacity-70 text-sm">
+                <Trans>Keine Anbieter konfiguriert.</Trans>
+              </p>
+            ) : (
+              <ul className="menu gap-1" data-testid="provider-list">
+                {providers.map((provider) => {
+                  const providerModels = modelsByProvider.get(provider.id) ?? [];
+                  const activationLabel = ACTIVATION_LABELS[provider.activation] ?? provider.activation;
+                  return (
+                    <li key={provider.id} data-testid={`provider-row-${provider.id}`}>
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="badge badge-ghost badge-sm">{activationLabel}</span>
+                          <span className="flex-1 break-all">{provider.name}</span>
+                        </div>
+                        {providerModels.length === 0 ? (
+                          <span className="text-xs opacity-70">
+                            <Trans>Keine Modelle.</Trans>
+                          </span>
+                        ) : (
+                          <span className="text-xs opacity-70 break-all">
+                            {providerModels.map((m) => m.name).join(", ")}
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+                {orphanModels.length > 0 && (
+                  <li data-testid="provider-row-orphans">
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="badge badge-ghost badge-sm">
+                          <Trans>Ohne Anbieter</Trans>
+                        </span>
+                      </div>
+                      <span className="text-xs opacity-70 break-all">
+                        {orphanModels.map((m) => m.name).join(", ")}
+                      </span>
+                    </div>
+                  </li>
+                )}
               </ul>
             )}
           </div>

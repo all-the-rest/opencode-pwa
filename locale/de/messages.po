@@ -53,11 +53,24 @@ msgstr "Agent"
 msgid "Agent der Session"
 msgstr "Agent der Session"
 
+#: src/pages/AgentDetail.tsx
+msgid "Agent konnte nicht geladen werden: {error}"
+msgstr "Agent konnte nicht geladen werden: {error}"
+
+#: src/pages/AgentDetail.tsx
+msgid "Agent konnte nicht geladen werden."
+msgstr "Agent konnte nicht geladen werden."
+
+#: src/pages/AgentDetail.tsx
+msgid "Agent: {agentName}"
+msgstr "Agent: {agentName}"
+
 #: src/pages/SessionDetail.tsx
 msgid "Agent/Modell konnte nicht gewechselt werden: {pickerError}"
 msgstr "Agent/Modell konnte nicht gewechselt werden: {pickerError}"
 
 #: src/pages/Dashboard.tsx
+#: src/pages/ServerTools.tsx
 msgid "Agenten"
 msgstr "Agenten"
 
@@ -109,6 +122,10 @@ msgid "Ältere Nachrichten laden ({remaining} weitere)"
 msgstr "Ältere Nachrichten laden ({remaining} weitere)"
 
 #: src/pages/ServerTools.tsx
+msgid "Anbieter & Modelle"
+msgstr "Anbieter & Modelle"
+
+#: src/pages/ServerTools.tsx
 msgid "Anfrage {requestId} ablehnen"
 msgstr "Anfrage {requestId} ablehnen"
 
@@ -119,6 +136,18 @@ msgstr "Anfrage {requestId} einmalig erlauben"
 #: src/pages/ServerTools.tsx
 msgid "Anfragen des Servers, die auf eine Entscheidung warten. Erlaubt wird einmalig („Einmal erlauben“) oder abgelehnt."
 msgstr "Anfragen des Servers, die auf eine Entscheidung warten. Erlaubt wird einmalig („Einmal erlauben“) oder abgelehnt."
+
+#: src/pages/SessionDetail.tsx
+msgid "Angehängte Dateien"
+msgstr "Angehängte Dateien"
+
+#: src/pages/SessionDetail.tsx
+msgid "Anhang {path} entfernen"
+msgstr "Anhang {path} entfernen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Anhängen"
+msgstr "Anhängen"
 
 #: src/pages/ServerTools.tsx
 #~ msgid "Anzeige auf {MAX_FILE_PREVIEW_CHARS} Zeichen gekürzt."
@@ -133,6 +162,7 @@ msgid "Anzeigen"
 msgstr "Anzeigen"
 
 #: src/pages/ServerDetail.tsx
+#: src/pages/SessionDetail.tsx
 msgid "Ausblenden"
 msgstr "Ausblenden"
 
@@ -182,6 +212,14 @@ msgstr "Ausgabe von {label} ausblenden"
 #: src/pages/ServerDetail.tsx
 msgid "Ausgabe wird geladen …"
 msgstr "Ausgabe wird geladen …"
+
+#: src/pages/SessionDetail.tsx
+msgid "Ausgabe:"
+msgstr "Ausgabe:"
+
+#: src/pages/AgentDetail.tsx
+msgid "Ausgabeformate:"
+msgstr "Ausgabeformate:"
 
 #: src/pages/Settings.tsx
 msgid "Basis-URL"
@@ -236,6 +274,10 @@ msgstr "Bitte warten …"
 msgid "blockiert"
 msgstr "blockiert"
 
+#: src/pages/SessionDetail.tsx
+msgid "Cache (lesen/schreiben):"
+msgstr "Cache (lesen/schreiben):"
+
 #. placeholder {0}: p.label
 #: src/pages/ServerDetail.tsx
 #~ msgid "Connect-Token für {0} anfordern"
@@ -249,9 +291,21 @@ msgstr "Connect-Token für {label} anfordern"
 msgid "Datei"
 msgstr "Datei"
 
+#: src/pages/SessionDetail.tsx
+msgid "Datei an den Prompt anhängen"
+msgstr "Datei an den Prompt anhängen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Datei anhängen"
+msgstr "Datei anhängen"
+
 #: src/pages/ServerTools.tsx
 msgid "Datei konnte nicht gelesen werden."
 msgstr "Datei konnte nicht gelesen werden."
+
+#: src/pages/SessionDetail.tsx
+msgid "Dateiänderungen"
+msgstr "Dateiänderungen"
 
 #: src/pages/ServerTools.tsx
 msgid "Dateien"
@@ -261,9 +315,21 @@ msgstr "Dateien"
 msgid "Dateien konnten nicht geladen werden."
 msgstr "Dateien konnten nicht geladen werden."
 
+#: src/pages/SessionDetail.tsx
+msgid "Dateipfad anhängen, z. B. src/app.ts"
+msgstr "Dateipfad anhängen, z. B. src/app.ts"
+
 #: src/pages/ServerTools.tsx
 msgid "Dateivorschau schließen"
 msgstr "Dateivorschau schließen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Denken:"
+msgstr "Denken:"
+
+#: src/pages/SessionDetail.tsx
+msgid "Der Kontext wird zusammengefasst, um Platz zu schaffen. Fortfahren?"
+msgstr "Der Kontext wird zusammengefasst, um Platz zu schaffen. Fortfahren?"
 
 #: src/pages/ServerDetail.tsx
 msgid "Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions und Aktionen sind bis dahin deaktiviert."
@@ -272,6 +338,10 @@ msgstr "Der Server bleibt gespeichert und wird automatisch weiter versucht. Sess
 #: src/pages/Dashboard.tsx
 msgid "Details öffnen"
 msgstr "Details öffnen"
+
+#: src/pages/ServerTools.tsx
+msgid "Details zu Agent {agentLabel} anzeigen"
+msgstr "Details zu Agent {agentLabel} anzeigen"
 
 #: src/hooks/useEventNotifications.ts
 msgid "Die Ausführung war erfolgreich{suffix}."
@@ -308,6 +378,10 @@ msgid "Die Session „{label}“ wird endgültig gelöscht. Fortfahren?"
 msgstr "Die Session „{label}“ wird endgültig gelöscht. Fortfahren?"
 
 #: src/pages/SessionDetail.tsx
+msgid "Die Session wird ab dem aktuellen Stand kopiert. Die neue Session öffnet sich danach automatisch. Fortfahren?"
+msgstr "Die Session wird ab dem aktuellen Stand kopiert. Die neue Session öffnet sich danach automatisch. Fortfahren?"
+
+#: src/pages/SessionDetail.tsx
 msgid "Die Session wird endgültig gelöscht. Fortfahren?"
 msgstr "Die Session wird endgültig gelöscht. Fortfahren?"
 
@@ -328,6 +402,22 @@ msgstr "Diese Berechtigungsanfrage hat keine Session und kann nicht beantwortet 
 msgid "Dieser Browser unterstützt keine Benachrichtigungen."
 msgstr "Dieser Browser unterstützt keine Benachrichtigungen."
 
+#: src/pages/SessionDetail.tsx
+msgid "Diffs anzeigen"
+msgstr "Diffs anzeigen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Diffs ausblenden"
+msgstr "Diffs ausblenden"
+
+#: src/pages/SessionDetail.tsx
+msgid "Diffs konnten nicht geladen werden: {diffError}"
+msgstr "Diffs konnten nicht geladen werden: {diffError}"
+
+#: src/pages/SessionDetail.tsx
+msgid "Diffs konnten nicht geladen werden."
+msgstr "Diffs konnten nicht geladen werden."
+
 #: src/pages/ServerTools.tsx
 msgid "Ein Verzeichnis zurück"
 msgstr "Ein Verzeichnis zurück"
@@ -335,6 +425,14 @@ msgstr "Ein Verzeichnis zurück"
 #: src/hooks/useEventNotifications.ts
 msgid "Eine Aktion wartet auf Freigabe{suffix}."
 msgstr "Eine Aktion wartet auf Freigabe{suffix}."
+
+#: src/pages/SessionDetail.tsx
+msgid "Eingabe:"
+msgstr "Eingabe:"
+
+#: src/pages/AgentDetail.tsx
+msgid "Eingabeformate:"
+msgstr "Eingabeformate:"
 
 #: src/hooks/useEventNotifications.ts
 msgid "Eingang für Session{suffix}."
@@ -354,6 +452,18 @@ msgstr "Einstellungen"
 msgid "Entfernen"
 msgstr "Entfernen"
 
+#: src/pages/AgentDetail.tsx
+msgid "Fähigkeiten"
+msgstr "Fähigkeiten"
+
+#: src/pages/SessionDetail.tsx
+msgid "Forken"
+msgstr "Forken"
+
+#: src/pages/SessionDetail.tsx
+msgid "Forken fehlgeschlagen."
+msgstr "Forken fehlgeschlagen."
+
 #: src/hooks/useEventNotifications.ts
 msgid "Freigabe beantwortet"
 msgstr "Freigabe beantwortet"
@@ -361,6 +471,14 @@ msgstr "Freigabe beantwortet"
 #: src/hooks/useEventNotifications.ts
 msgid "Freigabe erforderlich"
 msgstr "Freigabe erforderlich"
+
+#: src/pages/SessionDetail.tsx
+msgid "Gesamt (alle Sessions): {totalPrompts} Prompts, {totalSteps} Schritte"
+msgstr "Gesamt (alle Sessions): {totalPrompts} Prompts, {totalSteps} Schritte"
+
+#: src/pages/SessionDetail.tsx
+msgid "Gesamt (alle Sessions): {totalPrompts} Prompts, {totalSteps} Schritte, {totalToolCalls} Werkzeugaufrufe"
+msgstr "Gesamt (alle Sessions): {totalPrompts} Prompts, {totalSteps} Schritte, {totalToolCalls} Werkzeugaufrufe"
 
 #. placeholder {0}: servers.length
 #: src/pages/Settings.tsx
@@ -391,6 +509,18 @@ msgstr "Hinweis: Terminal-Rendering folgt nach MVP. Ein Connect-Token kann pro P
 msgid "Hinzufügen"
 msgstr "Hinzufügen"
 
+#: src/pages/AgentDetail.tsx
+msgid "Ja"
+msgstr "Ja"
+
+#: src/pages/AgentDetail.tsx
+msgid "Kein Modell zugewiesen."
+msgstr "Kein Modell zugewiesen."
+
+#: src/pages/SessionDetail.tsx
+msgid "Kein Patch verfügbar."
+msgstr "Kein Patch verfügbar."
+
 #: src/pages/ServerTools.tsx
 msgid "Kein Projekt ausgewählt."
 msgstr "Kein Projekt ausgewählt."
@@ -408,8 +538,24 @@ msgid "Kein Server ausgewählt. Wähle oben einen Server."
 msgstr "Kein Server ausgewählt. Wähle oben einen Server."
 
 #: src/pages/ServerTools.tsx
+msgid "Keine Agenten."
+msgstr "Keine Agenten."
+
+#: src/pages/ServerTools.tsx
+msgid "Keine Anbieter konfiguriert."
+msgstr "Keine Anbieter konfiguriert."
+
+#: src/pages/ServerTools.tsx
 msgid "Keine Änderungen."
 msgstr "Keine Änderungen."
+
+#: src/pages/AgentDetail.tsx
+msgid "Keine Angaben zu den Modellfähigkeiten."
+msgstr "Keine Angaben zu den Modellfähigkeiten."
+
+#: src/pages/SessionDetail.tsx
+msgid "Keine Dateiänderungen in dieser Session."
+msgstr "Keine Dateiänderungen in dieser Session."
 
 #: src/pages/ServerTools.tsx
 msgid "Keine Einträge."
@@ -418,6 +564,10 @@ msgstr "Keine Einträge."
 #: src/pages/ServerTools.tsx
 msgid "Keine MCP-Server konfiguriert."
 msgstr "Keine MCP-Server konfiguriert."
+
+#: src/pages/ServerTools.tsx
+msgid "Keine Modelle."
+msgstr "Keine Modelle."
 
 #: src/pages/SessionDetail.tsx
 msgid "Keine Nachrichten vorhanden."
@@ -459,6 +609,10 @@ msgstr "Keiner"
 msgid "Keines"
 msgstr "Keines"
 
+#: src/pages/SessionDetail.tsx
+msgid "Kompaktieren"
+msgstr "Kompaktieren"
+
 #: src/hooks/useEventNotifications.ts
 msgid "Kompaktierung fehlgeschlagen"
 msgstr "Kompaktierung fehlgeschlagen"
@@ -471,10 +625,23 @@ msgstr "Kompaktierung fertig"
 msgid "Kompaktierung gescheitert{suffix}."
 msgstr "Kompaktierung gescheitert{suffix}."
 
+#: src/pages/SessionDetail.tsx
+msgid "Kompaktierung gestartet – der Kontext wird zusammengefasst."
+msgstr "Kompaktierung gestartet – der Kontext wird zusammengefasst."
+
 #: src/hooks/useEventNotifications.ts
 msgid "Kompaktierung läuft"
 msgstr "Kompaktierung läuft"
 
+#: src/pages/SessionDetail.tsx
+msgid "Kontext der Session zusammenfassen"
+msgstr "Kontext der Session zusammenfassen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Kosten:"
+msgstr "Kosten:"
+
+#: src/pages/AgentDetail.tsx
 #: src/pages/Dashboard.tsx
 #: src/pages/ServerDetail.tsx
 #: src/pages/ServerTools.tsx
@@ -535,6 +702,7 @@ msgstr "Menü öffnen"
 msgid "Menü schließen"
 msgstr "Menü schließen"
 
+#: src/pages/AgentDetail.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Modell"
 msgstr "Modell"
@@ -542,6 +710,10 @@ msgstr "Modell"
 #: src/pages/SessionDetail.tsx
 msgid "Modell der Session"
 msgstr "Modell der Session"
+
+#: src/pages/AgentDetail.tsx
+msgid "Modus:"
+msgstr "Modus:"
 
 #: src/pages/ServerDetail.tsx
 msgid "Nach Agent filtern"
@@ -575,6 +747,10 @@ msgstr "Name"
 msgid "Name und Basis-URL sind Pflichtfelder."
 msgstr "Name und Basis-URL sind Pflichtfelder."
 
+#: src/pages/AgentDetail.tsx
+msgid "Nein"
+msgstr "Nein"
+
 #: src/hooks/useEventNotifications.ts
 msgid "Neue Inbox-Nachricht"
 msgstr "Neue Inbox-Nachricht"
@@ -604,9 +780,21 @@ msgstr "Noch keine Server angelegt."
 msgid "Noch keine Server vorhanden."
 msgstr "Noch keine Server vorhanden."
 
+#: src/pages/SessionDetail.tsx
+msgid "Noch keine Verbrauchsdaten vorhanden."
+msgstr "Noch keine Verbrauchsdaten vorhanden."
+
 #: src/pages/ServerTools.tsx
 msgid "Nur lesend: geänderte Dateien des Server-Verzeichnisses."
 msgstr "Nur lesend: geänderte Dateien des Server-Verzeichnisses."
+
+#: src/pages/ServerTools.tsx
+msgid "Nur lesend: konfigurierte Agenten mit Detailansicht."
+msgstr "Nur lesend: konfigurierte Agenten mit Detailansicht."
+
+#: src/pages/ServerTools.tsx
+msgid "Nur lesend: konfigurierte Anbieter mit ihren Modellen."
+msgstr "Nur lesend: konfigurierte Anbieter mit ihren Modellen."
 
 #: src/pages/ServerTools.tsx
 msgid "Nur lesend: konfigurierte MCP-Server und ihr Verbindungsstatus."
@@ -632,6 +820,10 @@ msgstr "Offline: zwischengespeicherte Nachrichten werden angezeigt ({error})."
 #: src/pages/ServerTools.tsx
 msgid "Öffnen"
 msgstr "Öffnen"
+
+#: src/pages/ServerTools.tsx
+msgid "Ohne Anbieter"
+msgstr "Ohne Anbieter"
 
 #: src/pages/ServerTools.tsx
 msgid "Ordner"
@@ -724,10 +916,19 @@ msgstr "Server hinzufügen"
 msgid "Server ist offline – Aktionen sind deaktiviert."
 msgstr "Server ist offline – Aktionen sind deaktiviert."
 
+#: src/pages/AgentDetail.tsx
 #: src/pages/ServerDetail.tsx
 #: src/pages/ServerTools.tsx
 msgid "Server nicht gefunden"
 msgstr "Server nicht gefunden"
+
+#: src/pages/ServerTools.tsx
+msgid "Server offline – Anbieterliste ist deaktiviert."
+msgstr "Server offline – Anbieterliste ist deaktiviert."
+
+#: src/pages/AgentDetail.tsx
+msgid "Server offline – Neuladen ist deaktiviert."
+msgstr "Server offline – Neuladen ist deaktiviert."
 
 #: src/pages/Dashboard.tsx
 #: src/pages/ServerDetail.tsx
@@ -797,6 +998,10 @@ msgstr "Session {label} löschen"
 msgid "Session {label} unterbrechen"
 msgstr "Session {label} unterbrechen"
 
+#: src/pages/SessionDetail.tsx
+msgid "Session ab dem aktuellen Stand kopieren"
+msgstr "Session ab dem aktuellen Stand kopieren"
+
 #: src/hooks/useEventNotifications.ts
 msgid "Session bereit"
 msgstr "Session bereit"
@@ -809,6 +1014,10 @@ msgstr "Session entfernt{suffix}."
 msgid "Session erstellt{suffix}."
 msgstr "Session erstellt{suffix}."
 
+#: src/pages/SessionDetail.tsx
+msgid "Session forken"
+msgstr "Session forken"
+
 #: src/hooks/useEventNotifications.ts
 msgid "Session gelöscht"
 msgstr "Session gelöscht"
@@ -816,6 +1025,10 @@ msgstr "Session gelöscht"
 #: src/hooks/useEventNotifications.ts
 msgid "Session ist bereit{suffix}."
 msgstr "Session ist bereit{suffix}."
+
+#: src/pages/SessionDetail.tsx
+msgid "Session kompaktieren"
+msgstr "Session kompaktieren"
 
 #: src/hooks/useEventNotifications.ts
 msgid "Session kompaktiert{suffix}."
@@ -923,8 +1136,16 @@ msgid "Unbekannter Fehler"
 msgstr "Unbekannter Fehler"
 
 #: src/lib/opencode.ts
+msgid "Unerwartete Agent-Antwort vom Server."
+msgstr "Unerwartete Agent-Antwort vom Server."
+
+#: src/lib/opencode.ts
 msgid "Unerwartete Session-Antwort vom Server."
 msgstr "Unerwartete Session-Antwort vom Server."
+
+#: src/lib/opencode.ts
+msgid "Unerwartete Statistik-Antwort vom Server."
+msgstr "Unerwartete Statistik-Antwort vom Server."
 
 #: src/pages/ServerDetail.tsx
 msgid "Unerwartete Token-Antwort vom Server."
@@ -934,6 +1155,10 @@ msgstr "Unerwartete Token-Antwort vom Server."
 #: src/pages/SessionDetail.tsx
 msgid "Unterbrechen"
 msgstr "Unterbrechen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Verbrauch dieser Session"
+msgstr "Verbrauch dieser Session"
 
 #: src/pages/Dashboard.tsx
 msgid "Version"
@@ -947,6 +1172,10 @@ msgstr "Web PWA for Opencode · <0>GitHub-Repository</0>"
 msgid "Weitere Sessions laden"
 msgstr "Weitere Sessions laden"
 
+#: src/pages/AgentDetail.tsx
+msgid "Werkzeuge:"
+msgstr "Werkzeuge:"
+
 #: src/pages/ServerTools.tsx
 msgid "Worktrees"
 msgstr "Worktrees"
@@ -959,10 +1188,15 @@ msgstr "z. B. Heimserver"
 msgid "Zurück"
 msgstr "Zurück"
 
+#: src/pages/AgentDetail.tsx
+msgid "Zurück zu den Server-Werkzeugen"
+msgstr "Zurück zu den Server-Werkzeugen"
+
 #: src/pages/ServerTools.tsx
 msgid "Zurück zu den Serverdetails"
 msgstr "Zurück zu den Serverdetails"
 
+#: src/pages/AgentDetail.tsx
 #: src/pages/ServerDetail.tsx
 #: src/pages/ServerTools.tsx
 msgid "Zurück zur Übersicht"

@@ -6,7 +6,11 @@ import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import Icon from "../components/Icon.tsx";
 import { SESSION_PAGE_SIZE, useSessionMessages, type SessionMessageSource } from "../hooks/useSessionMessages.ts";
 import {
+  compactSession,
+  forkSession,
+  getSessionDiff,
   getSessionInfo,
+  getSessionStats,
   interruptSession,
   listAgents,
   listModels,
@@ -16,10 +20,16 @@ import {
   sendPrompt,
   switchSessionAgent,
   switchSessionModel,
+  toPromptFileUri,
   type AgentOption,
   type ModelOption,
+  type PromptFileAttachment,
   type ServerConfig,
+  type SessionDiffRow,
+  type SessionStatsSummary,
+  type TokenUsage,
 } from "../lib/opencode.ts";
+import { isActionEnabled, reachability } from "../lib/offline.ts";
 import { useServers } from "../state/servers.tsx";
 
 function countLabel(total: number, source: SessionMessageSource): string {
@@ -53,9 +63,19 @@ export default function SessionDetail() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState<"interrupt" | "delete" | null>(null);
+  const [attachments, setAttachments] = useState<string[]>([]);
+  const [attachmentInput, setAttachmentInput] = useState("");
+  const [confirm, setConfirm] = useState<"interrupt" | "delete" | "fork" | "compact" | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [sessionTokens, setSessionTokens] = useState<TokenUsage | null>(null);
+  const [sessionCost, setSessionCost] = useState<number | null>(null);
+  const [globalStats, setGlobalStats] = useState<SessionStatsSummary | null>(null);
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [diffRows, setDiffRows] = useState<SessionDiffRow[] | null>(null);
+  const [diffLoading, setDiffLoading] = useState(false);
+  const [diffError, setDiffError] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const [agents, setAgents] = useState<AgentOption[]>([]);
@@ -91,7 +111,8 @@ export default function SessionDetail() {
       listAgents(activeServer),
       listModels(activeServer),
       getSessionInfo(activeServer, activeSession),
-    ]).then(([agentsRes, modelsRes, infoRes]) => {
+      getSessionStats(activeServer),
+    ]).then(([agentsRes, modelsRes, infoRes, statsRes]) => {
       if (cancelled) return;
       const firstError = agentsRes.error ?? modelsRes.error ?? infoRes.error;
       if (firstError !== null) {
@@ -102,6 +123,8 @@ export default function SessionDetail() {
       setModels(modelsRes.data ?? []);
       const info = infoRes.data;
       setCurrentAgent(info?.agent ?? null);
+      setSessionTokens(info?.tokens ?? null);
+      setSessionCost(info?.cost ?? null);
       setCurrentModelValue(
         info?.model === null || info?.model === undefined
           ? ""
@@ -111,6 +134,9 @@ export default function SessionDetail() {
               ...(info.model.variant !== undefined ? { variant: info.model.variant } : {}),
             }),
       );
+      // The global stats call is best-effort: the per-session card above must
+      // not fail just because the aggregate endpoint is unreachable.
+      if (statsRes.error === null) setGlobalStats(statsRes.data);
     });
     return () => {
       cancelled = true;
@@ -122,6 +148,42 @@ export default function SessionDetail() {
   const showList = !showInitialSpinner && (total > 0 || error !== null);
   const serverName = server?.name ?? "";
   const remaining = total - visible.length;
+  const { offline } = reachability(error);
+  const canFork = isActionEnabled(offline, "session-fork");
+  const canCompact = isActionEnabled(offline, "session-compact");
+  const canDiff = isActionEnabled(offline, "session-diff");
+  // Lingui messages take plain variables only — no member access or calls —
+  // so every formatted stat is hoisted here (see `lingui/no-expression-in-message`).
+  const statInput = (sessionTokens?.input ?? 0).toLocaleString("de");
+  const statOutput = (sessionTokens?.output ?? 0).toLocaleString("de");
+  const statReasoning = (sessionTokens?.reasoning ?? 0).toLocaleString("de");
+  const statCacheRead = (sessionTokens?.cacheRead ?? 0).toLocaleString("de");
+  const statCacheWrite = (sessionTokens?.cacheWrite ?? 0).toLocaleString("de");
+  const statCost = (sessionCost ?? 0).toLocaleString("de", {
+    style: "currency",
+    currency: "USD",
+  });
+  const totalPrompts = globalStats?.prompts ?? 0;
+  const totalSteps = globalStats?.steps ?? 0;
+  const totalToolCalls = globalStats?.toolCalls ?? null;
+
+  function addAttachment() {
+    const path = attachmentInput.trim().replace(/^\/+/, "");
+    if (path === "" || attachments.includes(path)) return;
+    setAttachments((prev) => [...prev, path]);
+    setAttachmentInput("");
+  }
+
+  function removeAttachment(path: string) {
+    setAttachments((prev) => prev.filter((entry) => entry !== path));
+  }
+
+  function toAttachmentFiles(paths: string[]): PromptFileAttachment[] {
+    return paths.map((path) => ({
+      uri: toPromptFileUri(path),
+      name: path.split("/").pop() ?? path,
+    }));
+  }
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -130,11 +192,14 @@ export default function SessionDetail() {
     if (text === "" || sending) return;
     const activeServer: ServerConfig = server;
     const activeSession: string = id;
+    const files = toAttachmentFiles(attachments);
     setDraft("");
+    setAttachments([]);
+    setAttachmentInput("");
     setSendError(null);
     const localID = addLocalMessage("user", text);
     setSending(true);
-    const result = await sendPrompt(activeServer, activeSession, text);
+    const result = await sendPrompt(activeServer, activeSession, text, files);
     setSending(false);
     // The server echo carries its own message id, so the optimistic entry
     // is dropped and replaced by the live/network message shortly after.
@@ -142,6 +207,7 @@ export default function SessionDetail() {
     if (result.error !== null) {
       setSendError(result.error);
       setDraft(text);
+      setAttachments(attachments);
     }
   }
 
@@ -183,6 +249,29 @@ export default function SessionDetail() {
     const activeSession: string = id;
     setConfirmBusy(true);
     setConfirmError(null);
+    setActionNotice(null);
+    if (confirm === "fork") {
+      const result = await forkSession(activeServer, activeSession);
+      setConfirmBusy(false);
+      if (result.error !== null || result.data === null) {
+        setConfirmError(result.error ?? t`Forken fehlgeschlagen.`);
+        return;
+      }
+      setConfirm(null);
+      navigate(`/sessions/${result.data.id}?server=${activeServer.id}`);
+      return;
+    }
+    if (confirm === "compact") {
+      const result = await compactSession(activeServer, activeSession);
+      setConfirmBusy(false);
+      if (result.error !== null) {
+        setConfirmError(result.error);
+        return;
+      }
+      setConfirm(null);
+      setActionNotice(t`Kompaktierung gestartet – der Kontext wird zusammengefasst.`);
+      return;
+    }
     const result =
       confirm === "interrupt"
         ? await interruptSession(activeServer, activeSession)
@@ -200,6 +289,25 @@ export default function SessionDetail() {
     setConfirm(null);
   }
 
+  async function toggleDiff() {
+    if (diffOpen) {
+      setDiffOpen(false);
+      return;
+    }
+    setDiffOpen(true);
+    if (diffRows !== null || diffLoading) return;
+    if (server === null || server === undefined || id === undefined) return;
+    setDiffLoading(true);
+    setDiffError(null);
+    const result = await getSessionDiff(server, id);
+    setDiffLoading(false);
+    if (result.error !== null || result.data === null) {
+      setDiffError(result.error ?? t`Diffs konnten nicht geladen werden.`);
+      return;
+    }
+    setDiffRows(result.data);
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -208,6 +316,32 @@ export default function SessionDetail() {
         </h1>
         {server !== null && server !== undefined && id !== undefined && (
           <>
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              title={t`Session ab dem aktuellen Stand kopieren`}
+              aria-label={t`Session forken`}
+              disabled={!canFork}
+              onClick={() => {
+                setConfirmError(null);
+                setConfirm("fork");
+              }}
+            >
+              <Icon name="fork" /> <Trans>Forken</Trans>
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              title={t`Kontext der Session zusammenfassen`}
+              aria-label={t`Session kompaktieren`}
+              disabled={!canCompact}
+              onClick={() => {
+                setConfirmError(null);
+                setConfirm("compact");
+              }}
+            >
+              <Icon name="compact" /> <Trans>Kompaktieren</Trans>
+            </button>
             <button
               type="button"
               className="btn btn-sm btn-ghost"
@@ -303,6 +437,78 @@ export default function SessionDetail() {
               </span>
             </div>
           )}
+          {actionNotice !== null && (
+            <div className="alert alert-success">
+              <span>{actionNotice}</span>
+            </div>
+          )}
+          <section className="card bg-base-200 shadow" data-testid="session-stats">
+            <div className="card-body py-3">
+              <h2 className="card-title text-base">
+                <Trans>Verbrauch dieser Session</Trans>
+              </h2>
+              {sessionTokens === null && sessionCost === null ? (
+                <p className="opacity-70 text-sm">
+                  <Trans>Noch keine Verbrauchsdaten vorhanden.</Trans>
+                </p>
+              ) : (
+                <dl className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  <div className="flex gap-1">
+                    <dt className="opacity-70">
+                      <Trans>Eingabe:</Trans>
+                    </dt>
+                    <dd className="font-mono" data-testid="session-stats-input">
+                      {statInput}
+                    </dd>
+                  </div>
+                  <div className="flex gap-1">
+                    <dt className="opacity-70">
+                      <Trans>Ausgabe:</Trans>
+                    </dt>
+                    <dd className="font-mono" data-testid="session-stats-output">
+                      {statOutput}
+                    </dd>
+                  </div>
+                  <div className="flex gap-1">
+                    <dt className="opacity-70">
+                      <Trans>Denken:</Trans>
+                    </dt>
+                    <dd className="font-mono">{statReasoning}</dd>
+                  </div>
+                  <div className="flex gap-1">
+                    <dt className="opacity-70">
+                      <Trans>Cache (lesen/schreiben):</Trans>
+                    </dt>
+                    <dd className="font-mono">
+                      {statCacheRead}/{statCacheWrite}
+                    </dd>
+                  </div>
+                  <div className="flex gap-1">
+                    <dt className="opacity-70">
+                      <Trans>Kosten:</Trans>
+                    </dt>
+                    <dd className="font-mono" data-testid="session-stats-cost">
+                      {statCost}
+                    </dd>
+                  </div>
+                </dl>
+              )}
+              {globalStats !== null && (
+                <p className="text-xs opacity-70">
+                  {totalToolCalls === null ? (
+                    <Trans>
+                      Gesamt (alle Sessions): {totalPrompts} Prompts, {totalSteps} Schritte
+                    </Trans>
+                  ) : (
+                    <Trans>
+                      Gesamt (alle Sessions): {totalPrompts} Prompts, {totalSteps} Schritte,{" "}
+                      {totalToolCalls} Werkzeugaufrufe
+                    </Trans>
+                  )}
+                </p>
+              )}
+            </div>
+          </section>
           <p className="text-sm opacity-70" data-testid="cache-status">
             {loading && total === 0 ? (
               <Trans>Nachrichten werden geladen …</Trans>
@@ -384,6 +590,114 @@ export default function SessionDetail() {
               <Trans>Ältere Nachrichten laden ({remaining} weitere)</Trans>
             </button>
           )}
+          <section className="card bg-base-200 shadow" data-testid="session-diff-section">
+            <div className="card-body py-3">
+              <div className="flex items-center gap-2">
+                <h2 className="card-title text-base flex-1">
+                  <Trans>Dateiänderungen</Trans>
+                </h2>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  disabled={!canDiff}
+                  aria-expanded={diffOpen}
+                  aria-label={diffOpen ? t`Diffs ausblenden` : t`Diffs anzeigen`}
+                  onClick={() => void toggleDiff()}
+                >
+                  {diffOpen ? <Trans>Ausblenden</Trans> : <Trans>Diffs anzeigen</Trans>}
+                </button>
+              </div>
+              {diffOpen && (
+                <>
+                  {diffLoading && (
+                    <span className="loading loading-spinner loading-sm" aria-label={t`Lädt`} />
+                  )}
+                  {diffError !== null && (
+                    <div className="alert alert-warning">
+                      <span>
+                        <Trans>Diffs konnten nicht geladen werden: {diffError}</Trans>
+                      </span>
+                    </div>
+                  )}
+                  {!diffLoading && diffError === null && diffRows !== null && diffRows.length === 0 && (
+                    <p className="opacity-70 text-sm">
+                      <Trans>Keine Dateiänderungen in dieser Session.</Trans>
+                    </p>
+                  )}
+                  {!diffLoading && diffError === null && diffRows !== null && diffRows.length > 0 && (
+                    <ul className="flex flex-col gap-2" data-testid="session-diff">
+                      {diffRows.map((row) => (
+                        <li key={row.file} data-testid={`session-diff-${row.file}`}>
+                          <details className="collapse collapse-arrow bg-base-300 rounded">
+                            <summary className="collapse-title text-sm font-mono flex items-center gap-2">
+                              <span className="flex-1 break-all">{row.file}</span>
+                              <span className="text-xs opacity-70">
+                                {`+${row.additions} −${row.deletions}`}
+                              </span>
+                            </summary>
+                            <div className="collapse-content">
+                              <pre className="text-xs whitespace-pre-wrap break-words max-h-72 overflow-auto">
+                                {row.patch === "" ? t`Kein Patch verfügbar.` : row.patch}
+                              </pre>
+                            </div>
+                          </details>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
+          </section>
+          {attachments.length > 0 && (
+            <ul className="flex flex-wrap gap-1" data-testid="prompt-attachments" aria-label={t`Angehängte Dateien`}>
+              {attachments.map((path) => (
+                <li
+                  key={path}
+                  data-testid={`prompt-attachment-${path}`}
+                  className="badge badge-primary gap-1 py-3"
+                >
+                  <Icon name="file" />
+                  <span className="font-mono max-w-48 truncate" title={path}>
+                    {path}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-ghost"
+                    aria-label={t`Anhang ${path} entfernen`}
+                    onClick={() => removeAttachment(path)}
+                  >
+                    <Icon name="close" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              addAttachment();
+            }}
+          >
+            <input
+              className="input input-bordered input-sm flex-1 font-mono"
+              placeholder={t`Dateipfad anhängen, z. B. src/app.ts`}
+              value={attachmentInput}
+              onChange={(e) => setAttachmentInput(e.target.value)}
+              aria-label={t`Datei an den Prompt anhängen`}
+              disabled={sending}
+              data-testid="prompt-attachment-input"
+            />
+            <button
+              type="submit"
+              className="btn btn-sm btn-ghost"
+              disabled={sending || attachmentInput.trim() === ""}
+              aria-label={t`Datei anhängen`}
+            >
+              <Icon name="plus" /> <Trans>Anhängen</Trans>
+            </button>
+          </form>
           <form className="flex gap-2 sticky bottom-4" onSubmit={(e) => void handleSend(e)}>
             <input
               className="input input-bordered flex-1"
@@ -406,13 +720,33 @@ export default function SessionDetail() {
       )}
       <ConfirmDialog
         open={confirm !== null}
-        title={confirm === "delete" ? t`Session löschen` : t`Ausführung unterbrechen`}
+        title={
+          confirm === "delete"
+            ? t`Session löschen`
+            : confirm === "fork"
+              ? t`Session forken`
+              : confirm === "compact"
+                ? t`Session kompaktieren`
+                : t`Ausführung unterbrechen`
+        }
         message={
           confirm === "delete"
             ? t`Die Session wird endgültig gelöscht. Fortfahren?`
-            : t`Die laufende Ausführung wird unterbrochen. Die Session selbst bleibt erhalten. Fortfahren?`
+            : confirm === "fork"
+              ? t`Die Session wird ab dem aktuellen Stand kopiert. Die neue Session öffnet sich danach automatisch. Fortfahren?`
+              : confirm === "compact"
+                ? t`Der Kontext wird zusammengefasst, um Platz zu schaffen. Fortfahren?`
+                : t`Die laufende Ausführung wird unterbrochen. Die Session selbst bleibt erhalten. Fortfahren?`
         }
-        confirmLabel={confirm === "delete" ? t`Löschen` : t`Unterbrechen`}
+        confirmLabel={
+          confirm === "delete"
+            ? t`Löschen`
+            : confirm === "fork"
+              ? t`Forken`
+              : confirm === "compact"
+                ? t`Kompaktieren`
+                : t`Unterbrechen`
+        }
         busy={confirmBusy}
         error={confirmError}
         onConfirm={() => void handleConfirm()}

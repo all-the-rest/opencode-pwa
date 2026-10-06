@@ -196,6 +196,29 @@ export interface ModelOption {
   providerID: string;
   name: string;
   variant?: string;
+  /** Kept from `ModelInfo.capabilities` for read-only overviews (agent detail). */
+  capabilities?: ModelCapabilities;
+}
+
+/** What a model can do (`ModelInfo.capabilities`): tool use + I/O formats. */
+export interface ModelCapabilities {
+  tools: boolean;
+  input: string[];
+  output: string[];
+}
+
+/** Normalize a `capabilities` payload; null when the entry carries none. */
+export function extractModelCapabilities(value: unknown): ModelCapabilities | null {
+  if (value === null || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  if (typeof record["tools"] !== "boolean") return null;
+  const input = record["input"];
+  const output = record["output"];
+  return {
+    tools: record["tools"],
+    input: Array.isArray(input) ? input.filter((e): e is string => typeof e === "string") : [],
+    output: Array.isArray(output) ? output.filter((e): e is string => typeof e === "string") : [],
+  };
 }
 
 /**
@@ -250,9 +273,14 @@ export function extractModels(value: unknown): ModelOption[] {
     const id = readString(record, ["modelID", "modelId", "id"]) ?? `modell-${index}`;
     const name = readString(record, ["name", "canonical"]) ?? id;
     const single = readString(record, ["variant"]) ?? undefined;
+    const capabilities = extractModelCapabilities(record["capabilities"]) ?? undefined;
+    const extra: { variant?: string; capabilities?: ModelCapabilities } = {
+      ...(single !== undefined ? { variant: single } : {}),
+      ...(capabilities !== undefined ? { capabilities } : {}),
+    };
     const variants = Array.isArray(record["variants"]) ? (record["variants"] as unknown[]) : [];
     if (variants.length === 0) {
-      options.push({ id, providerID, name, ...(single !== undefined ? { variant: single } : {}) });
+      options.push({ id, providerID, name, ...extra });
       return;
     }
     const expanded: ModelOption[] = [];
@@ -262,11 +290,11 @@ export function extractModels(value: unknown): ModelOption[] {
           ? readString(variant as Record<string, unknown>, ["id"])
           : null;
       if (variantID === null) continue;
-      expanded.push({ id, providerID, name: `${name} (${variantID})`, variant: variantID });
+      expanded.push({ id, providerID, name: `${name} (${variantID})`, ...extra, variant: variantID });
     }
     // Never drop the model just because its variants were unusable.
     if (expanded.length === 0) {
-      options.push({ id, providerID, name, ...(single !== undefined ? { variant: single } : {}) });
+      options.push({ id, providerID, name, ...extra });
       return;
     }
     options.push(...expanded);
@@ -396,9 +424,55 @@ export function removeSession(server: ServerConfig, sessionID: string) {
   return guarded(async () => (await makeClient(server)).session.remove({ sessionID }));
 }
 
+/** One workspace file attached to a prompt (`SessionPromptInput.files`). */
+export interface PromptFileAttachment {
+  uri: string;
+  name?: string;
+}
+
+/**
+ * Build a `files[].uri` for a workspace path. The API takes URIs, so a bare
+ * project-relative path becomes `file:///...`; anything already shaped like a
+ * URI passes through untouched.
+ */
+export function toPromptFileUri(path: string): string {
+  const trimmed = path.trim();
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed)) return trimmed;
+  return `file://${trimmed.startsWith("/") ? "" : "/"}${trimmed}`;
+}
+
 /** POST /api/session/{sessionID}/prompt — send a prompt (returns the inbox entry). */
-export function sendPrompt(server: ServerConfig, sessionID: string, text: string) {
-  return guarded(async () => (await makeClient(server)).session.prompt({ sessionID, text }));
+export function sendPrompt(
+  server: ServerConfig,
+  sessionID: string,
+  text: string,
+  files: PromptFileAttachment[] = [],
+) {
+  return guarded(async () => {
+    const input =
+      files.length > 0 ? { sessionID, text, files } : { sessionID, text };
+    try {
+      // Verified against the installed package: `session.prompt()` accepts
+      // `files` (node_modules/@opencode/client `SessionPromptInput.files`).
+      return await (await makeClient(server)).session.prompt(input);
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/prompt`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
+          body: JSON.stringify(input),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `POST /api/session/${sessionID}/prompt failed with status ${response.status}`,
+        );
+      }
+      return response.json();
+    }
+  });
 }
 
 export interface SessionModelRef {
@@ -434,6 +508,45 @@ export interface SessionInfo {
   id: string;
   agent: string | null;
   model: SessionModelRef | null;
+  /** Per-session token usage (`session.get` carries it on `SessionInfo`). */
+  tokens: TokenUsage | null;
+  /** Per-session cost in USD (`SessionInfo.cost`), null when absent. */
+  cost: number | null;
+}
+
+/** Token counters as the server reports them (`TokenUsageInfo`). */
+export interface TokenUsage {
+  input: number;
+  output: number;
+  reasoning: number;
+  cacheRead: number;
+  cacheWrite: number;
+}
+
+/** Normalize a `TokenUsageInfo` payload; null when no counters exist. */
+export function extractTokenUsage(value: unknown): TokenUsage | null {
+  if (value === null || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const input = record["input"];
+  const output = record["output"];
+  if (typeof input !== "number" || typeof output !== "number") return null;
+  const reasoning = record["reasoning"];
+  const cache = record["cache"];
+  const cacheRecord =
+    cache !== null && typeof cache === "object" ? (cache as Record<string, unknown>) : null;
+  const cacheRead = cacheRecord?.["read"];
+  const cacheWrite = cacheRecord?.["write"];
+  return {
+    input,
+    output,
+    reasoning: typeof reasoning === "number" ? reasoning : 0,
+    cacheRead: typeof cacheRead === "number" ? cacheRead : 0,
+    cacheWrite: typeof cacheWrite === "number" ? cacheWrite : 0,
+  };
+}
+
+function readCost(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 export function extractSessionInfo(value: unknown): SessionInfo | null {
@@ -457,7 +570,7 @@ export function extractSessionInfo(value: unknown): SessionInfo | null {
       model = { id: modelID, providerID, ...(variant !== undefined ? { variant } : {}) };
     }
   }
-  return { id, agent, model };
+  return { id, agent, model, tokens: extractTokenUsage(data["tokens"]), cost: readCost(data["cost"]) };
 }
 
 async function fetchSessionInfoRaw(server: ServerConfig, sessionID: string): Promise<unknown> {
@@ -905,5 +1018,326 @@ export function replyPermission(
       decision,
     });
     return true;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Parity batch 2: session stats, diff, fork/compact, agent detail, providers
+//
+// The REST paths below are verified against the installed package
+// (`node_modules/@opencode/client`): `session.stats` hits
+// `/api/experimental/session/stats`, `session.diff` hits
+// `/api/session/{id}/diff`, `session.fork` hits `/api/session/{id}/fork`,
+// `session.compact` hits `/api/session/{id}/compact`, `agent.get` hits
+// `/api/agent/{agentID}` and `provider.list` hits `/api/provider`.
+// Every call keeps the direct-fetch fallback, because the client throws on an
+// unreachable server before any HTTP status exists.
+//
+// Note on `session.stats`: it is a *global* aggregate (all sessions, optional
+// from/to/project/timezone filter) — there is no per-session stats endpoint.
+// The per-session card on SessionDetail therefore reads tokens/cost from
+// `session.get` (`SessionInfo.tokens`, `SessionInfo.cost`) and only takes the
+// tool totals from the global stats call, labelled as such.
+// ---------------------------------------------------------------------------
+
+/** Global usage aggregate (`SessionStatsInfo`), normalized for the stats card. */
+export interface SessionStatsSummary {
+  sessions: number;
+  prompts: number;
+  steps: number;
+  tokens: TokenUsage;
+  cost: number;
+  /** Tool calls across all sessions; null when the server sent no tool totals. */
+  toolCalls: number | null;
+}
+
+function readCount(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+/** Normalize a `session.stats` payload (`SessionStatsInfo`, possibly enveloped). */
+export function extractSessionStats(value: unknown): SessionStatsSummary | null {
+  if (value === null || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const data =
+    record["data"] !== null && typeof record["data"] === "object"
+      ? (record["data"] as Record<string, unknown>)
+      : record;
+  if (typeof data["prompts"] !== "number" && typeof data["sessions"] !== "number") return null;
+  let toolCalls: number | null = null;
+  const tools = data["tools"];
+  if (tools !== null && typeof tools === "object") {
+    const totals = (tools as Record<string, unknown>)["totals"];
+    if (totals !== null && typeof totals === "object") {
+      const calls = (totals as Record<string, unknown>)["calls"];
+      if (typeof calls === "number") toolCalls = calls;
+    }
+  }
+  return {
+    sessions: readCount(data["sessions"]),
+    prompts: readCount(data["prompts"]),
+    steps: readCount(data["steps"]),
+    tokens: extractTokenUsage(data["tokens"]) ?? {
+      input: 0,
+      output: 0,
+      reasoning: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+    },
+    cost: readCost(data["cost"]) ?? 0,
+    toolCalls,
+  };
+}
+
+/** GET /api/experimental/session/stats — global usage aggregate. */
+export function getSessionStats(server: ServerConfig): Promise<ApiResult<SessionStatsSummary>> {
+  return guarded(async () => {
+    try {
+      // Verified against the installed package: `session.stats()` exists
+      // (node_modules/@opencode/client `session: { ..., stats, ... }`).
+      const stats = extractSessionStats(await (await makeClient(server)).session.stats());
+      if (stats === null) throw new Error(t`Unerwartete Statistik-Antwort vom Server.`);
+      return stats;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Unerwartete Statistik")) throw error;
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/api/experimental/session/stats`, {
+        headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) },
+      });
+      if (!response.ok) {
+        throw new Error(`GET /api/experimental/session/stats failed with status ${response.status}`);
+      }
+      const stats = extractSessionStats(await response.json());
+      if (stats === null) throw new Error(t`Unerwartete Statistik-Antwort vom Server.`);
+      return stats;
+    }
+  });
+}
+
+export interface SessionDiffRow {
+  file: string;
+  patch: string;
+  additions: number;
+  deletions: number;
+  status: "added" | "deleted" | "modified";
+}
+
+/** Normalize a `session.diff` payload (`FileDiffInfo[]`, possibly enveloped). */
+export function extractSessionDiff(value: unknown): SessionDiffRow[] {
+  return extractListRows(value).map((entry, index) => {
+    if (entry === null || typeof entry !== "object") {
+      return { file: String(entry), patch: "", additions: 0, deletions: 0, status: "modified" as const };
+    }
+    const record = entry as Record<string, unknown>;
+    const raw = readString(record, ["status"]);
+    const status: SessionDiffRow["status"] =
+      raw === "added" || raw === "deleted" || raw === "modified" ? raw : "modified";
+    const patch = record["patch"];
+    const additions = record["additions"];
+    const deletions = record["deletions"];
+    return {
+      file: readString(record, ["file", "path", "name"]) ?? `datei-${index}`,
+      patch: typeof patch === "string" ? patch : "",
+      additions: typeof additions === "number" ? additions : 0,
+      deletions: typeof deletions === "number" ? deletions : 0,
+      status,
+    };
+  });
+}
+
+/** GET /api/session/{sessionID}/diff — file diffs of one session, read-only. */
+export function getSessionDiff(
+  server: ServerConfig,
+  sessionID: string,
+): Promise<ApiResult<SessionDiffRow[]>> {
+  return guarded(async () => {
+    try {
+      // Verified against the installed package: `session.diff()` exists
+      // (node_modules/@opencode/client `session: { ..., diff, ... }`).
+      return extractSessionDiff(await (await makeClient(server)).session.diff({ sessionID }));
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/diff`,
+        { headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) } },
+      );
+      if (!response.ok) {
+        throw new Error(`GET /api/session/${sessionID}/diff failed with status ${response.status}`);
+      }
+      return extractSessionDiff(await response.json());
+    }
+  });
+}
+
+/** POST /api/session/{sessionID}/fork — fork the session, returns the new one. */
+export function forkSession(
+  server: ServerConfig,
+  sessionID: string,
+): Promise<ApiResult<SessionInfo>> {
+  return guarded(async () => {
+    try {
+      // Verified against the installed package: `session.fork()` exists
+      // (node_modules/@opencode/client `session: { ..., fork, ... }`).
+      const info = extractSessionInfo(await (await makeClient(server)).session.fork({ sessionID }));
+      if (info === null) throw new Error(t`Unerwartete Session-Antwort vom Server.`);
+      return info;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Unerwartete Session")) throw error;
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/fork`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
+          body: JSON.stringify({}),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(`POST /api/session/${sessionID}/fork failed with status ${response.status}`);
+      }
+      const info = extractSessionInfo(await response.json());
+      if (info === null) throw new Error(t`Unerwartete Session-Antwort vom Server.`);
+      return info;
+    }
+  });
+}
+
+/** POST /api/session/{sessionID}/compact — compact the session context. */
+export function compactSession(server: ServerConfig, sessionID: string) {
+  return guarded(async () => {
+    try {
+      // Verified against the installed package: `session.compact()` exists
+      // (node_modules/@opencode/client `session: { ..., compact, ... }`).
+      await (await makeClient(server)).session.compact({ sessionID });
+      return;
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/compact`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
+          body: JSON.stringify({}),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `POST /api/session/${sessionID}/compact failed with status ${response.status}`,
+        );
+      }
+    }
+  });
+}
+
+/** One agent in full (`AgentInfo`): identity, model ref and behaviour flags. */
+export interface AgentDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  mode: string;
+  model: SessionModelRef | null;
+}
+
+/** Normalize an `agent.get` payload (`{ location, data: AgentInfo }`). */
+export function extractAgentDetail(value: unknown): AgentDetail | null {
+  if (value === null || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const data =
+    record["data"] !== null && typeof record["data"] === "object"
+      ? (record["data"] as Record<string, unknown>)
+      : record;
+  const id = readString(data, ["id"]);
+  if (id === null) return null;
+  let model: SessionModelRef | null = null;
+  const modelRaw: unknown = data["model"];
+  if (modelRaw !== null && typeof modelRaw === "object") {
+    const modelRecord = modelRaw as Record<string, unknown>;
+    const modelID = readString(modelRecord, ["id", "modelID"]);
+    const providerID = readString(modelRecord, ["providerID", "providerId"]);
+    if (modelID !== null && providerID !== null) {
+      const variant = readString(modelRecord, ["variant"]) ?? undefined;
+      model = { id: modelID, providerID, ...(variant !== undefined ? { variant } : {}) };
+    }
+  }
+  return {
+    id,
+    name: readString(data, ["name"]) ?? id,
+    description: readString(data, ["description"]),
+    mode: readString(data, ["mode"]) ?? "all",
+    model,
+  };
+}
+
+/** GET /api/agent/{agentID} — full detail of one agent. */
+export function getAgentDetail(
+  server: ServerConfig,
+  agentID: string,
+): Promise<ApiResult<AgentDetail>> {
+  return guarded(async () => {
+    try {
+      // Verified against the installed package: `agent.get()` exists
+      // (node_modules/@opencode/client `agent: { list, get }`).
+      const detail = extractAgentDetail(
+        await (await makeClient(server)).agent.get({ agentID }),
+      );
+      if (detail === null) throw new Error(t`Unerwartete Agent-Antwort vom Server.`);
+      return detail;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Unerwartete Agent")) throw error;
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/api/agent/${encodeURIComponent(agentID)}`, {
+        headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) },
+      });
+      if (!response.ok) {
+        throw new Error(`GET /api/agent/${agentID} failed with status ${response.status}`);
+      }
+      const detail = extractAgentDetail(await response.json());
+      if (detail === null) throw new Error(t`Unerwartete Agent-Antwort vom Server.`);
+      return detail;
+    }
+  });
+}
+
+export interface ProviderRow {
+  id: string;
+  name: string;
+  /** `activation` as reported (`auto`/`enabled`/`disabled`), raw otherwise. */
+  activation: string;
+}
+
+/** Normalize a `provider.list` payload (`{ location, data: [...] }`). */
+export function extractProviders(value: unknown): ProviderRow[] {
+  return extractListRows(value).map((entry, index) => {
+    if (entry === null || typeof entry !== "object") {
+      const fallback = `anbieter-${index}`;
+      return { id: fallback, name: String(entry) === "" ? fallback : String(entry), activation: "auto" };
+    }
+    const record = entry as Record<string, unknown>;
+    const id = readString(record, ["id"]) ?? `anbieter-${index}`;
+    return {
+      id,
+      name: readString(record, ["name", "canonical"]) ?? id,
+      activation: readString(record, ["activation"]) ?? "auto",
+    };
+  });
+}
+
+/** GET /api/provider — configured providers, read-only. */
+export function listProviders(server: ServerConfig): Promise<ApiResult<ProviderRow[]>> {
+  return guarded(async () => {
+    try {
+      // Verified against the installed package: `provider.list()` exists
+      // (node_modules/@opencode/client `provider: { list, get }`).
+      return extractProviders(await (await makeClient(server)).provider.list());
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/api/provider`, {
+        headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) },
+      });
+      if (!response.ok) {
+        throw new Error(`GET /api/provider failed with status ${response.status}`);
+      }
+      return extractProviders(await response.json());
+    }
   });
 }

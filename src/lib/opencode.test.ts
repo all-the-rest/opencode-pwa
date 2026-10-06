@@ -1,29 +1,42 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   basicAuthHeader,
+  compactSession,
   decodeFileContent,
+  extractAgentDetail,
   extractAgents,
   extractFileEntries,
   extractListRows,
   extractMcpServers,
+  extractModelCapabilities,
   extractModels,
   extractPermissionRequests,
   extractProjects,
+  extractProviders,
   extractPtyTicket,
+  extractSessionDiff,
   extractSessionInfo,
   extractSessionPage,
   extractSessionRows,
+  extractSessionStats,
   extractShellOutput,
+  extractTokenUsage,
   extractVcsStatus,
   extractWorktrees,
   filterSessionRows,
+  forkSession,
+  getAgentDetail,
+  getSessionDiff,
+  getSessionStats,
   groupSessionsByProject,
   listAgents,
+  listProviders,
   MAX_FILE_PREVIEW_CHARS,
   modelOptionValue,
   parseModelOptionValue,
   sessionAgentKey,
   sessionProjectKey,
+  toPromptFileUri,
   UNASSIGNED_PROJECT_KEY,
   type ServerConfig,
   type ServerCredentials,
@@ -357,6 +370,8 @@ describe("extractSessionInfo", () => {
       id: "ses-1",
       agent: "coder",
       model: { id: "claude-sonnet-4", providerID: "anthropic" },
+      tokens: null,
+      cost: null,
     });
   });
 
@@ -367,8 +382,39 @@ describe("extractSessionInfo", () => {
       id: "ses-2",
       agent: null,
       model: { id: "gpt-5", providerID: "openai", variant: "x" },
+      tokens: null,
+      cost: null,
     });
-    expect(extractSessionInfo({ id: "ses-3" })).toEqual({ id: "ses-3", agent: null, model: null });
+    expect(extractSessionInfo({ id: "ses-3" })).toEqual({
+      id: "ses-3",
+      agent: null,
+      model: null,
+      tokens: null,
+      cost: null,
+    });
+  });
+
+  it("reads per-session token usage and cost", () => {
+    expect(
+      extractSessionInfo({
+        id: "ses-4",
+        tokens: { input: 10, output: 5, reasoning: 2, cache: { read: 3, write: 1 } },
+        cost: 0.012,
+      }),
+    ).toEqual({
+      id: "ses-4",
+      agent: null,
+      model: null,
+      tokens: { input: 10, output: 5, reasoning: 2, cacheRead: 3, cacheWrite: 1 },
+      cost: 0.012,
+    });
+    expect(extractSessionInfo({ id: "ses-5", tokens: null, cost: "teuer" })).toEqual({
+      id: "ses-5",
+      agent: null,
+      model: null,
+      tokens: null,
+      cost: null,
+    });
   });
 
   it("returns null when no id exists", () => {
@@ -608,5 +654,282 @@ describe("listAgents direct-fetch fallback", () => {
     expect(result.error).toBeNull();
     expect(result.data).toEqual([{ id: "coder", name: "coder", mode: "all" }]);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("extractTokenUsage", () => {
+  it("normalizes TokenUsageInfo with its cache counters", () => {
+    expect(
+      extractTokenUsage({ input: 7, output: 3, reasoning: 1, cache: { read: 2, write: 0 } }),
+    ).toEqual({ input: 7, output: 3, reasoning: 1, cacheRead: 2, cacheWrite: 0 });
+  });
+
+  it("defaults missing counters to zero and rejects junk", () => {
+    expect(extractTokenUsage({ input: 7, output: 3 })).toEqual({
+      input: 7,
+      output: 3,
+      reasoning: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+    });
+    expect(extractTokenUsage(null)).toBeNull();
+    expect(extractTokenUsage({ output: 3 })).toBeNull();
+    expect(extractTokenUsage({ input: "viel", output: 3 })).toBeNull();
+  });
+});
+
+describe("extractSessionStats", () => {
+  it("normalizes the global aggregate with tool totals", () => {
+    expect(
+      extractSessionStats({
+        data: {
+          sessions: 4,
+          prompts: 20,
+          steps: 55,
+          tokens: { input: 100, output: 50, reasoning: 0, cache: { read: 10, write: 5 } },
+          cost: 1.23,
+          tools: { mode: "summary", totals: { calls: 9, succeeded: 8, failed: 1, unfinished: 0 } },
+        },
+      }),
+    ).toEqual({
+      sessions: 4,
+      prompts: 20,
+      steps: 55,
+      tokens: { input: 100, output: 50, reasoning: 0, cacheRead: 10, cacheWrite: 5 },
+      cost: 1.23,
+      toolCalls: 9,
+    });
+  });
+
+  it("tolerates missing tool totals and rejects junk", () => {
+    expect(extractSessionStats({ sessions: 1, prompts: 2, steps: 3 })).toMatchObject({
+      sessions: 1,
+      toolCalls: null,
+      cost: 0,
+    });
+    expect(extractSessionStats(null)).toBeNull();
+    expect(extractSessionStats({})).toBeNull();
+  });
+});
+
+describe("extractSessionDiff", () => {
+  it("normalizes FileDiffInfo rows", () => {
+    expect(
+      extractSessionDiff({
+        data: [
+          { file: "src/a.ts", patch: "@@ -1 +1 @@", additions: 2, deletions: 1, status: "modified" },
+          { file: "src/neu.ts", patch: "...", additions: 5, deletions: 0, status: "added" },
+        ],
+      }),
+    ).toEqual([
+      { file: "src/a.ts", patch: "@@ -1 +1 @@", additions: 2, deletions: 1, status: "modified" },
+      { file: "src/neu.ts", patch: "...", additions: 5, deletions: 0, status: "added" },
+    ]);
+  });
+
+  it("falls back to modified for unknown states", () => {
+    expect(extractSessionDiff([{ file: "x", status: "quatsch" }, null])).toEqual([
+      { file: "x", patch: "", additions: 0, deletions: 0, status: "modified" },
+      { file: "null", patch: "", additions: 0, deletions: 0, status: "modified" },
+    ]);
+    expect(extractSessionDiff(null)).toEqual([]);
+  });
+});
+
+describe("extractAgentDetail", () => {
+  it("reads an enveloped AgentInfo with its model ref", () => {
+    expect(
+      extractAgentDetail({
+        location: {},
+        data: {
+          id: "coder",
+          name: "Coder",
+          description: "Schreibt Code",
+          mode: "primary",
+          model: { id: "claude-sonnet-4", providerID: "anthropic" },
+        },
+      }),
+    ).toEqual({
+      id: "coder",
+      name: "Coder",
+      description: "Schreibt Code",
+      mode: "primary",
+      model: { id: "claude-sonnet-4", providerID: "anthropic" },
+    });
+  });
+
+  it("tolerates missing detail fields", () => {
+    expect(extractAgentDetail({ id: "a" })).toEqual({
+      id: "a",
+      name: "a",
+      description: null,
+      mode: "all",
+      model: null,
+    });
+    expect(extractAgentDetail(null)).toBeNull();
+    expect(extractAgentDetail({ name: "ohne-id" })).toBeNull();
+  });
+});
+
+describe("extractProviders", () => {
+  it("reads id, name and activation from an envelope", () => {
+    expect(
+      extractProviders({
+        location: {},
+        data: [
+          { id: "anthropic", name: "Anthropic", activation: "enabled" },
+          { id: "openai" },
+        ],
+      }),
+    ).toEqual([
+      { id: "anthropic", name: "Anthropic", activation: "enabled" },
+      { id: "openai", name: "openai", activation: "auto" },
+    ]);
+  });
+
+  it("tolerates junk rows", () => {
+    expect(extractProviders([null])).toEqual([
+      { id: "anbieter-0", name: "null", activation: "auto" },
+    ]);
+    expect(extractProviders(null)).toEqual([]);
+  });
+});
+
+describe("extractModelCapabilities", () => {
+  it("reads tools and I/O formats", () => {
+    expect(
+      extractModelCapabilities({ tools: true, input: ["text", "image"], output: ["text"] }),
+    ).toEqual({ tools: true, input: ["text", "image"], output: ["text"] });
+  });
+
+  it("rejects payloads without a tools flag", () => {
+    expect(extractModelCapabilities(null)).toBeNull();
+    expect(extractModelCapabilities({ input: ["text"] })).toBeNull();
+  });
+
+  it("keeps capabilities on model options for overviews", () => {
+    const options = extractModels([
+      { modelID: "m1", providerID: "p", capabilities: { tools: false, input: ["text"], output: ["text"] } },
+    ]);
+    expect(options[0]?.capabilities).toEqual({ tools: false, input: ["text"], output: ["text"] });
+  });
+});
+
+describe("toPromptFileUri", () => {
+  it("turns workspace paths into file URIs", () => {
+    expect(toPromptFileUri("src/app.ts")).toBe("file:///src/app.ts");
+    expect(toPromptFileUri("/repo/src/app.ts")).toBe("file:///repo/src/app.ts");
+  });
+
+  it("passes real URIs through", () => {
+    expect(toPromptFileUri("file:///repo/a.ts")).toBe("file:///repo/a.ts");
+  });
+});
+
+describe("parity batch 2 direct-fetch fallbacks", () => {
+  const parityServer: ServerConfig = {
+    id: "s1",
+    name: "Lokal",
+    baseUrl: "http://x.local/",
+    username: "",
+  };
+
+  function jsonResponse(payload: unknown, status = 200): Response {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      json: async () => payload,
+    } as unknown as Response;
+  }
+
+  beforeEach(() => {
+    agentListMock.mockReset();
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("fetches global stats from /api/experimental/session/stats when the client throws", async () => {
+    // The mocked client only implements `agent.list` — every other namespace
+    // is undefined, so the client call throws and the fetch path runs.
+    fetchMock.mockResolvedValue(jsonResponse({ data: { sessions: 2, prompts: 5, steps: 9 } }));
+    const result = await getSessionStats(parityServer);
+    expect(result.error).toBeNull();
+    expect(result.data).toMatchObject({ sessions: 2, prompts: 5, steps: 9, toolCalls: null });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://x.local/api/experimental/session/stats",
+      expect.objectContaining({
+        headers: expect.objectContaining({ accept: "application/json" }),
+      }),
+    );
+  });
+
+  it("fetches the session diff from /api/session/{id}/diff", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ data: [{ file: "a.ts", patch: "p", additions: 1, deletions: 0, status: "added" }] }),
+    );
+    const result = await getSessionDiff(parityServer, "ses-1");
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual([
+      { file: "a.ts", patch: "p", additions: 1, deletions: 0, status: "added" },
+    ]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://x.local/api/session/ses-1/diff",
+      expect.objectContaining({
+        headers: expect.objectContaining({ accept: "application/json" }),
+      }),
+    );
+  });
+
+  it("forks via POST /api/session/{id}/fork and returns the new session", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ data: { id: "ses-2" } }));
+    const result = await forkSession(parityServer, "ses-1");
+    expect(result.error).toBeNull();
+    expect(result.data).toMatchObject({ id: "ses-2" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://x.local/api/session/ses-1/fork",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("compacts via POST /api/session/{id}/compact", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({}));
+    const result = await compactSession(parityServer, "ses-1");
+    expect(result.error).toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://x.local/api/session/ses-1/compact",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("reads one agent from /api/agent/{id}", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ data: { id: "coder", name: "Coder", mode: "primary" } }));
+    const result = await getAgentDetail(parityServer, "coder");
+    expect(result.error).toBeNull();
+    expect(result.data).toMatchObject({ id: "coder", name: "Coder", mode: "primary" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://x.local/api/agent/coder",
+      expect.objectContaining({
+        headers: expect.objectContaining({ accept: "application/json" }),
+      }),
+    );
+  });
+
+  it("lists providers from /api/provider", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ data: [{ id: "anthropic", name: "Anthropic", activation: "enabled" }] }),
+    );
+    const result = await listProviders(parityServer);
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual([{ id: "anthropic", name: "Anthropic", activation: "enabled" }]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://x.local/api/provider",
+      expect.objectContaining({
+        headers: expect.objectContaining({ accept: "application/json" }),
+      }),
+    );
   });
 });
