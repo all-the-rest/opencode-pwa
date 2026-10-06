@@ -1,6 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import Icon from "../components/Icon.tsx";
@@ -77,6 +77,57 @@ export default function SessionDetail() {
   const [diffLoading, setDiffLoading] = useState(false);
   const [diffError, setDiffError] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const [showJumpToNewest, setShowJumpToNewest] = useState(false);
+  // Window-scroll chat behavior: stick to the bottom for new live messages
+  // only while the user is already near the bottom (never yank while
+  // reading history). `loadMore` prepends older messages and restores the
+  // offset instead.
+  const nearBottomRef = useRef(true);
+  const initialScrollDoneRef = useRef(false);
+  const preserveOffsetRef = useRef<number | null>(null);
+  const stickAfterSendRef = useRef(false);
+  const prevVisibleLengthRef = useRef(0);
+
+  function scrollToBottom() {
+    window.scrollTo(0, document.documentElement.scrollHeight);
+  }
+
+  function isNearBottom(): boolean {
+    return window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 200;
+  }
+
+  useEffect(() => {
+    function onScroll() {
+      nearBottomRef.current = isNearBottom();
+      setShowJumpToNewest(!nearBottomRef.current && total > 0);
+    }
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [total]);
+
+  useEffect(() => {
+    if (loading || visible.length === 0) return;
+    if (preserveOffsetRef.current !== null) {
+      window.scrollTo(0, document.documentElement.scrollHeight - preserveOffsetRef.current);
+      preserveOffsetRef.current = null;
+      prevVisibleLengthRef.current = visible.length;
+      return;
+    }
+    const grew = visible.length > prevVisibleLengthRef.current;
+    prevVisibleLengthRef.current = visible.length;
+    if (!initialScrollDoneRef.current) {
+      initialScrollDoneRef.current = true;
+      scrollToBottom();
+      return;
+    }
+    if (grew && (nearBottomRef.current || stickAfterSendRef.current)) {
+      stickAfterSendRef.current = false;
+      scrollToBottom();
+    }
+  }, [loading, visible.length]);
 
   const [agents, setAgents] = useState<AgentOption[]>([]);
   const [models, setModels] = useState<ModelOption[]>([]);
@@ -86,12 +137,27 @@ export default function SessionDetail() {
   const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
+    initialScrollDoneRef.current = false;
+    prevVisibleLengthRef.current = 0;
+    preserveOffsetRef.current = null;
+    nearBottomRef.current = true;
+    setShowJumpToNewest(false);
+  }, [id]);
+
+  const handleLoadMore = useCallback(() => {
+    // Remember the distance from the viewport top to the page bottom so the
+    // view stays anchored on the same message after older ones prepend.
+    preserveOffsetRef.current = document.documentElement.scrollHeight - window.scrollY;
+    loadMore();
+  }, [loadMore]);
+
+  useEffect(() => {
     const node = sentinelRef.current;
     if (node === null || !hasMore) return;
     const observer = new IntersectionObserver(
       (entries) => {
         const first = entries[0];
-        if (first !== undefined && first.isIntersecting) loadMore();
+        if (first !== undefined && first.isIntersecting) handleLoadMore();
       },
       { rootMargin: "400px" },
     );
@@ -99,7 +165,7 @@ export default function SessionDetail() {
     return () => {
       observer.disconnect();
     };
-  }, [hasMore, loadMore]);
+  }, [hasMore, handleLoadMore]);
 
   useEffect(() => {
     if (server === null || server === undefined || id === undefined) return;
@@ -198,6 +264,7 @@ export default function SessionDetail() {
     setAttachmentInput("");
     setSendError(null);
     const localID = addLocalMessage("user", text);
+    stickAfterSendRef.current = true;
     setSending(true);
     const result = await sendPrompt(activeServer, activeSession, text, files);
     setSending(false);
@@ -558,36 +625,49 @@ export default function SessionDetail() {
             </p>
           )}
           {showList && total > 0 && (
-            <ul className="flex flex-col gap-2" data-testid="message-list">
-              {visible.map((m) => (
-                <li
-                  key={m.messageID}
-                  data-testid="message-item"
-                  className={m.role === "user" ? "chat chat-end" : "chat chat-start"}
+            <>
+              <div ref={sentinelRef} data-testid="load-more-sentinel" aria-hidden="true" />
+              {hasMore && (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm self-center"
+                  onClick={handleLoadMore}
+                  aria-label={t`Ältere Nachrichten laden`}
                 >
-                  <div className="chat-header text-xs opacity-70 mb-1">{m.role}</div>
-                  <div
-                    className={
-                      m.role === "user"
-                        ? "chat-bubble chat-bubble-primary whitespace-pre-wrap break-words"
-                        : "chat-bubble chat-bubble-neutral whitespace-pre-wrap break-words"
-                    }
+                  <Trans>Ältere Nachrichten laden ({remaining} weitere)</Trans>
+                </button>
+              )}
+              <ul className="flex flex-col gap-2" data-testid="message-list">
+                {visible.map((m) => (
+                  <li
+                    key={m.messageID}
+                    data-testid="message-item"
+                    className={m.role === "user" ? "chat chat-end" : "chat chat-start"}
                   >
-                    {m.text}
-                  </div>
-                </li>
-              ))}
-            </ul>
+                    <div className="chat-header text-xs opacity-70 mb-1">{m.role}</div>
+                    <div
+                      className={
+                        m.role === "user"
+                          ? "chat-bubble chat-bubble-primary whitespace-pre-wrap break-words"
+                          : "chat-bubble chat-bubble-neutral whitespace-pre-wrap break-words"
+                      }
+                    >
+                      {m.text}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
-          <div ref={sentinelRef} data-testid="load-more-sentinel" aria-hidden="true" />
-          {hasMore && (
+          {showJumpToNewest && (
             <button
               type="button"
-              className="btn btn-ghost btn-sm self-center"
-              onClick={loadMore}
-              aria-label={t`Ältere Nachrichten laden`}
+              className="btn btn-primary btn-sm fixed bottom-24 right-4 z-10 shadow-lg"
+              onClick={scrollToBottom}
+              aria-label={t`Zu neuesten springen`}
+              data-testid="jump-to-newest"
             >
-              <Trans>Ältere Nachrichten laden ({remaining} weitere)</Trans>
+              <Trans>Neueste ↓</Trans>
             </button>
           )}
           <section className="card bg-base-200 shadow" data-testid="session-diff-section">

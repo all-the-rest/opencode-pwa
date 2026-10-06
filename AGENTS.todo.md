@@ -41,7 +41,6 @@ Stand: 2026-10-06. W6 umgesetzt (Tresor + Parität-Rest). Nur offene TODOs.
       unter Last (geteilter Host, parallele Playwright-Suite) sporadisch ein
       `locator.click`-Timeout. Nur mit `--repeat-each` reproduzierbar, die vollen
       Läufe waren grün.
-- [ ] Feed-Richtung: neueste zuerst, ältere laden am Listenende (Standard-Feed); „nach oben nachladen" wörtlich ist nicht umgesetzt – Owner-Entscheidung ausstehend.
 - [ ] Manuell prüfen: CI-Runs auf `main` nach jedem Push (frühe Phase: nicht auf CI warten).
 
 ## Später (MVP+1)

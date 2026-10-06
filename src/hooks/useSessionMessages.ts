@@ -19,7 +19,7 @@ export const SESSION_PAGE_SIZE = 25;
 export type SessionMessageSource = "live" | "cache" | "offline-cache";
 
 export interface SessionMessageState {
-  /** Newest first, current infinite-scroll window. */
+  /** Oldest first (chat style), current infinite-scroll window (newest N). */
   visible: CachedMessage[];
   total: number;
   hasMore: boolean;
@@ -31,7 +31,7 @@ export interface SessionMessageState {
   error: string | null;
   source: SessionMessageSource;
   liveCount: number;
-  /** Optimistically insert a local message (newest first); returns the temp id. */
+  /** Optimistically append a local message (oldest first, newest at bottom); returns the temp id. */
   addLocalMessage: (role: string, text: string) => string;
   /** Drop a local message again (e.g. after a failed send). */
   dropLocalMessage: (localID: string) => void;
@@ -39,7 +39,9 @@ export interface SessionMessageState {
 
 /**
  * Cache-first session messages: IndexedDB first, then network merge, then
- * live event updates. Newest first; paging grows via `loadMore`.
+ * live event updates. Chat style: oldest first, newest at the bottom; the
+ * window holds the newest N (`all` stays newest-first for eviction), paging
+ * grows upward via `loadMore`.
  */
 export function useSessionMessages(
   server: ServerConfig | null | undefined,
@@ -159,7 +161,8 @@ export function useSessionMessages(
         created: now,
       };
       // Deliberately not persisted: the server echo arrives with its own id.
-      setLocal((prev) => [message, ...prev.filter((m) => m.messageID !== localID)]);
+      // Oldest first (chat style): local messages append at the bottom.
+      setLocal((prev) => [...prev.filter((m) => m.messageID !== localID), message]);
       return localID;
     },
     [server, sessionID],
@@ -169,7 +172,9 @@ export function useSessionMessages(
     setLocal((prev) => prev.filter((m) => m.messageID !== localID));
   }, []);
 
-  const visible = [...local, ...all.slice(0, visibleCount)];
+  // Chat style: `all` is newest-first (eviction order), the visible window
+  // shows the newest N oldest-first — oldest at the top, newest at the bottom.
+  const visible = [...all.slice(0, visibleCount)].reverse().concat(local);
   return {
     visible,
     total: local.length + all.length,

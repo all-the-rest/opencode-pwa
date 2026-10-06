@@ -767,6 +767,10 @@ msgstr "Neuer Shell-Befehl"
 msgid "Neues Passwort (Basic Auth)"
 msgstr "Neues Passwort (Basic Auth)"
 
+#: src/pages/SessionDetail.tsx
+msgid "Neueste ↓"
+msgstr "Neueste ↓"
+
 #: src/pages/Settings.tsx
 msgid "nicht angefragt"
 msgstr "nicht angefragt"
@@ -1183,6 +1187,10 @@ msgstr "Worktrees"
 #: src/pages/Settings.tsx
 msgid "z. B. Heimserver"
 msgstr "z. B. Heimserver"
+
+#: src/pages/SessionDetail.tsx
+msgid "Zu neuesten springen"
+msgstr "Zu neuesten springen"
 
 #: src/pages/ServerTools.tsx
 msgid "Zurück"

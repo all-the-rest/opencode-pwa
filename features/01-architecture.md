@@ -48,8 +48,10 @@
   cache-first in IndexedDB (`src/lib/messageCache.ts`, key
   `serverID:sessionID:messageID`, newest ~200 per session with eviction).
   `SessionDetail` renders from the cache first, merges the network result,
-  and pages newest-first with infinite scroll (`useSessionMessages` +
-  IntersectionObserver).
+  and pages chat-style — oldest at the top, newest at the bottom, older
+  messages load upward via a top sentinel (`useSessionMessages` +
+  IntersectionObserver, auto-scroll to bottom only while near the bottom,
+  "Zu neuesten springen" button when scrolled up).
 
 ## PWA, Icons & Offline-Strategie
 
@@ -65,7 +67,10 @@
 - Nachrichten-Cache statt API-Cache: `useSessionMessages` liest zuerst
   IndexedDB (`src/lib/messageCache.ts`, Key `serverID:sessionID:messageID`,
   neueste ~200/Session mit Eviction), merged dann das Netz-Ergebnis und zeigt
-  bei Netzfehlern den `offline-cache`-Banner. Dashboard/ServerDetail zeigen
+  bei Netzfehlern den `offline-cache`-Banner. Intern bleibt alles
+  neueste-zuerst (Eviction-Reihenfolge); nur das sichtbare Fenster wird
+  Chat-Stil älteste-zuerst gedreht (neueste unten, nach oben nachladen).
+  Dashboard/ServerDetail zeigen
   Warnbanner (`Server offline oder nicht erreichbar`) statt zu crashen.
 
 ## Routing

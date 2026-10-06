@@ -111,7 +111,7 @@ async function loadAll(page: Page) {
 }
 
 test(
-  "neueste zuerst, aeltere per Infinite Scroll nachladen",
+  "aelteste oben, neueste unten, aeltere per Infinite Scroll nach oben nachladen",
   { tag: ["@feature", "@feature:stream-cache"] },
   async ({ page }) => {
     const online = { current: true };
@@ -121,12 +121,14 @@ test(
 
     await expect(page.getByTestId("cache-status")).toContainText("live");
     const items = page.getByTestId("message-item");
-    await expect(items.first()).toContainText("Nachricht 60");
+    // Chat-Stil: Fenster der neuesten 25, älteste oben, neueste unten.
     await expect(items).toHaveCount(PAGE_SIZE);
+    await expect(items.first()).toContainText("Nachricht 36");
+    await expect(items.last()).toContainText("Nachricht 60");
 
     await loadAll(page);
-    await expect(items.first()).toContainText("Nachricht 60");
-    await expect(items.last()).toContainText("Nachricht 1");
+    await expect(items.first()).toContainText("Nachricht 1");
+    await expect(items.last()).toContainText("Nachricht 60");
   },
 );
 
@@ -140,18 +142,21 @@ test(
     await page.goto(`/sessions/${SESSION_ID}?server=${server.id}`);
 
     const items = page.getByTestId("message-item");
-    await expect(items.first()).toContainText("Nachricht 60");
+    await expect(items.first()).toContainText("Nachricht 36");
+    await expect(items.last()).toContainText("Nachricht 60");
     await waitForCache(page, MESSAGE_COUNT);
 
     online.current = false;
     await page.reload();
     await expect(page.getByTestId("cache-status")).toContainText("offline aus Zwischenspeicher");
     await expect(page.getByText("Offline: zwischengespeicherte Nachrichten")).toBeVisible();
-    await expect(items.first()).toContainText("Nachricht 60");
+    await expect(items.first()).toContainText("Nachricht 36");
+    await expect(items.last()).toContainText("Nachricht 60");
 
     online.current = true;
     await page.reload();
     await expect(page.getByTestId("cache-status")).toContainText("live");
-    await expect(items.first()).toContainText("Nachricht 60");
+    await expect(items.first()).toContainText("Nachricht 36");
+    await expect(items.last()).toContainText("Nachricht 60");
   },
 );
