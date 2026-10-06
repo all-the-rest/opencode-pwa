@@ -89,11 +89,25 @@ async function loadAll(page: Page) {
   const items = page.getByTestId("message-item");
   const moreButton = page.getByRole("button", { name: "Ältere Nachrichten laden" });
   await page.getByTestId("load-more-sentinel").scrollIntoViewIfNeeded();
-  for (let round = 0; round < 4; round += 1) {
-    if (!(await moreButton.isVisible())) break;
-    await moreButton.click();
-  }
-  await expect(items).toHaveCount(MESSAGE_COUNT);
+  // The button is replaced while the IntersectionObserver auto-loads, so a
+  // fixed click loop flakes (~1/8): a detached click throws and the loop
+  // times out. Poll the loaded count instead and treat a replaced button as
+  // "auto-load in progress, try again on the next poll".
+  await expect
+    .poll(
+      async () => {
+        try {
+          if (await moreButton.isVisible()) {
+            await moreButton.click({ timeout: 1000 });
+          }
+        } catch {
+          // Detached during auto-load — the count below shows the progress.
+        }
+        return items.count();
+      },
+      { timeout: 15_000 },
+    )
+    .toBe(MESSAGE_COUNT);
 }
 
 test(

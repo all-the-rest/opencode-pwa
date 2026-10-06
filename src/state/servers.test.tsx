@@ -245,6 +245,92 @@ describe("credential vault", () => {
     expect(readStoredServers()[0]).not.toHaveProperty("password");
   });
 
+  it("keeps the stored credential when updating with a blank password", async () => {
+    setVaultStorageForTests(vaultBackend());
+    function UpdateFlow() {
+      const { addServer, updateServer, servers } = useServers();
+      return (
+        <div>
+          <button
+            type="button"
+            onClick={() =>
+              void addServer({
+                name: "Heimserver",
+                baseUrl: "http://heim.local",
+                username: "u",
+                password: "geheim",
+              })
+            }
+          >
+            add
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const first = servers[0];
+              if (first !== undefined) {
+                void updateServer(first.id, {
+                  name: "Neu",
+                  baseUrl: "http://neu.local",
+                  username: "u",
+                  password: "",
+                });
+              }
+            }}
+          >
+            update-blank
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const first = servers[0];
+              if (first !== undefined) {
+                void updateServer(first.id, {
+                  name: "Neu",
+                  baseUrl: "http://neu.local",
+                  username: "u",
+                  password: "neu-geheim",
+                });
+              }
+            }}
+          >
+            update-new
+          </button>
+        </div>
+      );
+    }
+    await mountProvider(
+      <ServerProvider>
+        <UpdateFlow />
+      </ServerProvider>,
+    );
+    await act(async () => {
+      screen.getByRole("button", { name: "add" }).click();
+    });
+    await waitFor(async () => {
+      expect(readStoredServers()).toHaveLength(1);
+    });
+    const id = readStoredServers()[0]?.["id"] as string;
+    await waitFor(async () => {
+      expect(await readCredential(id)).toBe("geheim");
+    });
+
+    // Blank keeps the stored secret; only the identity fields change.
+    await act(async () => {
+      screen.getByRole("button", { name: "update-blank" }).click();
+    });
+    expect(await readCredential(id)).toBe("geheim");
+    expect(readStoredServers()[0]).toMatchObject({ name: "Neu" });
+
+    // A non-blank password overwrites the stored credential.
+    await act(async () => {
+      screen.getByRole("button", { name: "update-new" }).click();
+    });
+    await waitFor(async () => {
+      expect(await readCredential(id)).toBe("neu-geheim");
+    });
+  });
+
   it("migrates a plaintext password on load and wipes it from localStorage", async () => {
     setVaultStorageForTests(vaultBackend());
     localStorage.setItem(

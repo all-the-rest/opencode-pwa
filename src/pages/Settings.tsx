@@ -1,7 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
 import { useState } from "react";
-import { readCredential } from "../lib/credentialVault.ts";
 import {
   ensurePermission,
   getPermissionStatus,
@@ -93,15 +92,20 @@ export default function Settings() {
     }
   }
 
-  /** The password is sealed in the vault, so editing reads it back first. */
-  async function handleEdit(id: string) {
+  /**
+   * Editing never reads the secret back: the password field stays blank, and
+   * a blank field keeps the stored credential. The secret never enters the
+   * DOM; dropping a stored credential is only possible by removing the
+   * server. A non-blank field overwrites the stored credential on save.
+   */
+  function handleEdit(id: string) {
     const server = servers.find((s) => s.id === id);
     if (!server) return;
     setForm({
       name: server.name,
       baseUrl: server.baseUrl,
       username: server.username,
-      password: await readCredential(id),
+      password: "",
     });
     setEditingId(id);
     setFormError(null);
@@ -176,7 +180,11 @@ export default function Settings() {
             </label>
             <label className="flex flex-col gap-1">
               <span className="label label-text">
-                <Trans>Passwort (Basic Auth)</Trans>
+                {editingId === null ? (
+                  <Trans>Passwort (Basic Auth)</Trans>
+                ) : (
+                  <Trans>Neues Passwort (Basic Auth)</Trans>
+                )}
               </span>
               <input
                 className="input input-bordered w-full"
@@ -185,7 +193,21 @@ export default function Settings() {
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 autoComplete="current-password"
                 aria-label={t`Passwort`}
+                placeholder={
+                  editingId === null
+                    ? t`Passwort festlegen`
+                    : t`Leer lassen, um das gespeicherte Passwort zu behalten`
+                }
               />
+              {editingId !== null && (
+                <span className="text-xs opacity-70">
+                  <Trans>
+                    Leer lassen, um das gespeicherte Passwort zu behalten. Ein neues
+                    Passwort überschreibt das gespeicherte. Ein gespeichertes Passwort
+                    lässt sich nur entfernen, indem der Server entfernt wird.
+                  </Trans>
+                </span>
+              )}
             </label>
             {formError !== null && (
               <div className="alert alert-error">

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import Icon from "../components/Icon.tsx";
-import { useLiveRefresh } from "../hooks/useLiveRefresh.ts";
+import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
 import { useShellOutputStream } from "../hooks/useShellOutputStream.ts";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
 import {
@@ -293,7 +293,9 @@ export default function ServerDetail() {
   }, [server]);
 
   // Live counters + lists: poll every 5s + refresh on event-hub activity.
-  useLiveRefresh(server, reload);
+  // Paused while a shell output panel is open — its 2s tail-poll is the live
+  // view there, and the list refresh would only overlap it.
+  useLiveRefresh(server, reload, LIVE_REFRESH_INTERVAL_MS, expandedShell === null);
 
   if (server === null) {
     return (

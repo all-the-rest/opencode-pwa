@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   basicAuthHeader,
   decodeFileContent,
@@ -18,14 +18,32 @@ import {
   extractWorktrees,
   filterSessionRows,
   groupSessionsByProject,
+  listAgents,
   MAX_FILE_PREVIEW_CHARS,
   modelOptionValue,
   parseModelOptionValue,
   sessionAgentKey,
   sessionProjectKey,
   UNASSIGNED_PROJECT_KEY,
+  type ServerConfig,
   type ServerCredentials,
 } from "./opencode.ts";
+
+const agentListMock = vi.hoisted(() => vi.fn());
+vi.mock("@opencode/client", () => ({
+  OpenCode: {
+    make: () => ({ agent: { list: agentListMock } }),
+  },
+}));
+
+// The fallback tests must not touch IndexedDB/WebCrypto: the credential is
+// stubbed, so the direct-fetch path runs with empty auth headers.
+vi.mock("./credentialVault.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./credentialVault.ts")>();
+  return { ...actual, readCredential: () => Promise.resolve("") };
+});
+
+const fetchMock = vi.fn();
 
 // A server never carries its password any more — it is sealed in the vault.
 const server: ServerCredentials = { username: "user", password: "secret" };
@@ -531,5 +549,64 @@ describe("extractPermissionRequests", () => {
     expect(extractPermissionRequests([{ resources: ["a", 1, "", null] }])).toEqual([
       { id: "anfrage-0", sessionID: "", action: "unbekannt", resources: ["a"], message: null },
     ]);
+  });
+});
+
+describe("listAgents direct-fetch fallback", () => {
+  const agentServer: ServerConfig = {
+    id: "s1",
+    name: "Lokal",
+    baseUrl: "http://x.local/",
+    username: "",
+  };
+
+  function jsonResponse(payload: unknown, status = 200): Response {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      json: async () => payload,
+    } as unknown as Response;
+  }
+
+  beforeEach(() => {
+    agentListMock.mockReset();
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("uses the direct fetch path when the client method throws", async () => {
+    agentListMock.mockRejectedValue(new Error("Client kaputt"));
+    fetchMock.mockResolvedValue(
+      jsonResponse({ data: [{ id: "coder", name: "Coder", mode: "primary" }] }),
+    );
+    const result = await listAgents(agentServer);
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual([{ id: "coder", name: "Coder", mode: "primary" }]);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://x.local/api/agent",
+      expect.objectContaining({
+        headers: expect.objectContaining({ accept: "application/json" }),
+      }),
+    );
+  });
+
+  it("surfaces the fetch status when the fallback also fails", async () => {
+    agentListMock.mockRejectedValue(new Error("Client kaputt"));
+    fetchMock.mockResolvedValue(jsonResponse({}, 500));
+    const result = await listAgents(agentServer);
+    expect(result.data).toBeNull();
+    expect(result.error).toContain("500");
+  });
+
+  it("prefers the client result and never fetches when it succeeds", async () => {
+    agentListMock.mockResolvedValue({ data: [{ id: "coder" }] });
+    const result = await listAgents(agentServer);
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual([{ id: "coder", name: "coder", mode: "all" }]);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

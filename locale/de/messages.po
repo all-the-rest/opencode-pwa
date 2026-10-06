@@ -498,6 +498,14 @@ msgstr "Laufende Sessions"
 msgid "Laufende Shells"
 msgstr "Laufende Shells"
 
+#: src/pages/Settings.tsx
+msgid "Leer lassen, um das gespeicherte Passwort zu behalten"
+msgstr "Leer lassen, um das gespeicherte Passwort zu behalten"
+
+#: src/pages/Settings.tsx
+msgid "Leer lassen, um das gespeicherte Passwort zu behalten. Ein neues Passwort überschreibt das gespeicherte. Ein gespeichertes Passwort lässt sich nur entfernen, indem der Server entfernt wird."
+msgstr "Leer lassen, um das gespeicherte Passwort zu behalten. Ein neues Passwort überschreibt das gespeicherte. Ein gespeichertes Passwort lässt sich nur entfernen, indem der Server entfernt wird."
+
 #: src/pages/ServerTools.tsx
 msgid "Leere Datei."
 msgstr "Leere Datei."
@@ -580,6 +588,10 @@ msgid "Neuer Shell-Befehl"
 msgstr "Neuer Shell-Befehl"
 
 #: src/pages/Settings.tsx
+msgid "Neues Passwort (Basic Auth)"
+msgstr "Neues Passwort (Basic Auth)"
+
+#: src/pages/Settings.tsx
 msgid "nicht angefragt"
 msgstr "nicht angefragt"
 
@@ -632,6 +644,10 @@ msgstr "Passwort"
 #: src/pages/Settings.tsx
 msgid "Passwort (Basic Auth)"
 msgstr "Passwort (Basic Auth)"
+
+#: src/pages/Settings.tsx
+msgid "Passwort festlegen"
+msgstr "Passwort festlegen"
 
 #: src/pages/ServerTools.tsx
 msgid "Pfad im Projekt"

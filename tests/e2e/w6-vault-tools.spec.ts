@@ -276,17 +276,29 @@ test(
     await mockApi(page, log);
     await page.goto("/settings");
 
-    // Edit form reads the decrypted password back out of the vault.
+    // The edit form never reads the secret back: the field stays blank, and
+    // saving it blank keeps the stored credential.
     await page.getByRole("button", { name: "Bearbeiten" }).click();
-    await expect(page.getByLabel("Passwort")).toHaveValue(legacyServer.password);
+    await expect(page.getByLabel("Passwort")).toHaveValue("");
+    await expect(
+      page.getByText("Leer lassen, um das gespeicherte Passwort zu behalten"),
+    ).toBeVisible();
 
     await page.reload();
     await page.getByRole("button", { name: "Bearbeiten" }).click();
-    await expect(page.getByLabel("Passwort")).toHaveValue(legacyServer.password);
+    await expect(page.getByLabel("Passwort")).toHaveValue("");
 
     const stored = await readStoredServers(page);
     expect(stored[0]).not.toHaveProperty("password");
     expect(JSON.stringify(stored)).not.toContain(legacyServer.password);
+
+    // …and requests still authenticate with the stored credential.
+    await page.goto("/");
+    await expect(page.getByText("Alle Server (1)")).toBeVisible({ timeout: 20_000 });
+    const expected = `Basic ${btoa(`${legacyServer.username}:${legacyServer.password}`)}`;
+    await expect
+      .poll(() => log.authHeaders.filter((value) => value !== undefined), { timeout: 20_000 })
+      .toContain(expected);
   },
 );
 

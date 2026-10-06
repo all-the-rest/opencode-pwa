@@ -9,17 +9,23 @@ export const LIVE_REFRESH_INTERVAL_MS = 5000;
  * Keep a view live: re-run `reload` every `intervalMs` and additionally on
  * every event-hub activity of `server`. The shared hub keeps exactly one
  * stream per server; polling covers missed/silent periods.
+ *
+ * `enabled` pauses the whole refresh (interval + hub subscription) — used on
+ * the server detail while a shell output panel is open: the 2s tail-poll is
+ * the live view there, and the 5s list refresh would only overlap it with
+ * redundant `session.list`/`shell.list` round-trips.
  */
 export function useLiveRefresh(
   server: ServerConfig | null,
   reload: () => void,
   intervalMs: number = LIVE_REFRESH_INTERVAL_MS,
+  enabled = true,
 ): void {
   const reloadRef = useRef(reload);
   reloadRef.current = reload;
 
   useEffect(() => {
-    if (server === null) return;
+    if (server === null || !enabled) return;
     const active: ServerConfig = server;
     const timer = setInterval(() => {
       reloadRef.current();
@@ -31,5 +37,5 @@ export function useLiveRefresh(
       clearInterval(timer);
       unsubscribe();
     };
-  }, [server, intervalMs]);
+  }, [server, intervalMs, enabled]);
 }

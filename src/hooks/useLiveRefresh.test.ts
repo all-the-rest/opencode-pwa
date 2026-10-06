@@ -61,4 +61,22 @@ describe("useLiveRefresh", () => {
     expect(reload).not.toHaveBeenCalled();
     expect(listeners.size).toBe(0);
   });
+
+  it("stays paused while disabled and resumes when enabled", () => {
+    const reload = vi.fn();
+    const { rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) => useLiveRefresh(server, reload, 1000, enabled),
+      { initialProps: { enabled: false } },
+    );
+    vi.advanceTimersByTime(5000);
+    emit({ type: "session.idle" });
+    expect(reload).not.toHaveBeenCalled();
+    expect(listeners.size).toBe(0);
+
+    rerender({ enabled: true });
+    vi.advanceTimersByTime(2000);
+    expect(reload).toHaveBeenCalledTimes(2);
+    emit({ type: "session.idle" });
+    expect(reload).toHaveBeenCalledTimes(3);
+  });
 });

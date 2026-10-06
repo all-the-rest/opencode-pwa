@@ -110,6 +110,11 @@ Server passwords are **never** in `localStorage` any more.
 - Covered by `src/lib/credentialVault.test.ts` (roundtrip, fresh IV, tampered
   ciphertext, restart, migration, fallback) plus E2E `@feature:vault-migration`
   and `@feature:vault-fallback` in `tests/e2e/w6-vault-tools.spec.ts`.
+- Edit semantics: the Settings password field stays blank while editing — the
+  secret never enters the DOM. Saving it blank keeps the stored credential
+  (`updateServer` only seals a non-blank password); a non-blank password
+  overwrites it. Dropping a stored credential is only possible by removing
+  the server.
 
 ## App-Level
 

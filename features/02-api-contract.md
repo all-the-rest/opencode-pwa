@@ -36,7 +36,11 @@ Client: `@opencode/client` promise entrypoint, `OpenCode.make({ baseUrl, headers
 - `Authorization: Basic base64(user:pass)` per server. The password is not part of
   `ServerConfig` any more: `makeClient(server)` is async and resolves it through
   `getDecryptedConfig(server)` / the credential vault (see `features/01-architecture.md`).
-  The direct-fetch fallbacks use the same `fetchAuthHeaders(server)`.
+  The direct-fetch fallbacks use the same `fetchAuthHeaders(server)`. They run
+  only when the client method throws; the `listAgents` fallback path is unit
+  covered in `src/lib/opencode.test.ts` (client throw → fetch path, fetch
+  failure surfaces the status, client success never fetches) as the
+  representative for the shared try/catch-fetch pattern.
 
 ## Error Handling
 

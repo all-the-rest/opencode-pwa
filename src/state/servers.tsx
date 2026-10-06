@@ -203,8 +203,13 @@ export function ServerProvider({ children }: { children: ReactNode }) {
           : s,
       ),
     );
-    const mode = await storeCredential(id, input.password);
-    setCredentialStorage(mode);
+    // A blank password keeps the stored credential: the secret never enters
+    // the DOM, so "no new password" must not wipe the vault entry. The only
+    // way to drop a stored credential is removing the server (removeServer).
+    if (input.password !== "") {
+      const mode = await storeCredential(id, input.password);
+      setCredentialStorage(mode);
+    }
   }, []);
 
   const removeServer = useCallback((id: string) => {

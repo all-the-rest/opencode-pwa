@@ -1,7 +1,7 @@
 # Skills-Marker
 
-agents-skills-consumed: b0eafee
-geprüft am: 2026-10-05
+agents-skills-consumed: be24163
+geprüft am: 2026-10-06
 
 ## Skill-Stand
 
@@ -9,13 +9,15 @@ geprüft am: 2026-10-05
 |---|---|---|---|
 | codegraph-project-setup | ja | `.codegraph/.gitignore`, `.githooks/pre-commit` | |
 | build-verify | ja | `AGENTS.md:6` (lint:fix + build gates) | |
-| playwright-parallel | nein | | Projekt hat 2 Specs, keine Parallel-Probleme; siehe `AGENTS.todo.md` ui-review |
-| ui-review | nein | | offen: `AGENTS.todo.md` ui-review loop über alle Routen |
+| playwright-parallel | ja | `playwright.config.ts` (chromium + Pixel-7-Projekte, E2E_PORT-Override) | |
+| ui-review | ja | `tests/screenshots/` (Harness + 16 Captures, W4) | |
 | skills-marker | ja | `AGENTS.skills.md` | |
+| react-i18n | ja | `src/logic/I18nProvider.tsx`, `lingui.config.ts` (W3, 207 Strings) | |
+| laravel | nein | | kein Backend im Projekt (rein statische PWA) |
 
-## Offen aus dem Bereich `<alter-sha>..<neuer-sha>`
+## Offen aus dem Bereich `b0eafee..be24163`
 
-_Kein Vor-Stand: bei einem neu angelegten Projekt gibt es keine Range, weil noch nichts geprüft werden musste. Dieser Abschnitt wird beim ersten Pull im Skills-Repo angelegt._
+Geprüft 2026-10-06: neu `react-i18n` (angewendet, W3) und `laravel` (trifft nicht zu, kein Backend). Geändert: `react-i18n/references/lingui-setup.md` (v6-Makro-Importe, in W3 verifiziert).
 
 ## Fortschreiben
 
