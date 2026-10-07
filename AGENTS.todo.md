@@ -29,6 +29,23 @@ Stand: 2026-10-06. W6 umgesetzt (Tresor + Parität-Rest). Nur offene TODOs.
 
 ## Offen (nach MVP)
 
+- [ ] Remote-Zugriff (PWA → `remote-code.all-the.rest`, Details in
+      `features/06-remote-access.md`, empfohlen: Option B — `/api/*` mit
+      Client-Basic statt Cookie-Gate). **Owner-seitig auf dem VPS:**
+    1. Caddy-Snippet aus `features/06-remote-access.md` (§2 + Option B) in die
+       `Caddyfile` für `remote-code.all-the.rest` einpflegen (caddyfile-Repo,
+       `./sync.sh` validate + reload).
+    2. Stack neu deployen, falls der Sidecar angefasst wurde (bei Option B
+       nicht nötig — nur Caddy-Reload).
+    3. Cookie-Test: `Set-Cookie` muss weiter `SameSite=Lax` sein (kein
+       `None`), d. h. `curl -sSI https://remote-code.all-the.rest/login.html`
+       prüfen bzw. nach Login
+       `curl -sk -c jar -X POST https://remote-code.all-the.rest/api/login -H 'Content-Type: application/json' -d '{"username":"<user>","password":"<pass>"}' -D - -o /dev/null | grep -i '^set-cookie'`.
+    4. CORS-Preflight-Test als Nachweis (erwartet: 204 + PWA-Origin):
+       `curl -s -o /dev/null -w '%{http_code}\n' -X OPTIONS https://remote-code.all-the.rest/api/info -H 'Origin: https://ocweb.all-the.rest' -H 'Access-Control-Request-Method: GET' -H 'Access-Control-Request-Headers: authorization,content-type'`
+       sowie Header-Nachweis:
+       `curl -s -o /dev/null -D - -X OPTIONS https://remote-code.all-the.rest/api/info -H 'Origin: https://ocweb.all-the.rest' -H 'Access-Control-Request-Method: GET' | grep -i '^access-control-'`.
+    5. Auth-Nachweis: `curl -s -o /dev/null -w '%{http_code}\n' https://remote-code.all-the.rest/api/info -H 'Authorization: Basic $(echo -n "<user>:<opencode-passwort>" | base64)'` muss `200` sein (nicht 302).
 - [ ] Echter Geräte-Test: PWA-Install + Offline/SW auf realem Handy (nur Config + `dist` verifiziert).
 - [ ] PTY: nur Liste + Token-Anzeige; Terminal-Rendering bei Bedarf (Entscheidung in `features/05-parity.md`).
 - [ ] Parität weiter aus `features/05-parity.md` (❌-Markierungen): Commands/Skills

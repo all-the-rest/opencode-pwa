@@ -378,6 +378,10 @@ msgstr "Bezeichnung für die Verbindung"
 msgid "Bitte warten …"
 msgstr "Bitte warten …"
 
+#: src/lib/opencodeCookie.ts
+msgid "Bitte zuerst im Browser einloggen."
+msgstr "Bitte zuerst im Browser einloggen."
+
 #: src/pages/Settings.tsx
 msgid "blockiert"
 msgstr "blockiert"
@@ -1655,6 +1659,7 @@ msgid "Umgebung"
 msgstr "Umgebung"
 
 #: src/lib/opencode.ts
+#: src/lib/opencodeCookie.ts
 #: src/pages/Dashboard.tsx
 msgid "Unbekannter Fehler"
 msgstr "Unbekannter Fehler"
