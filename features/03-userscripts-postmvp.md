@@ -20,3 +20,11 @@
 3. Even later: share/export scripts, per-script confirmation policy.
 
 Not implemented. Keep this file as the idea backlog.
+
+## Verdict 2026-10-07 (static-only → not feasible)
+
+Verified against `@opencode/client@2.0.23`: no server endpoint for user-script
+CRUD (`command.list`/`skill.list` are read-only, no `script`/`snippet`/
+`template` methods). Server-stored scripts would need server-side support
+(plugin/backend) – incompatible with the static-only goal. Stays backlog
+unless the Opencode API gains a script store.
