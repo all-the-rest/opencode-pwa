@@ -192,3 +192,23 @@ alone deploys nothing. The Caddyfile itself goes through the caddyfile-repo
 4. Verify with the curl proofs in `AGENTS.todo.md` (preflight 204,
    `Access-Control-Allow-Origin`, authenticated `GET /api/info` → 200).
 5. Only then point the PWA at the remote base URL and retest in the browser.
+
+## 5. Live verification 2026-10-07 (deployed via caddyfile-repo, Option B)
+
+Measured against `https://remote-code.all-the.rest` (Caddy Basic-gate for
+`/api/*`, `@api` matcher requires `header Authorization *` so cookie
+requests keep working; `OPTIONS` answered 204 before auth):
+
+| Fall | Ergebnis |
+|---|---|
+| `GET /api/info` + Origin, ohne Basic | 302 → `/login.html` (korrekt) |
+| `GET /api/info` + Origin + korrektes Basic | 200 + `Access-Control-Allow-Origin` |
+| Basic falsch | 401 + ACAO, `realm="restricted"` (Caddy, nicht opencode) |
+| `OPTIONS` | 204 + Allow-Methods/Headers/Credentials/Max-Age |
+
+PWA credential rule: username MUST be `opencode` (Caddy `basic_auth` maps
+on the name — any other stored username 401s every request), password is
+the **server password** (`OPENCODE_PASSWORD`), NOT the login password
+(`AUTH_HASH`). Debug hint: `realm="restricted"` = Caddy rejected,
+`realm="Secure Area"` + `{"_tag":"UnauthorizedError"}` = opencode itself
+rejected (wrong password injected upstream).
