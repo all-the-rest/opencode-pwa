@@ -772,6 +772,43 @@ export function listMessages(server: ServerConfig, sessionID: string) {
   return guarded(async () => (await makeClient(server)).message.list({ sessionID }));
 }
 
+/**
+ * PATCH /api/project/{projectID} — rename a project.
+ *
+ * Verified against the installed package: `project.update()` exists
+ * (node_modules/@opencode/client `project: { list, update }`) and hits
+ * `PATCH /api/project/{projectID}` with `{ name }` in the body.
+ * The direct-fetch fallback pins the same method/path/body.
+ */
+export function updateProjectName(
+  server: ServerConfig,
+  projectID: string,
+  name: string,
+): Promise<ApiResult<ProjectInfo>> {
+  return guarded(async () => {
+    try {
+      return toProjectInfo(
+        await (await makeClient(server)).project.update({ projectID, name }),
+        0,
+      );
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/project/${encodeURIComponent(projectID)}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
+          body: JSON.stringify({ name }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(`PATCH /api/project/${projectID} failed with status ${response.status}`);
+      }
+      return toProjectInfo(await response.json(), 0);
+    }
+  });
+}
+
 export async function* subscribeEvents(
   server: ServerConfig,
   signal: AbortSignal,

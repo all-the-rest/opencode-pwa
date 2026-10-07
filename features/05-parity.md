@@ -216,6 +216,30 @@ Server passwords are **never** in `localStorage` any more.
   overwrites it. Dropping a stored credential is only possible by removing
   the server.
 
+## Server Rename (local label, optional project write-through)
+
+- Server entries are client-side only: `name` is a local label in
+  `localStorage`, there is no server-side "server" resource to rename. The
+  inline rename on `/servers/:id` therefore always updates just the stored
+  entry (`updateServer`), never the server itself.
+- The V2 API does have a project rename: `PATCH /api/project/{projectID}`
+  with `{ name }` (verified in the installed `@opencode/client`:
+  `project.update({ projectID, name })`, `dist/promise/generated/client.js`).
+  Wired up as `updateProjectName` in `src/lib/opencode.ts` (client call +
+  direct-fetch fallback pinning the same method/path/body).
+- Write-through rule: when the server has **exactly one** project, the rename
+  flow offers to rename that project on the server as well — behind a German
+  confirm dialog and the offline guard (`project-rename` is blocked while
+  offline, `src/lib/offline.ts`). The local rename happens first and always;
+  the confirm only controls the remote side effect.
+- Why not otherwise: with **zero** projects there is nothing to rename; with
+  **more than one** project there is no unambiguous mapping — the app never
+  guesses which project a server label refers to, so the rename stays
+  local-only. No endpoint is invented for this; the only project-write
+  endpoint used is the verified `PATCH /api/project/{projectID}`.
+- Covered by E2E `tests/e2e/server-tabs.spec.ts` (`@feature:server-tabs`:
+  one-project confirm + PATCH, multi-project local-only).
+
 ## App-Level
 
 - ✅ Multi-server with Basic Auth, offline-tolerant UI, local notifications.

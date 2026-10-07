@@ -39,6 +39,7 @@ export type ServerAction =
   | "config-view"
   | "config-shells"
   | "terminal-read"
+  | "project-rename"
   | "shell-create"
   | "shell-remove"
   | "shell-output"
@@ -78,6 +79,7 @@ const ACTIONS_REQUIRING_SERVER: ReadonlySet<ServerAction> = new Set<ServerAction
   "config-view",
   "config-shells",
   "terminal-read",
+  "project-rename",
   "shell-create",
   "shell-remove",
   "shell-output",

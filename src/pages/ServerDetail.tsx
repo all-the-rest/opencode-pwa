@@ -22,6 +22,7 @@ import {
   listShells,
   removeSession,
   removeShell,
+  updateProjectName,
   type ProjectInfo,
   type ServerConfig,
   type SessionRow,
@@ -221,12 +222,21 @@ export default function ServerDetail() {
   const [ptyTickets, setPtyTickets] = useState<Record<string, string>>({});
   const [ptyTicketError, setPtyTicketError] = useState<string | null>(null);
 
-  // Inline rename (local-only: updateServer touches only the stored entry and
-  // never calls the API, so a failed/unreachable server stays untouched).
+  // Inline rename. The server entry itself is client-side only (updateServer
+  // touches just the stored entry), but when the server has exactly one
+  // project the rename can be wired through to it via PATCH
+  // /api/project/{projectID} — behind a German confirm and the offline guard.
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [renameError, setRenameError] = useState<string | null>(null);
   const [renameBusy, setRenameBusy] = useState(false);
+  const [projectRename, setProjectRename] = useState<{
+    projectID: string;
+    projectName: string;
+    newName: string;
+  } | null>(null);
+  const [projectRenameBusy, setProjectRenameBusy] = useState(false);
+  const [projectRenameError, setProjectRenameError] = useState<string | null>(null);
   // Server delete is local-only as well: it removes the stored entry (and its
   // vault credential) and never touches the server itself.
   const [confirmDeleteServer, setConfirmDeleteServer] = useState(false);
@@ -273,6 +283,8 @@ export default function ServerDetail() {
     setRenaming(false);
     setRenameValue("");
     setRenameError(null);
+    setProjectRename(null);
+    setProjectRenameError(null);
     setConfirmDeleteServer(false);
     Promise.all([
       listSessionsPaged(server, { limit: SESSION_PAGE_LIMIT }),
@@ -446,6 +458,15 @@ export default function ServerDetail() {
         password: "",
       });
       setRenaming(false);
+      // Server-side rename: only with exactly one project is the mapping
+      // unambiguous. Zero projects: nothing to rename. More than one: the
+      // app never guesses which project a server label refers to.
+      if (projects.length === 1) {
+        const only = projects[0];
+        if (only !== undefined) {
+          setProjectRename({ projectID: only.id, projectName: only.name, newName: name });
+        }
+      }
     } catch (failure) {
       setRenameError(
         failure instanceof Error ? failure.message : t`Umbenennen fehlgeschlagen.`,
@@ -453,6 +474,25 @@ export default function ServerDetail() {
     } finally {
       setRenameBusy(false);
     }
+  }
+
+  async function confirmProjectRename() {
+    if (projectRename === null || projectRenameBusy) return;
+    // Offline guard: never write to an unreachable server.
+    if (offline) {
+      setProjectRenameError(t`Server ist offline – Aktionen sind deaktiviert.`);
+      return;
+    }
+    setProjectRenameBusy(true);
+    setProjectRenameError(null);
+    const result = await updateProjectName(activeServer, projectRename.projectID, projectRename.newName);
+    setProjectRenameBusy(false);
+    if (result.error !== null) {
+      setProjectRenameError(result.error);
+      return;
+    }
+    setProjectRename(null);
+    reload();
   }
 
   function handleDeleteServer() {
@@ -471,6 +511,9 @@ export default function ServerDetail() {
   });
   const sessionGroups = groupSessionsByProject(filtered, projects);
   const sessionCount = filtered.length;
+  // Lingui-safe hoists: no member access inside `t` messages.
+  const projectRenameName = projectRename?.projectName ?? "";
+  const projectRenameNewName = projectRename?.newName ?? "";
 
   return (
     <div className="flex flex-col gap-4">
@@ -863,6 +906,25 @@ export default function ServerDetail() {
         error={null}
         onConfirm={handleDeleteServer}
         onCancel={() => setConfirmDeleteServer(false)}
+      />
+      <ConfirmDialog
+        open={projectRename !== null}
+        title={t`Projekt umbenennen`}
+        message={
+          projectRename === null
+            ? ""
+            : t`Dieser Server hat genau ein Projekt: „${projectRenameName}“. Soll dieses Projekt auf dem Server in „${projectRenameNewName}“ umbenannt werden? Der Servername wurde bereits lokal gespeichert.`
+        }
+        confirmLabel={t`Umbenennen`}
+        busy={projectRenameBusy}
+        error={projectRenameError}
+        onConfirm={() => void confirmProjectRename()}
+        onCancel={() => {
+          if (!projectRenameBusy) {
+            setProjectRename(null);
+            setProjectRenameError(null);
+          }
+        }}
       />
     </div>
   );

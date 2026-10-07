@@ -89,3 +89,21 @@ test(
     await expect(page.getByRole("heading", { name: "Übersicht" })).toBeVisible();
   },
 );
+
+test(
+  "settings shows the CORS requirement with the current origin (mocked)",
+  { tag: ["@feature", "@feature:w4-persistence"] },
+  async ({ page }) => {
+    await page.goto("/settings");
+
+    // The hint is part of the add-server form and names the exact command.
+    const hint = page.getByTestId("cors-hint");
+    await expect(hint).toBeVisible();
+    await expect(hint).toContainText("CORS wird benötigt");
+    await expect(hint).toContainText("Failed to fetch");
+    await expect(hint).toContainText("opencode serve --cors");
+    // The origin is the current PWA origin, shown dynamically.
+    const origin = new URL(page.url()).origin;
+    await expect(hint).toContainText(`opencode serve --cors ${origin}`);
+  },
+);

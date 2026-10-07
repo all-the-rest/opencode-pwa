@@ -400,6 +400,10 @@ msgstr "Cache (lesen/schreiben):"
 msgid "Connect-Token für {label} anfordern"
 msgstr "Connect-Token für {label} anfordern"
 
+#: src/pages/Settings.tsx
+msgid "CORS wird benötigt: Ohne CORS-Freigabe des Servers blockiert der Browser alle API-Aufrufe – die Preflight-Anfrage schlägt mit „Failed to fetch“ fehl. Auf dem Server starten mit:"
+msgstr "CORS wird benötigt: Ohne CORS-Freigabe des Servers blockiert der Browser alle API-Aufrufe – die Preflight-Anfrage schlägt mit „Failed to fetch“ fehl. Auf dem Server starten mit:"
+
 #: src/pages/SessionDetail.tsx
 msgid "Das gestagete Revert wird übernommen. Nachrichten und Dateien nach dem gewählten Stand gehen verloren. Fortfahren?"
 msgstr "Das gestagete Revert wird übernommen. Nachrichten und Dateien nach dem gewählten Stand gehen verloren. Fortfahren?"
@@ -543,6 +547,10 @@ msgstr "Diese Berechtigungsanfrage hat keine Session und kann nicht beantwortet 
 #: src/pages/Settings.tsx
 msgid "Dieser Browser unterstützt keine Benachrichtigungen."
 msgstr "Dieser Browser unterstützt keine Benachrichtigungen."
+
+#: src/pages/ServerDetail.tsx
+msgid "Dieser Server hat genau ein Projekt: „{projectRenameName}“. Soll dieses Projekt auf dem Server in „{projectRenameNewName}“ umbenannt werden? Der Servername wurde bereits lokal gespeichert."
+msgstr "Dieser Server hat genau ein Projekt: „{projectRenameName}“. Soll dieses Projekt auf dem Server in „{projectRenameNewName}“ umbenannt werden? Der Servername wurde bereits lokal gespeichert."
 
 #: src/pages/SessionDetail.tsx
 msgid "Diffs anzeigen"
@@ -1262,6 +1270,10 @@ msgstr "Projekt"
 #: src/pages/ServerTools.tsx
 msgid "Projekt für Worktrees"
 msgstr "Projekt für Worktrees"
+
+#: src/pages/ServerDetail.tsx
+msgid "Projekt umbenennen"
+msgstr "Projekt umbenennen"
 
 #: src/pages/Dashboard.tsx
 msgid "Projekte"

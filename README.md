@@ -64,7 +64,15 @@ pnpm build   # typecheck + production build into dist/
   stays a deploy-time concern, not a repo default.
 - Browsers call the Opencode servers directly, so each server must allow the
   PWA origin via CORS. There is no backend or proxy (see
-  `features/01-architecture.md`, "Static-Only Invariant").
+  `features/01-architecture.md`, "Static-Only Invariant"). Start every server
+  with the PWA origin (flag is repeatable, one `--cors` per additional origin):
+
+  ```bash
+  opencode serve --cors https://ocweb.all-the.rest
+  ```
+
+  Without it the browser blocks every preflight and all API calls fail with
+  "Failed to fetch".
 - Local notifications use the `Notification` API only (permission opt-in under
   **Einstellungen** → "Benachrichtigungen aktivieren"). No push server, no
   service-worker push.

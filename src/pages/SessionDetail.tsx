@@ -12,6 +12,7 @@ import {
   commitSessionRevert,
   compactSession,
   exportSession,
+  extractSessionRows,
   forkSession,
   getSessionDiff,
   getSessionInfo,
@@ -23,6 +24,7 @@ import {
   listModels,
   listSessionForms,
   listSessionInbox,
+  listSessions,
   readSessionTerminal,
   updateSessionInbox,
   modelOptionValue,
@@ -67,7 +69,7 @@ export default function SessionDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { servers, selectedServer } = useServers();
-  const { ensureTab } = useSessionTabs();
+  const { ensureTab, retitleTab } = useSessionTabs();
   const serverId = searchParams.get("server") ?? selectedServer?.id ?? null;
   const server = servers.find((s) => s.id === serverId) ?? selectedServer;
 
@@ -80,6 +82,25 @@ export default function SessionDetail() {
     if (server === null || server === undefined || id === undefined) return;
     ensureTab({ serverID: server.id, sessionID: id, title: id });
   }, [server, id, ensureTab]);
+
+  // Direct-URL mount: resolve the real session title from the session list
+  // (fetched once per server+id) instead of showing the raw session id.
+  // Fallback: the id stays the label when the list is unreachable (offline)
+  // or the id matches no known session.
+  useEffect(() => {
+    if (server === null || server === undefined || id === undefined) return;
+    let cancelled = false;
+    void listSessions(server).then((result) => {
+      if (cancelled) return;
+      const match = extractSessionRows(result.data).find((row) => row.id === id);
+      if (match !== undefined) {
+        retitleTab(server.id, id, match.label);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [server, id, retitleTab]);
 
   const {
     visible,
