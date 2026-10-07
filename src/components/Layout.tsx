@@ -5,6 +5,7 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import Icon from "./Icon.tsx";
 import ServerDot from "./ServerDot.tsx";
 import SessionTabBar from "./SessionTabBar.tsx";
+import SidebarProjects from "./SidebarProjects.tsx";
 import { useEventNotifications } from "../hooks/useEventNotifications.ts";
 import { useLayoutMode } from "../state/layoutMode.tsx";
 import { useServers } from "../state/servers.tsx";
@@ -155,6 +156,7 @@ export default function Layout() {
               <Trans>Einstellungen</Trans>
             </NavLink>
           </li>
+          <SidebarProjects />
           <li className="menu-title mt-4">
             <span>
               <Trans>Server</Trans>

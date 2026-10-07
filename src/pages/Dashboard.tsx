@@ -7,6 +7,7 @@ import ServerStatusBadge from "../components/ServerStatusBadge.tsx";
 import { useLiveRefresh } from "../hooks/useLiveRefresh.ts";
 import { reachability } from "../lib/offline.ts";
 import {
+  extractSessionRows,
   getServerInfo,
   listAgents,
   listProjects,
@@ -15,6 +16,12 @@ import {
   type ServerConfig,
 } from "../lib/opencode.ts";
 import { useServers } from "../state/servers.tsx";
+import SessionStarter from "../components/SessionStarter.tsx";
+
+interface AgentActivity {
+  agent: string;
+  count: number;
+}
 
 interface Counts {
   info: string | null;
@@ -22,6 +29,8 @@ interface Counts {
   shells: number | null;
   agents: number | null;
   projects: number | null;
+  /** Sessions per agent of the selected server (cheap spectator view). */
+  byAgent: AgentActivity[] | null;
 }
 
 async function loadCounts(server: ServerConfig): Promise<Counts> {
@@ -40,6 +49,17 @@ async function loadCounts(server: ServerConfig): Promise<Counts> {
   const agents = agentsRes.data;
   const shellsData: unknown = shells !== null && typeof shells === "object" ? (shells as { data?: unknown }).data : null;
   // agent.list is normalized to `AgentOption[]` by `listAgents`.
+  // Spectator view: group the same session rows by agent, so running
+  // subagent activity is visible without an extra request.
+  const agentCounts = new Map<string, number>();
+  for (const row of extractSessionRows(sessions)) {
+    const key = row.agent ?? "";
+    if (key === "") continue;
+    agentCounts.set(key, (agentCounts.get(key) ?? 0) + 1);
+  }
+  const byAgent: AgentActivity[] = [...agentCounts.entries()]
+    .map(([agent, count]) => ({ agent, count }))
+    .sort((a, b) => b.count - a.count || a.agent.localeCompare(b.agent));
   return {
     info: infoRes.data ? `v${infoRes.data.version} (PID ${infoRes.data.pid})` : null,
     sessions:
@@ -49,6 +69,7 @@ async function loadCounts(server: ServerConfig): Promise<Counts> {
     shells: Array.isArray(shellsData) ? shellsData.length : null,
     agents: Array.isArray(agents) ? agents.length : null,
     projects: projectsRes.data === null ? null : projectsRes.data.length,
+    byAgent,
   };
 }
 
@@ -114,6 +135,8 @@ export default function Dashboard() {
       <h1 className="text-2xl font-bold">
         <Trans>Übersicht</Trans>
       </h1>
+
+      <SessionStarter />
 
       {selectedServer === null && (
         <div className="card bg-base-200 shadow" data-testid="dashboard-empty-state">
@@ -201,6 +224,51 @@ export default function Dashboard() {
           </div>
         </section>
       )}
+
+      <section data-testid="subagent-activity">
+        <h2 className="text-lg font-semibold mb-2">
+          <Trans>Subagenten-Aktivität</Trans>
+        </h2>
+        {selectedServer === null ? (
+          <p className="opacity-70">
+            <Trans>Noch kein Server ausgewählt.</Trans>
+          </p>
+        ) : loading ? (
+          <p className="opacity-70">
+            <Trans>Lädt …</Trans>
+          </p>
+        ) : error !== null || counts?.byAgent == null ? (
+          <p className="opacity-70">
+            <Trans>Aktivität derzeit nicht verfügbar (Server offline?).</Trans>
+          </p>
+        ) : counts.byAgent.length === 0 ? (
+          <p className="opacity-70">
+            <Trans>Keine laufenden Sessions – keine Subagenten aktiv.</Trans>
+          </p>
+        ) : (
+          <ul className="flex flex-wrap gap-2">
+            {counts.byAgent.map((entry) => {
+              // Lingui-safe hoists: no member access inside messages.
+              const agentName = entry.agent;
+              const agentCount = entry.count;
+              return (
+              <li key={entry.agent}>
+                <Link
+                  className="badge badge-outline gap-2 p-3"
+                  to={`/servers/${selectedServer.id}?agent=${encodeURIComponent(entry.agent)}`}
+                  title={t`Sessions von ${agentName} auf dem Server anzeigen`}
+                >
+                  <span className="font-semibold">{agentName}</span>
+                  <span className="opacity-70" data-testid={`subagent-count-${entry.agent}`}>
+                    {agentCount}
+                  </span>
+                </Link>
+              </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
 
       <section>
         <h2 className="text-lg font-semibold mb-2">

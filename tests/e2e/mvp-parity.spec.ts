@@ -213,21 +213,23 @@ test(
     await mockApi(page, freshLog());
     await page.goto(`/servers/${server.id}`);
 
-    await expect(page.getByRole("link", { name: "Alpha bauen" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Beta prüfen" })).toBeVisible();
+    // Scoped to the sessions card: the sidebar duplicates session links.
+    const sessionsCard = page.getByTestId("sessions-card");
+    await expect(sessionsCard.getByRole("link", { name: "Alpha bauen" })).toBeVisible();
+    await expect(sessionsCard.getByRole("link", { name: "Beta prüfen" })).toBeVisible();
 
     await page.getByRole("button", { name: "Weitere Sessions laden" }).click();
-    await expect(page.getByRole("link", { name: "Gamma bauen" })).toBeVisible();
+    await expect(sessionsCard.getByRole("link", { name: "Gamma bauen" })).toBeVisible();
 
     await page.getByLabel("Nach Agent filtern").selectOption("coder");
-    await expect(page.getByRole("link", { name: "Alpha bauen" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Gamma bauen" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Beta prüfen" })).toHaveCount(0);
+    await expect(sessionsCard.getByRole("link", { name: "Alpha bauen" })).toBeVisible();
+    await expect(sessionsCard.getByRole("link", { name: "Gamma bauen" })).toBeVisible();
+    await expect(sessionsCard.getByRole("link", { name: "Beta prüfen" })).toHaveCount(0);
 
     await page.getByLabel("Nach Agent filtern").selectOption("");
     await page.getByLabel("Sessions suchen").fill("beta");
-    await expect(page.getByRole("link", { name: "Beta prüfen" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Alpha bauen" })).toHaveCount(0);
+    await expect(sessionsCard.getByRole("link", { name: "Beta prüfen" })).toBeVisible();
+    await expect(sessionsCard.getByRole("link", { name: "Alpha bauen" })).toHaveCount(0);
   },
 );
 
@@ -240,7 +242,9 @@ test(
     await mockApi(page, log);
     await page.goto(`/servers/${server.id}`);
 
-    await expect(page.getByRole("link", { name: "Alpha bauen" })).toBeVisible();
+    // Scoped to the sessions card: the sidebar duplicates session links.
+    const sessionsCard = page.getByTestId("sessions-card");
+    await expect(sessionsCard.getByRole("link", { name: "Alpha bauen" })).toBeVisible();
 
     await page.getByRole("button", { name: "Session Alpha bauen unterbrechen" }).click();
     const dialog = page.getByRole("alertdialog");
@@ -259,7 +263,7 @@ test(
     await expect
       .poll(() => Promise.resolve(log.deletedSessions), { timeout: 5000 })
       .toContain("ses-2");
-    await expect(page.getByRole("link", { name: "Beta prüfen" })).toHaveCount(0);
+    await expect(sessionsCard.getByRole("link", { name: "Beta prüfen" })).toHaveCount(0);
   },
 );
 

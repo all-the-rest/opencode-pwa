@@ -39,6 +39,14 @@ msgstr "{total} Nachrichten"
 msgid "{type}{suffix}."
 msgstr "{type}{suffix}."
 
+#: src/pages/ProjectDetail.tsx
+msgid "← Server"
+msgstr "← Server"
+
+#: src/components/SessionTabBar.tsx
+msgid "+ Neu"
+msgstr "+ Neu"
+
 #: src/pages/SessionDetail.tsx
 msgid "1 Nachricht"
 msgstr "1 Nachricht"
@@ -60,6 +68,7 @@ msgid "Ablehnen"
 msgstr "Ablehnen"
 
 #: src/components/ConfigCard.tsx
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Agent"
@@ -103,6 +112,10 @@ msgstr "Aktiver Server: {selectedServerName}"
 msgid "aktiviert"
 msgstr "aktiviert"
 
+#: src/pages/Dashboard.tsx
+msgid "Aktivität derzeit nicht verfügbar (Server offline?)."
+msgstr "Aktivität derzeit nicht verfügbar (Server offline?)."
+
 #: src/pages/SessionDetail.tsx
 msgid "Aktualisiere …"
 msgstr "Aktualisiere …"
@@ -111,6 +124,7 @@ msgstr "Aktualisiere …"
 msgid "Aktualisieren"
 msgstr "Aktualisieren"
 
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Alle Agenten"
 msgstr "Alle Agenten"
@@ -131,6 +145,18 @@ msgstr "Alle schließen"
 #: src/pages/Dashboard.tsx
 msgid "Alle Server ({serverCount})"
 msgstr "Alle Server ({serverCount})"
+
+#: src/components/SessionStarter.tsx
+msgid "Alle Sessions ansehen"
+msgstr "Alle Sessions ansehen"
+
+#: src/components/SessionTabBar.tsx
+msgid "Alle Tabs"
+msgstr "Alle Tabs"
+
+#: src/components/SessionTabBar.tsx
+msgid "Alle Tabs anzeigen"
+msgstr "Alle Tabs anzeigen"
 
 #: src/components/SessionTabBar.tsx
 msgid "Alle Tabs schließen"
@@ -464,6 +490,10 @@ msgstr "Der Kontext wird zusammengefasst, um Platz zu schaffen. Fortfahren?"
 msgid "Der Server „{serverName}“ wird aus dieser App entfernt. Dabei werden nur die lokal gespeicherten Daten (Eintrag und Passwort) gelöscht – der Server selbst bleibt unverändert. Fortfahren?"
 msgstr "Der Server „{serverName}“ wird aus dieser App entfernt. Dabei werden nur die lokal gespeicherten Daten (Eintrag und Passwort) gelöscht – der Server selbst bleibt unverändert. Fortfahren?"
 
+#: src/pages/ProjectDetail.tsx
+msgid "Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions sind bis dahin deaktiviert."
+msgstr "Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions sind bis dahin deaktiviert."
+
 #: src/pages/ServerDetail.tsx
 msgid "Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions und Aktionen sind bis dahin deaktiviert."
 msgstr "Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions und Aktionen sind bis dahin deaktiviert."
@@ -559,6 +589,10 @@ msgstr "Dieser Browser unterstützt keine Benachrichtigungen."
 #: src/pages/ServerDetail.tsx
 msgid "Dieser Server hat genau ein Projekt: „{projectRenameName}“. Soll dieses Projekt auf dem Server in „{projectRenameNewName}“ umbenannt werden? Der Servername wurde bereits lokal gespeichert."
 msgstr "Dieser Server hat genau ein Projekt: „{projectRenameName}“. Soll dieses Projekt auf dem Server in „{projectRenameNewName}“ umbenannt werden? Der Servername wurde bereits lokal gespeichert."
+
+#: src/pages/ProjectDetail.tsx
+msgid "Dieses Projekt ist auf dem Server unbekannt – eventuell wurde es gelöscht."
+msgstr "Dieses Projekt ist auf dem Server unbekannt – eventuell wurde es gelöscht."
 
 #: src/pages/SessionDetail.tsx
 msgid "Diffs anzeigen"
@@ -899,6 +933,10 @@ msgstr "Keine Integrationen."
 msgid "Keine Konfiguration."
 msgstr "Keine Konfiguration."
 
+#: src/pages/Dashboard.tsx
+msgid "Keine laufenden Sessions – keine Subagenten aktiv."
+msgstr "Keine laufenden Sessions – keine Subagenten aktiv."
+
 #: src/pages/ServerTools.tsx
 msgid "Keine MCP-Server konfiguriert."
 msgstr "Keine MCP-Server konfiguriert."
@@ -927,6 +965,7 @@ msgstr "Keine offenen Formulare."
 msgid "Keine Projekte"
 msgstr "Keine Projekte"
 
+#: src/components/SidebarProjects.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Keine Projekte."
 msgstr "Keine Projekte."
@@ -935,6 +974,15 @@ msgstr "Keine Projekte."
 msgid "Keine PTYs."
 msgstr "Keine PTYs."
 
+#: src/components/SessionStarter.tsx
+msgid "Keine Sessions auf diesem Server. Öffne die Serverdetails, um zu beginnen."
+msgstr "Keine Sessions auf diesem Server. Öffne die Serverdetails, um zu beginnen."
+
+#: src/pages/ProjectDetail.tsx
+msgid "Keine Sessions in diesem Projekt."
+msgstr "Keine Sessions in diesem Projekt."
+
+#: src/components/SidebarProjects.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Keine Sessions."
 msgstr "Keine Sessions."
@@ -1006,13 +1054,17 @@ msgstr "Kosten:"
 
 #: src/components/ContentSkeleton.tsx
 #: src/components/IntegrationsCard.tsx
+#: src/components/SessionStarter.tsx
 #: src/pages/AgentDetail.tsx
 #: src/pages/Dashboard.tsx
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerTools.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Lädt"
 msgstr "Lädt"
 
+#: src/pages/Dashboard.tsx
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Lädt …"
 msgstr "Lädt …"
@@ -1100,6 +1152,7 @@ msgstr "Modell der Session"
 msgid "Modus:"
 msgstr "Modus:"
 
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Nach Agent filtern"
 msgstr "Nach Agent filtern"
@@ -1152,9 +1205,14 @@ msgstr "Nein"
 msgid "Neue Inbox-Nachricht"
 msgstr "Neue Inbox-Nachricht"
 
+#: src/components/SessionTabBar.tsx
 #: src/hooks/useEventNotifications.ts
 msgid "Neue Session"
 msgstr "Neue Session"
+
+#: src/components/SessionTabBar.tsx
+msgid "Neue Session öffnen"
+msgstr "Neue Session öffnen"
 
 #: src/pages/ServerDetail.tsx
 msgid "Neuer Servername"
@@ -1172,9 +1230,25 @@ msgstr "Neues Passwort (Basic Auth)"
 msgid "Neueste ↓"
 msgstr "Neueste ↓"
 
+#: src/components/SidebarProjects.tsx
+msgid "Neueste Sessions"
+msgstr "Neueste Sessions"
+
+#: src/components/SessionStarter.tsx
+msgid "Neueste Sessions auf {selectedServerName}"
+msgstr "Neueste Sessions auf {selectedServerName}"
+
 #: src/pages/Settings.tsx
 msgid "nicht angefragt"
 msgstr "nicht angefragt"
+
+#: src/pages/Dashboard.tsx
+msgid "Noch kein Server ausgewählt."
+msgstr "Noch kein Server ausgewählt."
+
+#: src/components/SessionStarter.tsx
+msgid "Noch kein Server eingerichtet. Lege deinen ersten Server an, um Sessions zu starten."
+msgstr "Noch kein Server eingerichtet. Lege deinen ersten Server an, um Sessions zu starten."
 
 #: src/pages/Dashboard.tsx
 msgid "Noch kein Server eingerichtet. Lege deinen ersten Server an, um Sessions, Shells und Werkzeuge zu verwalten."
@@ -1245,11 +1319,24 @@ msgstr "Offene Formulare"
 msgid "Offene Sessions"
 msgstr "Offene Sessions"
 
+#: src/components/SessionStarter.tsx
+msgid "Offene Tabs ({tabCount})"
+msgstr "Offene Tabs ({tabCount})"
+
 #: src/components/ServerStatusBadge.tsx
 #: src/pages/Dashboard.tsx
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Offline"
 msgstr "Offline"
+
+#: src/components/SidebarProjects.tsx
+msgid "Offline – Projekte nicht ladbar"
+msgstr "Offline – Projekte nicht ladbar"
+
+#: src/components/SidebarProjects.tsx
+msgid "Offline – Sessions nicht ladbar"
+msgstr "Offline – Sessions nicht ladbar"
 
 #: src/pages/SessionDetail.tsx
 msgid "Offline: zwischengespeicherte Nachrichten werden angezeigt ({error})."
@@ -1295,6 +1382,7 @@ msgstr "Pfad im Projekt, z. B. src"
 msgid "Pfad öffnen"
 msgstr "Pfad öffnen"
 
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 #: src/pages/ServerTools.tsx
 msgid "Projekt"
@@ -1308,6 +1396,7 @@ msgstr "Projekt für Worktrees"
 msgid "Projekt umbenennen"
 msgstr "Projekt umbenennen"
 
+#: src/components/SidebarProjects.tsx
 #: src/pages/Dashboard.tsx
 msgid "Projekte"
 msgstr "Projekte"
@@ -1375,6 +1464,7 @@ msgstr "Sendet …"
 msgid "Server"
 msgstr "Server"
 
+#: src/components/SessionStarter.tsx
 #: src/pages/Dashboard.tsx
 msgid "Server anlegen"
 msgstr "Server anlegen"
@@ -1396,6 +1486,7 @@ msgid "Server löschen"
 msgstr "Server löschen"
 
 #: src/pages/AgentDetail.tsx
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 #: src/pages/ServerTools.tsx
 msgid "Server nicht gefunden"
@@ -1429,7 +1520,9 @@ msgstr "Server offline – Shell-Liste ist deaktiviert."
 msgid "Server offline – Skill-Liste ist deaktiviert."
 msgstr "Server offline – Skill-Liste ist deaktiviert."
 
+#: src/components/SessionStarter.tsx
 #: src/pages/Dashboard.tsx
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 #: src/pages/ServerTools.tsx
 msgid "Server offline oder nicht erreichbar: {error}"
@@ -1462,6 +1555,7 @@ msgstr "Server-Werkzeuge: {serverName}"
 #~ msgid "Server: {0}"
 #~ msgstr "Server: {0}"
 
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Server: {serverName}"
@@ -1551,6 +1645,10 @@ msgstr "Session kompaktiert{suffix}."
 msgid "Session löschen"
 msgstr "Session löschen"
 
+#: src/components/SessionStarter.tsx
+msgid "Session starten"
+msgstr "Session starten"
+
 #: src/hooks/useEventNotifications.ts
 msgid "Session wird kompaktiert{suffix}."
 msgstr "Session wird kompaktiert{suffix}."
@@ -1559,17 +1657,24 @@ msgstr "Session wird kompaktiert{suffix}."
 msgid "Session-Status"
 msgstr "Session-Status"
 
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Sessions ({sessionCount})"
 msgstr "Sessions ({sessionCount})"
 
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Sessions konnten nicht nachgeladen werden."
 msgstr "Sessions konnten nicht nachgeladen werden."
 
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Sessions suchen"
 msgstr "Sessions suchen"
+
+#: src/pages/Dashboard.tsx
+msgid "Sessions von {agentName} auf dem Server anzeigen"
+msgstr "Sessions von {agentName} auf dem Server anzeigen"
 
 #: src/components/ConfigCard.tsx
 msgid "Shell"
@@ -1670,6 +1775,10 @@ msgstr "Status:"
 msgid "Status: {permission}"
 msgstr "Status: {permission}"
 
+#: src/pages/Dashboard.tsx
+msgid "Subagenten-Aktivität"
+msgstr "Subagenten-Aktivität"
+
 #: src/pages/ServerTools.tsx
 msgid "Suchanbieter"
 msgstr "Suchanbieter"
@@ -1678,6 +1787,7 @@ msgstr "Suchanbieter"
 msgid "Suchbegriff …"
 msgstr "Suchbegriff …"
 
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Suche"
 msgstr "Suche"
@@ -1718,6 +1828,7 @@ msgstr "Terminal ausblenden"
 msgid "Terminal-Ausgabe aktualisieren"
 msgstr "Terminal-Ausgabe aktualisieren"
 
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Titel oder ID suchen"
 msgstr "Titel oder ID suchen"
@@ -1854,6 +1965,7 @@ msgstr "Websuche"
 msgid "Websuche starten"
 msgstr "Websuche starten"
 
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Weitere Sessions laden"
 msgstr "Weitere Sessions laden"
@@ -1891,6 +2003,7 @@ msgid "Zurück zu den Serverdetails"
 msgstr "Zurück zu den Serverdetails"
 
 #: src/pages/AgentDetail.tsx
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 #: src/pages/ServerTools.tsx
 msgid "Zurück zur Übersicht"

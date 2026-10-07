@@ -2,6 +2,12 @@
 
 Stand: 2026-10-06. W6 umgesetzt (Tresor + Parität-Rest). Nur offene TODOs.
 
+## Navigation (Owner-Entscheidung 2026-10-07, umgesetzt)
+
+Umgesetzt und verifiziert (lint 0, vitest 233/233, build ok, e2e 117/117);
+Details in `features/04-projects.md` (Navigation). Offen nur: Streaming-Inspector
+für Agenten-Aktivität (dokumentierte Lücke).
+
 ## Abgeschlossen (W6)
 
 - [x] Passwort-Tresor: kein Klartext-Passwort mehr in `localStorage`. Pro Install ein

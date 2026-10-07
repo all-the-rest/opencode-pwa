@@ -1,7 +1,7 @@
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
-import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import ContentSkeleton from "../components/ContentSkeleton.tsx";
 import Icon from "../components/Icon.tsx";
@@ -210,9 +210,29 @@ export default function ServerDetail() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const [agentFilter, setAgentFilter] = useState("");
-  const [projectFilter, setProjectFilter] = useState("");
-  const [search, setSearch] = useState("");
+  // View state lives in query params (clean, shareable URLs): `?search=`,
+  // `?agent=`, `?project=`. Pagination cursors stay local state.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const agentFilter = searchParams.get("agent") ?? "";
+  const projectFilter = searchParams.get("project") ?? "";
+  const search = searchParams.get("search") ?? "";
+
+  function updateParam(key: "agent" | "project" | "search", value: string) {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value === "") next.delete(key);
+        else next.set(key, value);
+        return next;
+      },
+      { replace: true },
+    );
+  }
+
+  // Filters are per server: switching servers clears them, but a fresh mount
+  // (e.g. a deep link with `?agent=` from the dashboard spectator view) keeps
+  // the params from the URL.
+  const prevServerIdRef = useRef<string | null>(null);
 
   const [killTarget, setKillTarget] = useState<KillTarget | null>(null);
   const [killBusy, setKillBusy] = useState(false);
@@ -274,14 +294,15 @@ export default function ServerDetail() {
 
   useEffect(() => {
     if (server === null) return;
+    if (prevServerIdRef.current !== null && prevServerIdRef.current !== server.id) {
+      setSearchParams({}, { replace: true });
+    }
+    prevServerIdRef.current = server.id;
     let cancelled = false;
     setLoading(true);
     setError(null);
     setSessions([]);
     setNextCursor(null);
-    setAgentFilter("");
-    setProjectFilter("");
-    setSearch("");
     setExpandedShell(null);
     setPtyTickets({});
     setRenaming(false);
@@ -324,7 +345,7 @@ export default function ServerDetail() {
     return () => {
       cancelled = true;
     };
-  }, [server]);
+  }, [server, setSearchParams]);
 
   // Live counters + lists: poll every 5s + refresh on event-hub activity.
   // Paused while a shell output panel is open — its 2s tail-poll is the live
@@ -622,7 +643,7 @@ export default function ServerDetail() {
           }
           data-testid="server-panels"
         >
-          <section className="card bg-base-200 shadow">
+          <section className="card bg-base-200 shadow" data-testid="projects-card">
             <div className="card-body">
               <h2 className="card-title">
                 <Icon name="project" /> <Trans>Projekte ({projectCount})</Trans>
@@ -634,8 +655,13 @@ export default function ServerDetail() {
               ) : (
                 <ul className="menu gap-1">
                   {projects.map((p) => (
-                    <li key={p.id}>
-                      <span title={p.id}>{p.name}</span>
+                    <li key={p.id} data-testid={`project-row-${p.id}`}>
+                      <Link
+                        to={`/servers/${server.id}/projects/${p.id}`}
+                        title={p.id}
+                      >
+                        {p.name}
+                      </Link>
                     </li>
                   ))}
                 </ul>
@@ -659,7 +685,7 @@ export default function ServerDetail() {
                   <input
                     className="input input-bordered input-sm"
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => updateParam("search", e.target.value)}
                     placeholder={t`Titel oder ID suchen`}
                     aria-label={t`Sessions suchen`}
                   />
@@ -672,7 +698,7 @@ export default function ServerDetail() {
                     <select
                       className="select select-bordered select-sm w-full"
                       value={agentFilter}
-                      onChange={(e) => setAgentFilter(e.target.value)}
+                      onChange={(e) => updateParam("agent", e.target.value)}
                       aria-label={t`Nach Agent filtern`}
                     >
                       <option value="">
@@ -692,7 +718,7 @@ export default function ServerDetail() {
                     <select
                       className="select select-bordered select-sm w-full"
                       value={projectFilter}
-                      onChange={(e) => setProjectFilter(e.target.value)}
+                      onChange={(e) => updateParam("project", e.target.value)}
                       aria-label={t`Nach Projekt filtern`}
                     >
                       <option value="">
@@ -713,10 +739,22 @@ export default function ServerDetail() {
                 </p>
               ) : (
                 <div className="flex flex-col gap-3">
-                  {sessionGroups.map((group) => (
+                  {sessionGroups.map((group) => {
+                    const groupProject = projects.find((p) => p.id === group.key) ?? null;
+                    const groupCount = group.sessions.length;
+                    return (
                     <div key={group.key}>
                       <h3 className="text-sm font-semibold opacity-80 mb-1" title={group.key}>
-                        {group.label} ({group.sessions.length})
+                        {groupProject === null ? (
+                          <>{group.label} ({groupCount})</>
+                        ) : (
+                          <Link
+                            className="link"
+                            to={`/servers/${server.id}/projects/${groupProject.id}`}
+                          >
+                            {group.label} ({groupCount})
+                          </Link>
+                        )}
                       </h3>
                       <ul className="menu gap-1">
                         {group.sessions.map((s) => {
@@ -771,7 +809,8 @@ export default function ServerDetail() {
                         })}
                       </ul>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
               {nextCursor !== null && (

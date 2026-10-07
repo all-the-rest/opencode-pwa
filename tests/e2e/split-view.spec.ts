@@ -167,18 +167,22 @@ test(
     await mockApi(page);
 
     // Open two sessions so the close-all button appears.
+    // Scoped to the sessions card: the sidebar duplicates session links.
+    const sessionsCard = page.getByTestId("sessions-card");
     await page.goto(`/servers/${serverA.id}`);
-    await page.getByRole("link", { name: "Alpha bauen" }).click();
+    await sessionsCard.getByRole("link", { name: "Alpha bauen" }).click();
     await expect(page).toHaveURL(`/sessions/ses-a1?server=${serverA.id}`);
     await page.goto(`/servers/${serverA.id}`);
-    await page.getByRole("link", { name: "Alpha prüfen" }).click();
+    await sessionsCard.getByRole("link", { name: "Alpha prüfen" }).click();
     await expect(page).toHaveURL(`/sessions/ses-a2?server=${serverA.id}`);
 
     const closeAll = page.getByTestId("session-tabs-close-all");
     await expect(closeAll).toBeVisible();
     await closeAll.click();
     await expect(page).toHaveURL("/");
-    await expect(page.getByTestId("session-tab-bar")).toHaveCount(0);
+    // The tab bar stays rendered (always visible) with just "+ Neu" left.
+    await expect(page.getByTestId("session-tabs-close-all")).toHaveCount(0);
+    await expect(page.getByTestId("session-tab-new")).toBeVisible();
 
     // Mobile regression: the drawer closes itself after navigation.
     await page.setViewportSize({ width: 390, height: 844 });

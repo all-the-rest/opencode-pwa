@@ -240,8 +240,9 @@ test(
     await mockApi(page);
 
     // Open a session on server A: tab registers with the session title.
+    // Scoped to the sessions card: the sidebar duplicates session links.
     await page.goto(`/servers/${serverA.id}`);
-    await page.getByRole("link", { name: "Alpha bauen" }).click();
+    await page.getByTestId("sessions-card").getByRole("link", { name: "Alpha bauen" }).click();
     await expect(page).toHaveURL(`/sessions/ses-a1?server=${serverA.id}`);
     const tabBar = page.getByTestId("session-tab-bar");
     await expect(tabBar).toBeVisible();
@@ -253,7 +254,7 @@ test(
 
     // Open a session on server B: both tabs stay side by side.
     await page.goto(`/servers/${serverB.id}`);
-    await page.getByRole("link", { name: "Beta prüfen" }).click();
+    await page.getByTestId("sessions-card").getByRole("link", { name: "Beta prüfen" }).click();
     await expect(page).toHaveURL(`/sessions/ses-b1?server=${serverB.id}`);
     await expect(page.getByTestId("session-tab-ses-a1")).toBeVisible();
     await expect(page.getByTestId("session-tab-ses-b1")).toContainText("Beta prüfen");
@@ -276,10 +277,12 @@ test(
     await expect(page).toHaveURL(`/sessions/ses-a1?server=${serverA.id}`);
     await expect(page.getByTestId("session-tab-ses-b1")).toHaveCount(0);
 
-    // Closing the last tab returns to the dashboard.
+    // Closing the last tab returns to the dashboard. The tab bar itself
+    // stays rendered (always visible) with just the "+ Neu" shortcut left.
     await page.getByRole("button", { name: "Tab Alpha bauen schließen" }).click();
     await expect(page).toHaveURL("/");
-    await expect(page.getByTestId("session-tab-bar")).toHaveCount(0);
+    await expect(page.getByTestId("session-tab-ses-a1")).toHaveCount(0);
+    await expect(page.getByTestId("session-tab-new")).toBeVisible();
   },
 );
 

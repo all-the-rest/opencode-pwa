@@ -28,3 +28,27 @@
 - Dashboard stats include the project count ("Projekte").
 - All extraction is tolerant: missing fields degrade to generated ids/labels,
   never to crashes.
+
+## Navigation (Owner-Entscheidung 2026-10-07)
+
+- Projekte haben Priorität: die Sidebar listet zuerst Projekte, dann neueste
+  Sessions (`src/components/SidebarProjects.tsx`); auf der Serverdetailseite
+  steht die Projekte-Karte in der DOM-Reihenfolge an erster Stelle.
+- Jede Projekt-Klick führt auf eine eigene Seite mit eigener SPA-Route:
+  `/servers/:serverId/projects/:projectId`. Suche (`?search=`) und
+  Agent-Filter (`?agent=`) leben in den Query-Params, damit URLs teilbar und
+  deeplink-fähig bleiben. Die Serverdetail-Filter (`?search=`, `?agent=`,
+  `?project=`) folgen derselben Regel; Paging-Cursor bleiben lokaler State.
+- Die Session-Ansicht läuft immer über Tabs (`SessionTabBar`, immer
+  gerendert) mit Plus-Button (`+ Neu` → `/`). Die Startseite (`/`) zeigt den
+  Session-Starter (`src/components/SessionStarter.tsx`, neueste Sessions +
+  offene Tabs) als Fallback bei nichts Offenem.
+- Sessions öffnen überall per `?server=`-Muster (`/sessions/:id?server=…`);
+  Projektseiten nutzen die Server-ID im Pfad (eindeutig je Server).
+- Zuschau-Bereich für Subagenten-Aktivität: Dashboard-Karte
+  „Subagenten-Aktivität“ (Sessions je Agent, Links filtern die Server-Seite
+  per `?agent=`). Live-Fortschritt einzelner Agenten (Token-Streams,
+  Tool-Calls in Echtzeit) bleibt eine dokumentierte Lücke: sichtbar sind nur
+  aggregierte Zähler aus `session.list`, kein Streaming-Inspector.
+- Routen-Regel (Owner 2026-10-07): so viel wie sinnvoll in den Pfad, Rest in
+  Query-Params. `+ Neu` führt zum Starter (kein Deep-Link auf Server-Seite).

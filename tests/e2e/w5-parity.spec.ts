@@ -252,7 +252,9 @@ test(
     await page.goto(`/servers/${server.id}`);
 
     // Reachable first: rows and actions are live.
-    await expect(page.getByRole("link", { name: "Alpha bauen" })).toBeVisible();
+    // Scoped to the sessions card: the sidebar duplicates session links.
+    const sessionsCard = page.getByTestId("sessions-card");
+    await expect(sessionsCard.getByRole("link", { name: "Alpha bauen" })).toBeVisible();
     await expect(page.getByTestId("offline-badge")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Session Alpha bauen löschen" })).toBeEnabled();
 
@@ -261,8 +263,8 @@ test(
     await expect(page.getByTestId("offline-alert")).toBeVisible({ timeout: 20_000 });
 
     // Still listed, still the same rows — nothing was removed.
-    await expect(page.getByRole("link", { name: "Alpha bauen" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Beta prüfen" })).toBeVisible();
+    await expect(sessionsCard.getByRole("link", { name: "Alpha bauen" })).toBeVisible();
+    await expect(sessionsCard.getByRole("link", { name: "Beta prüfen" })).toBeVisible();
 
     // Marked offline.
     await expect(page.getByTestId("sessions-offline-badge")).toBeVisible();
