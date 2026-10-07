@@ -3,6 +3,7 @@ import { Trans } from "@lingui/react/macro";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import ServerDot from "../components/ServerDot.tsx";
+import ServerErrorBanner from "../components/ServerErrorBanner.tsx";
 import ServerStatusBadge from "../components/ServerStatusBadge.tsx";
 import { useLiveRefresh } from "../hooks/useLiveRefresh.ts";
 import { reachability } from "../lib/offline.ts";
@@ -169,13 +170,7 @@ export default function Dashboard() {
             </h2>
             <p className="text-sm opacity-70">{selectedServer.baseUrl}</p>
             {loading && <span className="loading loading-spinner loading-md" aria-label={t`Lädt`} />}
-            {error !== null && (
-              <div className="alert alert-warning">
-                <span>
-                  <Trans>Server offline oder nicht erreichbar: {error}</Trans>
-                </span>
-              </div>
-            )}
+            {error !== null && <ServerErrorBanner error={error} testId="dashboard-offline" />}
             {error === null && !loading && (
               <dl className="stats stats-vertical sm:stats-horizontal shadow mt-2">
                 <div className="stat">

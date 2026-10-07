@@ -215,6 +215,11 @@ msgstr "Anhang {path} entfernen"
 msgid "Anhängen"
 msgstr "Anhängen"
 
+#: src/components/ServerErrorBanner.tsx
+#: src/lib/serverAuthError.ts
+msgid "Anmeldung fehlgeschlagen. Bitte Benutzername und Server-Passwort in den Einstellungen prüfen."
+msgstr "Anmeldung fehlgeschlagen. Bitte Benutzername und Server-Passwort in den Einstellungen prüfen."
+
 #: src/components/IntegrationsCard.tsx
 msgid "Anmeldung konnte nicht gestartet werden."
 msgstr "Anmeldung konnte nicht gestartet werden."
@@ -1520,11 +1525,7 @@ msgstr "Server offline – Shell-Liste ist deaktiviert."
 msgid "Server offline – Skill-Liste ist deaktiviert."
 msgstr "Server offline – Skill-Liste ist deaktiviert."
 
-#: src/components/SessionStarter.tsx
-#: src/pages/Dashboard.tsx
-#: src/pages/ProjectDetail.tsx
-#: src/pages/ServerDetail.tsx
-#: src/pages/ServerTools.tsx
+#: src/components/ServerErrorBanner.tsx
 msgid "Server offline oder nicht erreichbar: {error}"
 msgstr "Server offline oder nicht erreichbar: {error}"
 
@@ -1803,6 +1804,10 @@ msgstr "Suchen"
 #: src/components/SessionTabBar.tsx
 msgid "Tab {tabTitle} schließen"
 msgstr "Tab {tabTitle} schließen"
+
+#: src/components/ServerErrorBanner.tsx
+msgid "Technische Details"
+msgstr "Technische Details"
 
 #: src/components/ConfigCard.tsx
 msgid "Teilen"

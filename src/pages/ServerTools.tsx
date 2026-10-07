@@ -6,6 +6,7 @@ import Icon from "../components/Icon.tsx";
 import ConfigCard from "../components/ConfigCard.tsx";
 import ContentSkeleton from "../components/ContentSkeleton.tsx";
 import IntegrationsCard from "../components/IntegrationsCard.tsx";
+import ServerErrorBanner from "../components/ServerErrorBanner.tsx";
 import ServerStatusBadge from "../components/ServerStatusBadge.tsx";
 import { useLiveRefresh } from "../hooks/useLiveRefresh.ts";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
@@ -115,13 +116,7 @@ function parentPath(path: string): string | null {
 }
 
 function OfflineAlert({ error }: { error: string }) {
-  return (
-    <div className="alert alert-warning" data-testid="tools-offline-alert">
-      <span>
-        <Trans>Server offline oder nicht erreichbar: {error}</Trans>
-      </span>
-    </div>
-  );
+  return <ServerErrorBanner error={error} testId="tools-offline-alert" />;
 }
 
 export default function ServerTools() {

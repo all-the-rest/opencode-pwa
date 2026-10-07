@@ -65,6 +65,8 @@ für Agenten-Aktivität (dokumentierte Lücke).
       `locator.click`-Timeout. Nur mit `--repeat-each` reproduzierbar, die vollen
       Läufe waren grün.
 - [ ] Manuell prüfen: CI-Runs auf `main` nach jedem Push (frühe Phase: nicht auf CI warten).
+- [ ] Server-URL aus Deep-Links: Deep-URL in Server-Config pasten → einmalig beim Einfügen automatisch auf Basis-URL korrigieren (Pfad/Query/`/api`-Suffix weg, nur Origin + ggf. Subpfad behalten?).
+- [ ] Server-Bearbeiten auffindbar machen: „Server bearbeiten"-Aktion auf der Server-Seite (Link in Einstellungen-Edit), Fehler-Banner bei Auth-Fehlern mit Direkt-Link zum Bearbeiten der Zugangsdaten.
 - [ ] Prozess: Bestätigungsdialoge (Fragen) der Subagenten beim Haupt-Agenten anzeigen – offene Entscheidungen nicht still entscheiden, sondern per question-Tool vorlegen (Regel in `AGENTS.md`).
 
 ## Später (MVP+1)

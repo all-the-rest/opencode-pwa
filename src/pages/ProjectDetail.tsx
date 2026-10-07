@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import Icon from "../components/Icon.tsx";
 import ServerDot from "../components/ServerDot.tsx";
+import ServerErrorBanner from "../components/ServerErrorBanner.tsx";
 import ServerStatusBadge from "../components/ServerStatusBadge.tsx";
 import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
@@ -207,17 +208,14 @@ export default function ProjectDetail() {
         </div>
       )}
       {error !== null && (
-        <div className="alert alert-warning" data-testid="offline-alert">
-          <span>
-            <Trans>Server offline oder nicht erreichbar: {error}</Trans>
-          </span>
+        <ServerErrorBanner error={error} testId="offline-alert">
           <span className="text-xs">
             <Trans>
               Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions sind
               bis dahin deaktiviert.
             </Trans>
           </span>
-        </div>
+        </ServerErrorBanner>
       )}
       <section className="card bg-base-200 shadow" data-testid="project-sessions-card">
         <div className="card-body">

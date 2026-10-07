@@ -6,6 +6,7 @@ import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import ContentSkeleton from "../components/ContentSkeleton.tsx";
 import Icon from "../components/Icon.tsx";
 import ServerDot from "../components/ServerDot.tsx";
+import ServerErrorBanner from "../components/ServerErrorBanner.tsx";
 import ServerStatusBadge from "../components/ServerStatusBadge.tsx";
 import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
 import { useShellOutputStream } from "../hooks/useShellOutputStream.ts";
@@ -622,17 +623,14 @@ export default function ServerDetail() {
       )}
       {loading && <ContentSkeleton cards={4} testId="server-detail-skeleton" />}
       {error !== null && (
-        <div className="alert alert-warning" data-testid="offline-alert">
-          <span>
-            <Trans>Server offline oder nicht erreichbar: {error}</Trans>
-          </span>
+        <ServerErrorBanner error={error} testId="offline-alert">
           <span className="text-xs">
             <Trans>
               Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions und
               Aktionen sind bis dahin deaktiviert.
             </Trans>
           </span>
-        </div>
+        </ServerErrorBanner>
       )}
       {!loading && (
         <div

@@ -3,6 +3,7 @@ import { Trans } from "@lingui/react/macro";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import ServerDot from "./ServerDot.tsx";
+import ServerErrorBanner from "./ServerErrorBanner.tsx";
 import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
 import { reachability } from "../lib/offline.ts";
 import {
@@ -124,11 +125,7 @@ export default function SessionStarter() {
         )}
         {loading && <span className="loading loading-spinner loading-md" aria-label={t`Lädt`} />}
         {error !== null && (
-          <div className="alert alert-warning" data-testid="session-starter-offline">
-            <span>
-              <Trans>Server offline oder nicht erreichbar: {error}</Trans>
-            </span>
-          </div>
+          <ServerErrorBanner error={error} testId="session-starter-offline" />
         )}
         {!loading && error === null && selectedServer !== null && visible.length === 0 && (
           <p className="opacity-70 text-sm">
