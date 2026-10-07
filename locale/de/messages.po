@@ -119,6 +119,10 @@ msgstr "Alle Agenten"
 msgid "Alle Projekte"
 msgstr "Alle Projekte"
 
+#: src/components/SessionTabBar.tsx
+msgid "Alle schließen"
+msgstr "Alle schließen"
+
 #. placeholder {0}: servers.length
 #: src/pages/Dashboard.tsx
 #~ msgid "Alle Server ({0})"
@@ -127,6 +131,10 @@ msgstr "Alle Projekte"
 #: src/pages/Dashboard.tsx
 msgid "Alle Server ({serverCount})"
 msgstr "Alle Server ({serverCount})"
+
+#: src/components/SessionTabBar.tsx
+msgid "Alle Tabs schließen"
+msgstr "Alle Tabs schließen"
 
 #: src/pages/SessionDetail.tsx
 msgid "Als Datei laden"
@@ -751,6 +759,14 @@ msgstr "Gesamt (alle Sessions): {totalPrompts} Prompts, {totalSteps} Schritte, {
 msgid "Gespeicherte Server ({serverCount})"
 msgstr "Gespeicherte Server ({serverCount})"
 
+#: src/components/Layout.tsx
+msgid "Geteilte Ansicht"
+msgstr "Geteilte Ansicht"
+
+#: src/components/Layout.tsx
+msgid "Geteilte Ansicht: Bereiche nebeneinander oder untereinander"
+msgstr "Geteilte Ansicht: Bereiche nebeneinander oder untereinander"
+
 #: src/pages/ServerTools.tsx
 msgid "Git-Status"
 msgstr "Git-Status"
@@ -762,6 +778,10 @@ msgstr "GitHub-Repository"
 #: src/components/Layout.tsx
 msgid "GitHub-Repository öffnen"
 msgstr "GitHub-Repository öffnen"
+
+#: src/components/Layout.tsx
+msgid "Hauptnavigation"
+msgstr "Hauptnavigation"
 
 #: src/pages/ServerDetail.tsx
 msgid "Hinweis: Der Terminal-Bildschirm einer Session steht lesend in der Session-Ansicht. Ein Connect-Token kann pro PTY angefordert werden (für externe Terminal-Clients)."
@@ -824,8 +844,8 @@ msgid "Kein Server"
 msgstr "Kein Server"
 
 #: src/pages/Dashboard.tsx
-msgid "Kein Server ausgewählt. Lege unter <0>Einstellungen</0> einen Server an."
-msgstr "Kein Server ausgewählt. Lege unter <0>Einstellungen</0> einen Server an."
+#~ msgid "Kein Server ausgewählt. Lege unter <0>Einstellungen</0> einen Server an."
+#~ msgstr "Kein Server ausgewählt. Lege unter <0>Einstellungen</0> einen Server an."
 
 #: src/pages/SessionDetail.tsx
 msgid "Kein Server ausgewählt. Wähle oben einen Server."
@@ -888,8 +908,12 @@ msgid "Keine Modelle."
 msgstr "Keine Modelle."
 
 #: src/pages/SessionDetail.tsx
-msgid "Keine Nachrichten vorhanden."
-msgstr "Keine Nachrichten vorhanden."
+#~ msgid "Keine Nachrichten vorhanden."
+#~ msgstr "Keine Nachrichten vorhanden."
+
+#: src/pages/SessionDetail.tsx
+msgid "Keine Nachrichten vorhanden. Schreibe unten die erste Nachricht."
+msgstr "Keine Nachrichten vorhanden. Schreibe unten die erste Nachricht."
 
 #: src/pages/ServerTools.tsx
 msgid "Keine offenen Anfragen."
@@ -980,10 +1004,10 @@ msgstr "Kontext der Session zusammenfassen"
 msgid "Kosten:"
 msgstr "Kosten:"
 
+#: src/components/ContentSkeleton.tsx
 #: src/components/IntegrationsCard.tsx
 #: src/pages/AgentDetail.tsx
 #: src/pages/Dashboard.tsx
-#: src/pages/ServerDetail.tsx
 #: src/pages/ServerTools.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Lädt"
@@ -1152,6 +1176,10 @@ msgstr "Neueste ↓"
 msgid "nicht angefragt"
 msgstr "nicht angefragt"
 
+#: src/pages/Dashboard.tsx
+msgid "Noch kein Server eingerichtet. Lege deinen ersten Server an, um Sessions, Shells und Werkzeuge zu verwalten."
+msgstr "Noch kein Server eingerichtet. Lege deinen ersten Server an, um Sessions, Shells und Werkzeuge zu verwalten."
+
 #: src/components/Layout.tsx
 msgid "Noch keine Server angelegt."
 msgstr "Noch keine Server angelegt."
@@ -1217,6 +1245,7 @@ msgstr "Offene Formulare"
 msgid "Offene Sessions"
 msgstr "Offene Sessions"
 
+#: src/components/ServerStatusBadge.tsx
 #: src/pages/Dashboard.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Offline"
@@ -1233,6 +1262,10 @@ msgstr "Öffnen"
 #: src/pages/ServerTools.tsx
 msgid "Ohne Anbieter"
 msgstr "Ohne Anbieter"
+
+#: src/components/ServerStatusBadge.tsx
+msgid "Online"
+msgstr "Online"
 
 #: src/pages/ServerTools.tsx
 msgid "Ordner"
@@ -1341,6 +1374,10 @@ msgstr "Sendet …"
 #: src/components/Layout.tsx
 msgid "Server"
 msgstr "Server"
+
+#: src/pages/Dashboard.tsx
+msgid "Server anlegen"
+msgstr "Server anlegen"
 
 #: src/pages/Settings.tsx
 msgid "Server bearbeiten"
@@ -1824,6 +1861,10 @@ msgstr "Weitere Sessions laden"
 #: src/pages/AgentDetail.tsx
 msgid "Werkzeuge:"
 msgstr "Werkzeuge:"
+
+#: src/pages/Dashboard.tsx
+msgid "Willkommen"
+msgstr "Willkommen"
 
 #: src/pages/ServerTools.tsx
 msgid "Worktrees"

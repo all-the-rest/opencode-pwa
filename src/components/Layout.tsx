@@ -1,11 +1,12 @@
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
-import { useEffect } from "react";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import Icon from "./Icon.tsx";
 import ServerDot from "./ServerDot.tsx";
 import SessionTabBar from "./SessionTabBar.tsx";
 import { useEventNotifications } from "../hooks/useEventNotifications.ts";
+import { useLayoutMode } from "../state/layoutMode.tsx";
 import { useServers } from "../state/servers.tsx";
 import { useSessionTabs } from "../state/sessionTabs.tsx";
 
@@ -18,6 +19,11 @@ function navClass(isActive: boolean): string {
 export default function Layout() {
   const { servers, selectedServer, selectServer } = useServers();
   const { pruneTabs } = useSessionTabs();
+  const { split, toggleMode } = useLayoutMode();
+  // Controlled drawer: on mobile the drawer overlays the content and must
+  // close once navigation happened — otherwise it keeps covering the page.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const location = useLocation();
   useEventNotifications(selectedServer);
 
   // Tabs of removed servers have no target left — drop them.
@@ -25,9 +31,21 @@ export default function Layout() {
     pruneTabs(servers.map((s) => s.id));
   }, [servers, pruneTabs]);
 
+  // Close the mobile drawer after every navigation (no-op on `lg+`, where the
+  // sidebar stays open by CSS).
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname, location.search]);
+
   return (
     <div className="drawer min-h-screen lg:drawer-open">
-      <input id="app-drawer" type="checkbox" className="drawer-toggle" />
+      <input
+        id="app-drawer"
+        type="checkbox"
+        className="drawer-toggle"
+        checked={drawerOpen}
+        onChange={(e) => setDrawerOpen(e.target.checked)}
+      />
       <div className="drawer-content flex flex-col">
         <header className="navbar bg-base-200 sticky top-0 z-10">
           <div className="flex-none lg:hidden">
@@ -41,6 +59,17 @@ export default function Layout() {
             </Link>
           </div>
           <div className="flex-none flex items-center gap-1">
+            <button
+              type="button"
+              className={`btn btn-square btn-ghost hidden lg:inline-flex ${split ? "btn-active" : ""}`}
+              aria-pressed={split}
+              aria-label={t`Geteilte Ansicht`}
+              title={t`Geteilte Ansicht: Bereiche nebeneinander oder untereinander`}
+              data-testid="layout-mode-toggle"
+              onClick={toggleMode}
+            >
+              <Icon name="columns" className="h-5 w-5" />
+            </button>
             <a
               className="btn btn-square btn-ghost"
               href={GITHUB_URL}
@@ -54,6 +83,7 @@ export default function Layout() {
             <select
               className="select select-bordered select-sm max-w-44"
               aria-label={t`Server wählen`}
+              title={selectedServer?.name ?? t`Server wählen`}
               value={selectedServer?.id ?? ""}
               onChange={(e) => selectServer(e.target.value === "" ? null : e.target.value)}
             >
@@ -87,7 +117,18 @@ export default function Layout() {
       </div>
       <aside className="drawer-side">
         <label htmlFor="app-drawer" className="drawer-overlay" aria-label={t`Menü schließen`} />
-        <nav className="menu bg-base-200 min-h-full w-64 gap-1 p-4">
+        <nav className="menu bg-base-200 min-h-full w-64 gap-1 p-4" aria-label={t`Hauptnavigation`}>
+          <div className="flex justify-end lg:hidden">
+            <button
+              type="button"
+              className="btn btn-square btn-ghost btn-sm"
+              aria-label={t`Menü schließen`}
+              data-testid="drawer-close"
+              onClick={() => setDrawerOpen(false)}
+            >
+              <Icon name="close" className="h-5 w-5" />
+            </button>
+          </div>
           <li>
             <NavLink to="/" end className={({ isActive }) => navClass(isActive)}>
               <Trans>Übersicht</Trans>

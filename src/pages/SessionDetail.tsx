@@ -55,6 +55,7 @@ import {
 } from "../lib/opencode.ts";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
 import { useServers } from "../state/servers.tsx";
+import { useLayoutMode } from "../state/layoutMode.tsx";
 import { useSessionTabs } from "../state/sessionTabs.tsx";
 
 function countLabel(total: number, source: SessionMessageSource): string {
@@ -69,7 +70,7 @@ export default function SessionDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { servers, selectedServer } = useServers();
-  const { ensureTab, retitleTab } = useSessionTabs();
+  const { ensureTab, retitleTab, tabs } = useSessionTabs();
   const serverId = searchParams.get("server") ?? selectedServer?.id ?? null;
   const server = servers.find((s) => s.id === serverId) ?? selectedServer;
 
@@ -363,6 +364,11 @@ export default function SessionDetail() {
   // Lingui-safe hoists for the staged revert (no member access in messages).
   const stagedMessageID = stagedRevert?.messageID ?? "";
   const stagedFileCount = stagedRevert?.fileCount ?? null;
+  const { split } = useLayoutMode();
+  // Heading shows the resolved session title once known (the tab state
+  // already carries the retitled label); the raw id stays visible below.
+  const tabTitle = tabs.find((entry) => entry.serverID === server?.id && entry.sessionID === id)?.title;
+  const headingTitle = tabTitle !== undefined && tabTitle !== "" && tabTitle !== id ? tabTitle : null;
 
   function addAttachment() {
     const path = attachmentInput.trim().replace(/^\/+/, "");
@@ -770,7 +776,7 @@ export default function SessionDetail() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="text-2xl font-bold flex-1">
-          <Trans>Session</Trans>
+          {headingTitle === null ? <Trans>Session</Trans> : headingTitle}
         </h1>
         {server !== null && server !== undefined && id !== undefined && (
           <>
@@ -1011,8 +1017,8 @@ export default function SessionDetail() {
             </div>
           )}
           {showEmpty && (
-            <p className="opacity-70 text-sm">
-              <Trans>Keine Nachrichten vorhanden.</Trans>
+            <p className="opacity-70 text-sm" data-testid="message-empty-state">
+              <Trans>Keine Nachrichten vorhanden. Schreibe unten die erste Nachricht.</Trans>
             </p>
           )}
           {showList && total > 0 && (
@@ -1061,6 +1067,17 @@ export default function SessionDetail() {
               <Trans>Neueste ↓</Trans>
             </button>
           )}
+          {/* Secondary panels: stacked on narrow screens, tiled 2–3 across
+              on wide screens in split mode. The conversation above (messages
+              + composer) always keeps the full width. */}
+          <div
+            className={
+              split
+                ? "grid gap-4 lg:grid-cols-2 lg:items-start xl:grid-cols-3"
+                : "flex flex-col gap-4"
+            }
+            data-testid="session-panels"
+          >
           <section className="card bg-base-200 shadow" data-testid="session-diff-section">
             <div className="card-body py-3">
               <div className="flex items-center gap-2">
@@ -1614,6 +1631,7 @@ export default function SessionDetail() {
               )}
             </div>
           </section>
+          </div>
           {attachments.length > 0 && (
             <ul className="flex flex-wrap gap-1" data-testid="prompt-attachments" aria-label={t`Angehängte Dateien`}>
               {attachments.map((path) => (

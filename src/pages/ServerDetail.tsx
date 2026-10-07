@@ -3,8 +3,10 @@ import { Trans } from "@lingui/react/macro";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
+import ContentSkeleton from "../components/ContentSkeleton.tsx";
 import Icon from "../components/Icon.tsx";
 import ServerDot from "../components/ServerDot.tsx";
+import ServerStatusBadge from "../components/ServerStatusBadge.tsx";
 import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
 import { useShellOutputStream } from "../hooks/useShellOutputStream.ts";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
@@ -28,6 +30,7 @@ import {
   type SessionRow,
 } from "../lib/opencode.ts";
 import { useServers } from "../state/servers.tsx";
+import { useLayoutMode } from "../state/layoutMode.tsx";
 import { useSessionTabs } from "../state/sessionTabs.tsx";
 import { serverColor } from "../lib/serverColor.ts";
 
@@ -195,6 +198,7 @@ export default function ServerDetail() {
   const navigate = useNavigate();
   const { servers, updateServer, removeServer } = useServers();
   const { openTab } = useSessionTabs();
+  const { split } = useLayoutMode();
   const server = servers.find((s) => s.id === id) ?? null;
 
   const [sessions, setSessions] = useState<SessionRow[]>([]);
@@ -526,6 +530,7 @@ export default function ServerDetail() {
       </h1>
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-sm opacity-70">{server.baseUrl}</p>
+        {!loading && <ServerStatusBadge offline={offline} testId="server-detail-status" />}
         <Link className="btn btn-sm btn-ghost" to={`/servers/${server.id}/tools`}>
           <Trans>Server-Werkzeuge</Trans>
         </Link>
@@ -594,7 +599,7 @@ export default function ServerDetail() {
           <span>{renameError}</span>
         </div>
       )}
-      {loading && <span className="loading loading-spinner loading-md" aria-label={t`Lädt`} />}
+      {loading && <ContentSkeleton cards={4} testId="server-detail-skeleton" />}
       {error !== null && (
         <div className="alert alert-warning" data-testid="offline-alert">
           <span>
@@ -609,7 +614,14 @@ export default function ServerDetail() {
         </div>
       )}
       {!loading && (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div
+          className={
+            split
+              ? "grid gap-4 lg:grid-cols-3 lg:items-start"
+              : "grid gap-4 md:grid-cols-2 xl:grid-cols-4"
+          }
+          data-testid="server-panels"
+        >
           <section className="card bg-base-200 shadow">
             <div className="card-body">
               <h2 className="card-title">
@@ -630,7 +642,10 @@ export default function ServerDetail() {
               )}
             </div>
           </section>
-          <section className="card bg-base-200 shadow" data-testid="sessions-card">
+          <section
+            className={split ? "card bg-base-200 shadow lg:order-first lg:col-span-2" : "card bg-base-200 shadow"}
+            data-testid="sessions-card"
+          >
             <div className="card-body">
               <h2 className="card-title">
                 <Icon name="session" /> <Trans>Sessions ({sessionCount})</Trans>

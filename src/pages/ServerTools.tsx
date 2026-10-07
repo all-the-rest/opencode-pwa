@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Icon from "../components/Icon.tsx";
 import ConfigCard from "../components/ConfigCard.tsx";
+import ContentSkeleton from "../components/ContentSkeleton.tsx";
 import IntegrationsCard from "../components/IntegrationsCard.tsx";
+import ServerStatusBadge from "../components/ServerStatusBadge.tsx";
 import { useLiveRefresh } from "../hooks/useLiveRefresh.ts";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
 import {
@@ -42,6 +44,7 @@ import {
   type WorktreeRow,
 } from "../lib/opencode.ts";
 import { useServers } from "../state/servers.tsx";
+import { useLayoutMode } from "../state/layoutMode.tsx";
 
 /**
  * Read-only parity view for the remaining server tools: file browser, VCS
@@ -126,6 +129,7 @@ export default function ServerTools() {
   const navigate = useNavigate();
   const { servers } = useServers();
   const server = servers.find((s) => s.id === id) ?? null;
+  const { split } = useLayoutMode();
 
   const [path, setPath] = useState("");
   const [pathInput, setPathInput] = useState("");
@@ -386,8 +390,9 @@ export default function ServerTools() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
           <Trans>Server-Werkzeuge: {serverName}</Trans>
+          {!loading && <ServerStatusBadge offline={offline} testId="tools-server-status" />}
         </h1>
         <Link className="btn btn-sm btn-ghost" to={`/servers/${server.id}`}>
           <Trans>Zurück zu den Serverdetails</Trans>
@@ -395,9 +400,22 @@ export default function ServerTools() {
       </div>
       <p className="text-sm opacity-70">{server.baseUrl}</p>
       {error !== null && <OfflineAlert error={error} />}
-      {loading && <span className="loading loading-spinner loading-md" aria-label={t`Lädt`} />}
+      {loading && (
+        <ContentSkeleton
+          cards={6}
+          testId="tools-skeleton"
+          className="grid gap-4 md:grid-cols-2"
+        />
+      )}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div
+        className={
+          split
+            ? "grid gap-4 md:grid-cols-2 lg:items-start xl:grid-cols-3"
+            : "grid gap-4 md:grid-cols-2"
+        }
+        data-testid="tools-panels"
+      >
         <section className="card bg-base-200 shadow" data-testid="files-card">
           <div className="card-body">
             <h2 className="card-title">
@@ -803,7 +821,14 @@ export default function ServerTools() {
           </div>
         </section>
 
-        <section className="card bg-base-200 shadow md:col-span-2" data-testid="websearch-card">
+        <section
+          className={
+            split
+              ? "card bg-base-200 shadow md:col-span-2 xl:col-span-3"
+              : "card bg-base-200 shadow md:col-span-2"
+          }
+          data-testid="websearch-card"
+        >
           <div className="card-body">
             <h2 className="card-title">
               <Icon name="server" /> <Trans>Websuche</Trans>
@@ -888,7 +913,14 @@ export default function ServerTools() {
 
         <ConfigCard server={server} offline={offline} />
 
-        <section className="card bg-base-200 shadow md:col-span-2" data-testid="permissions-card">
+        <section
+          className={
+            split
+              ? "card bg-base-200 shadow md:col-span-2 xl:col-span-3"
+              : "card bg-base-200 shadow md:col-span-2"
+          }
+          data-testid="permissions-card"
+        >
           <div className="card-body">
             <h2 className="card-title">
               <Icon name="project" /> <Trans>Offene Berechtigungen</Trans>

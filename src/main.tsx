@@ -8,6 +8,7 @@ import "./index.css";
 import { I18nProvider } from "./logic/I18nProvider.tsx";
 import { ServerProvider } from "./state/servers.tsx";
 import { SessionTabsProvider } from "./state/sessionTabs.tsx";
+import { LayoutModeProvider } from "./state/layoutMode.tsx";
 
 registerSW({ immediate: true });
 
@@ -19,11 +20,13 @@ if (rootElement === null) {
 createRoot(rootElement).render(
   <StrictMode>
     <I18nProvider>
-      <ServerProvider>
-        <SessionTabsProvider>
-          <App />
-        </SessionTabsProvider>
-      </ServerProvider>
+      <LayoutModeProvider>
+        <ServerProvider>
+          <SessionTabsProvider>
+            <App />
+          </SessionTabsProvider>
+        </ServerProvider>
+      </LayoutModeProvider>
     </I18nProvider>
   </StrictMode>,
 );

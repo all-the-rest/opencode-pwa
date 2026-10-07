@@ -17,7 +17,7 @@ function Probe() {
 }
 
 function Opener() {
-  const { tabs, openTab, closeTab, retitleTab } = useSessionTabs();
+  const { tabs, openTab, closeTab, closeAllTabs, retitleTab } = useSessionTabs();
   return (
     <div>
       <span data-testid="count">{tabs.length}</span>
@@ -33,6 +33,9 @@ function Opener() {
       </button>
       <button type="button" onClick={() => closeTab("srv-a", "ses-1")}>
         close-a1
+      </button>
+      <button type="button" onClick={() => closeAllTabs()}>
+        close-all
       </button>
     </div>
   );
@@ -106,6 +109,24 @@ describe("SessionTabsProvider", () => {
     });
     expect(screen.getByTestId("count")).toHaveTextContent("1");
     expect(screen.getByTestId("titles")).toHaveTextContent("srv-b:ses-1:Beta");
+  });
+
+  it("closing all tabs empties the list", () => {
+    render(
+      <SessionTabsProvider>
+        <Opener />
+      </SessionTabsProvider>,
+    );
+    act(() => {
+      screen.getByRole("button", { name: "open-a1" }).click();
+      screen.getByRole("button", { name: "open-b1" }).click();
+    });
+    expect(screen.getByTestId("count")).toHaveTextContent("2");
+    act(() => {
+      screen.getByRole("button", { name: "close-all" }).click();
+    });
+    expect(screen.getByTestId("count")).toHaveTextContent("0");
+    expect(localStorage.getItem(SESSION_TABS_STORAGE_KEY)).toBe("[]");
   });
 
   it("ignores invalid stored entries and falls back to the session id", () => {

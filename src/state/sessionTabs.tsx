@@ -69,6 +69,8 @@ interface SessionTabsValue {
   retitleTab: (serverID: string, sessionID: string, title: string) => void;
   /** Remove one tab. Navigation is the caller's job (see `SessionTabBar`). */
   closeTab: (serverID: string, sessionID: string) => void;
+  /** Remove all tabs (tab-bar "close all"). Navigation is the caller's job. */
+  closeAllTabs: () => void;
   /** Drop tabs whose server no longer exists (called with the known ids). */
   pruneTabs: (serverIDs: readonly string[]) => void;
 }
@@ -119,14 +121,18 @@ export function SessionTabsProvider({ children }: { children: ReactNode }) {
     setTabs((prev) => prev.filter((t) => !(t.serverID === serverID && t.sessionID === sessionID)));
   }, []);
 
+  const closeAllTabs = useCallback((): void => {
+    setTabs([]);
+  }, []);
+
   const pruneTabs = useCallback((serverIDs: readonly string[]) => {
     const known = new Set(serverIDs);
     setTabs((prev) => prev.filter((t) => known.has(t.serverID)));
   }, []);
 
   const value = useMemo<SessionTabsValue>(
-    () => ({ tabs, openTab, ensureTab, retitleTab, closeTab, pruneTabs }),
-    [tabs, openTab, ensureTab, retitleTab, closeTab, pruneTabs],
+    () => ({ tabs, openTab, ensureTab, retitleTab, closeTab, closeAllTabs, pruneTabs }),
+    [tabs, openTab, ensureTab, retitleTab, closeTab, closeAllTabs, pruneTabs],
   );
 
   return <SessionTabsContext.Provider value={value}>{children}</SessionTabsContext.Provider>;

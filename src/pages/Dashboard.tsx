@@ -3,6 +3,7 @@ import { Trans } from "@lingui/react/macro";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import ServerDot from "../components/ServerDot.tsx";
+import ServerStatusBadge from "../components/ServerStatusBadge.tsx";
 import { useLiveRefresh } from "../hooks/useLiveRefresh.ts";
 import { reachability } from "../lib/offline.ts";
 import {
@@ -115,16 +116,23 @@ export default function Dashboard() {
       </h1>
 
       {selectedServer === null && (
-        <div className="alert alert-info">
-          <span>
-            <Trans>
-              Kein Server ausgewählt. Lege unter{" "}
-              <Link className="link" to="/settings">
-                Einstellungen
-              </Link>{" "}
-              einen Server an.
-            </Trans>
-          </span>
+        <div className="card bg-base-200 shadow" data-testid="dashboard-empty-state">
+          <div className="card-body items-center text-center">
+            <h2 className="card-title">
+              <Trans>Willkommen</Trans>
+            </h2>
+            <p className="text-sm opacity-70">
+              <Trans>
+                Noch kein Server eingerichtet. Lege deinen ersten Server an, um
+                Sessions, Shells und Werkzeuge zu verwalten.
+              </Trans>
+            </p>
+            <div className="card-actions">
+              <Link className="btn btn-primary btn-sm" to="/settings">
+                <Trans>Server anlegen</Trans>
+              </Link>
+            </div>
+          </div>
         </div>
       )}
 
@@ -134,6 +142,7 @@ export default function Dashboard() {
             <h2 className="card-title">
               <ServerDot server={selectedServer} testId="dashboard-server-dot" />
               <Trans>Aktiver Server: {selectedServerName}</Trans>
+              {!loading && <ServerStatusBadge offline={offline} testId="dashboard-server-status" />}
             </h2>
             <p className="text-sm opacity-70">{selectedServer.baseUrl}</p>
             {loading && <span className="loading loading-spinner loading-md" aria-label={t`Lädt`} />}
