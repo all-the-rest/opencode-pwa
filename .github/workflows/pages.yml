@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     # No `cache: pnpm` on setup-node (pnpm 10 incompatibility, see ci.yml).
     # No `version:` on pnpm setup (packageManager wins, see ci.yml).
@@ -34,9 +34,21 @@ jobs:
       - name: SPA fallback for GitHub Pages
         run: cp dist/index.html dist/404.html
 
-      - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          cname: ocweb.all-the.rest
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
