@@ -8,3 +8,6 @@
   `pnpm test:e2e:smoke`.
 - Build-agent rule: the orchestrator owns commits and `codegraph init`. Build agents
   implement only and never commit.
+- Subagent questions surface to the user: implementers must return open
+  decisions as explicit questions; the orchestrator asks them via the
+  question tool instead of deciding silently or burying them in reports.

@@ -76,14 +76,28 @@ Legend: ✅ in this app · 🚧 partial · ❌ missing (post-MVP unless noted).
   then cursor-paged poll every 2s while the panel is open, stops on
   collapse/unmount, `Live` badge while tailing.
 
-## PTY / Terminal (decision)
+## PTY / Terminal (read-only)
 
-- 🚧 List + per-PTY connect-token request (`GET /api/pty/{id}/connect-token`, ticket shown for external terminal clients).
-- ❌ In-app terminal rendering: deliberately deferred. Rendering a
-  terminal needs an xterm-compatible emulator plus a WebSocket/ticket
-  attach flow, which is too big for the W2 MVP and duplicates external
-  terminals. The token flow is kept so nothing blocks it later
-  (see `features/02-api-contract.md`). Decision recorded here per W2 scope.
+- ✅ List (`GET /api/pty`) + per-PTY connect-token request
+  (`POST /api/pty/{id}/connect-token`, ticket shown for external terminal
+  clients).
+- ✅ Read-only session terminal on SessionDetail
+  (`GET /api/experimental/session/{sessionID}/terminal/read`, verified in the
+  installed client package as `experimental.persistentPty.read`): screen text
+  in a `<pre>` with manual refresh, `null` (no terminal attached) shown as
+  "Kein Terminal". No emulator, no input, no xterm dependency — the bundle
+  stays lean on purpose.
+- ❌ Deliberately out: interactive terminal (needs an xterm-compatible
+  emulator plus a WebSocket/ticket attach flow, duplicates external
+  terminals) and `pty.snapshot`
+  (`GET /api/experimental/persistent-pty/{ptyID}/snapshot`) — it needs a
+  persistent-PTY id, which no list endpoint hands out in a static-friendly
+  way; the per-session `terminal/read` above is the static-friendly read
+  path. Decision recorded here per W2 scope.
+- ✅ Offline policy covers the read: `terminal-read` is blocked while offline
+  (`src/lib/offline.ts`).
+- Covered by `src/lib/parity4.test.ts` (extractor + fallback-fetch path with
+  a throwing client, so URL/method are pinned).
 
 ## Projects, Agents, Models
 
@@ -128,7 +142,44 @@ cards, rows extracted with the `{ data: [...] }`-tolerant patterns in
   `permission-reply` are disabled, so nothing is written to an unreachable
   server. VCS/MCP/permissions reload on the 5 s live refresh.
 
-Still missing in this section: integration management, config editing.
+## Integrations (Server-Werkzeuge)
+
+- ✅ List (`GET /api/integration`) with connection count and "Anmeldung
+  nötig" badge, detail per integration (`GET /api/integration/{id}`) with
+  methods and connections (`src/components/IntegrationsCard.tsx`).
+- ✅ Key-based connect (`POST /api/integration/{id}/connect/key
+  {key, label?, answer?}`): key in a password field, optional label, optional
+  method answers as a validated JSON object (same Text/Zahl/Ja-Nein/Textliste
+  rule as session forms).
+- ✅ OAuth begin + status, read-only
+  (`POST /api/integration/{id}/connect/oauth {methodID, label?}` →
+  attempt URL + instructions as an external link,
+  `GET .../connect/oauth/{attemptID}` → wartet/abgeschlossen/fehlgeschlagen/
+  abgelaufen with a "Status prüfen" button). Limitation, shown in the UI: the
+  provider redirect leaves the static app, so there is no redirect handling —
+  the user finishes the login on the provider page and the app only polls the
+  attempt state. No `complete`/`cancel`, no `command` connect flow.
+- ✅ Offline policy covers the flows: `integration-list`,
+  `integration-detail`, `integration-connect-key`, `integration-oauth` are all
+  blocked while offline (`src/lib/offline.ts`).
+- Covered by `src/lib/parity4.test.ts` (extractors + fallback-fetch paths with
+  a throwing client, so every URL/method/body is pinned) and E2E
+  `tests/e2e/w9-parity4.spec.ts` (`@feature:integration` for list + detail +
+  key connect, `@feature:integration-oauth` for begin + status poll).
+
+## Config (Server-Werkzeuge, read-only)
+
+- ✅ Config viewer (`GET /api/config` → path, shell, model, default agent,
+  update/share per document) plus available shells
+  (`GET /api/config/shell` → path, name, geeignet/ungeeignet badge)
+  (`src/components/ConfigCard.tsx`).
+- ❌ No global-config writes: `config.update`
+  (`PATCH /api/experimental/config`) is deliberately absent — the global
+  configuration stays with the server. Stated in the UI card.
+- ✅ Offline policy covers the reads: `config-view`, `config-shells` are
+  blocked while offline (`src/lib/offline.ts`).
+- Covered by `src/lib/parity4.test.ts` and E2E `tests/e2e/w9-parity4.spec.ts`
+  (`@feature:config` for entries + shells with route mocks).
 
 ## Credential Vault (AES-GCM + Web Crypto)
 
@@ -180,5 +231,6 @@ Server passwords are **never** in `localStorage` any more.
   master switch).
 - ✅ Iconify icons (`src/components/Icon.tsx`, no inline SVGs), GitHub link
   (header + footer → `https://github.com/all-the-rest/opencode-pwa`).
-- ❌ Real terminal, push notifications, server-side rendering: out of scope
-  (static-only invariant, see `features/01-architecture.md`).
+- ❌ Full interactive terminal, push notifications, server-side rendering: out
+  of scope (static-only invariant, see `features/01-architecture.md`). The
+  session terminal is read-only (screen text, no input).

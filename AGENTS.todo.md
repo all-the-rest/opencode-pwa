@@ -42,6 +42,7 @@ Stand: 2026-10-06. W6 umgesetzt (Tresor + Parität-Rest). Nur offene TODOs.
       `locator.click`-Timeout. Nur mit `--repeat-each` reproduzierbar, die vollen
       Läufe waren grün.
 - [ ] Manuell prüfen: CI-Runs auf `main` nach jedem Push (frühe Phase: nicht auf CI warten).
+- [ ] Prozess: Bestätigungsdialoge (Fragen) der Subagenten beim Haupt-Agenten anzeigen – offene Entscheidungen nicht still entscheiden, sondern per question-Tool vorlegen (Regel in `AGENTS.md`).
 
 ## Später (MVP+1)
 

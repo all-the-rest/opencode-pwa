@@ -7,6 +7,10 @@ msgstr ""
 "X-Generator: @lingui/cli\n"
 "Language: de\n"
 
+#: src/components/IntegrationsCard.tsx
+msgid "{ \"feld\": \"wert\" }"
+msgstr "{ \"feld\": \"wert\" }"
+
 #: src/pages/SessionDetail.tsx
 msgid "{base} (aus Zwischenspeicher)"
 msgstr "{base} (aus Zwischenspeicher)"
@@ -18,6 +22,10 @@ msgstr "{base} (live)"
 #: src/pages/SessionDetail.tsx
 msgid "{base} (offline aus Zwischenspeicher)"
 msgstr "{base} (offline aus Zwischenspeicher)"
+
+#: src/components/IntegrationsCard.tsx
+msgid "{connectionCount} Verbindungen"
+msgstr "{connectionCount} Verbindungen"
 
 #: src/pages/SessionDetail.tsx
 msgid "{liveCount} neue"
@@ -35,6 +43,10 @@ msgstr "{type}{suffix}."
 msgid "1 Nachricht"
 msgstr "1 Nachricht"
 
+#: src/components/IntegrationsCard.tsx
+msgid "1 Verbindung"
+msgstr "1 Verbindung"
+
 #: src/components/ConfirmDialog.tsx
 #: src/pages/SessionDetail.tsx
 #: src/pages/Settings.tsx
@@ -46,6 +58,7 @@ msgstr "Abbrechen"
 msgid "Ablehnen"
 msgstr "Ablehnen"
 
+#: src/components/ConfigCard.tsx
 #: src/pages/ServerDetail.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Agent"
@@ -93,6 +106,10 @@ msgstr "aktiviert"
 msgid "Aktualisiere …"
 msgstr "Aktualisiere …"
 
+#: src/pages/SessionDetail.tsx
+msgid "Aktualisieren"
+msgstr "Aktualisieren"
+
 #: src/pages/ServerDetail.tsx
 msgid "Alle Agenten"
 msgstr "Alle Agenten"
@@ -131,6 +148,10 @@ msgstr "Ältere Nachrichten laden ({remaining} weitere)"
 msgid "Anbieter & Modelle"
 msgstr "Anbieter & Modelle"
 
+#: src/components/IntegrationsCard.tsx
+msgid "Anbieter-Verbindungen: Schlüssel direkt verbinden, OAuth auf der Anbieterseite abschließen und hier nur den Status prüfen."
+msgstr "Anbieter-Verbindungen: Schlüssel direkt verbinden, OAuth auf der Anbieterseite abschließen und hier nur den Status prüfen."
+
 #: src/pages/ServerTools.tsx
 msgid "Anbieter: {searchAnswerProvider}"
 msgstr "Anbieter: {searchAnswerProvider}"
@@ -158,6 +179,18 @@ msgstr "Anhang {path} entfernen"
 #: src/pages/SessionDetail.tsx
 msgid "Anhängen"
 msgstr "Anhängen"
+
+#: src/components/IntegrationsCard.tsx
+msgid "Anmeldung konnte nicht gestartet werden."
+msgstr "Anmeldung konnte nicht gestartet werden."
+
+#: src/components/IntegrationsCard.tsx
+msgid "Anmeldung nötig"
+msgstr "Anmeldung nötig"
+
+#: src/components/IntegrationsCard.tsx
+msgid "Anmeldung starten"
+msgstr "Anmeldung starten"
 
 #: src/pages/SessionDetail.tsx
 msgid "Antwort als JSON"
@@ -187,6 +220,14 @@ msgstr "Anzeige auf {previewLimit} Zeichen gekürzt."
 #: src/pages/SessionDetail.tsx
 msgid "Anzeigen"
 msgstr "Anzeigen"
+
+#: src/components/IntegrationsCard.tsx
+msgid "API-Schlüssel"
+msgstr "API-Schlüssel"
+
+#: src/components/IntegrationsCard.tsx
+msgid "API-Schlüssel …"
+msgstr "API-Schlüssel …"
 
 #: src/pages/ServerDetail.tsx
 #: src/pages/SessionDetail.tsx
@@ -324,6 +365,14 @@ msgstr "Benutzer"
 msgid "Benutzer (Basic Auth)"
 msgstr "Benutzer (Basic Auth)"
 
+#: src/components/IntegrationsCard.tsx
+msgid "Bezeichnung (optional)"
+msgstr "Bezeichnung (optional)"
+
+#: src/components/IntegrationsCard.tsx
+msgid "Bezeichnung für die Verbindung"
+msgstr "Bezeichnung für die Verbindung"
+
 #: src/components/ConfirmDialog.tsx
 #: src/pages/Settings.tsx
 msgid "Bitte warten …"
@@ -406,6 +455,15 @@ msgstr "Details öffnen"
 msgid "Details zu Agent {agentLabel} anzeigen"
 msgstr "Details zu Agent {agentLabel} anzeigen"
 
+#: src/components/IntegrationsCard.tsx
+msgid "Details zu Integration {integrationName} anzeigen"
+msgstr "Details zu Integration {integrationName} anzeigen"
+
+#: src/components/IntegrationsCard.tsx
+msgid "Die Anmeldung findet auf der Anbieterseite statt (die Weiterleitung verlässt die App); hier wird danach nur der Status geprüft."
+msgstr "Die Anmeldung findet auf der Anbieterseite statt (die Weiterleitung verlässt die App); hier wird danach nur der Status geprüft."
+
+#: src/components/IntegrationsCard.tsx
 #: src/lib/opencode.ts
 msgid "Die Antwort enthält kein gültiges JSON."
 msgstr "Die Antwort enthält kein gültiges JSON."
@@ -651,6 +709,10 @@ msgstr "Freigabe beantwortet"
 msgid "Freigabe erforderlich"
 msgstr "Freigabe erforderlich"
 
+#: src/components/ConfigCard.tsx
+msgid "geeignet"
+msgstr "geeignet"
+
 #: src/pages/SessionDetail.tsx
 msgid "Gesamt (alle Sessions): {totalPrompts} Prompts, {totalSteps} Schritte"
 msgstr "Gesamt (alle Sessions): {totalPrompts} Prompts, {totalSteps} Schritte"
@@ -681,8 +743,12 @@ msgid "GitHub-Repository öffnen"
 msgstr "GitHub-Repository öffnen"
 
 #: src/pages/ServerDetail.tsx
-msgid "Hinweis: Terminal-Rendering folgt nach MVP. Ein Connect-Token kann pro PTY angefordert werden (für externe Terminal-Clients)."
-msgstr "Hinweis: Terminal-Rendering folgt nach MVP. Ein Connect-Token kann pro PTY angefordert werden (für externe Terminal-Clients)."
+msgid "Hinweis: Der Terminal-Bildschirm einer Session steht lesend in der Session-Ansicht. Ein Connect-Token kann pro PTY angefordert werden (für externe Terminal-Clients)."
+msgstr "Hinweis: Der Terminal-Bildschirm einer Session steht lesend in der Session-Ansicht. Ein Connect-Token kann pro PTY angefordert werden (für externe Terminal-Clients)."
+
+#: src/pages/ServerDetail.tsx
+#~ msgid "Hinweis: Terminal-Rendering folgt nach MVP. Ein Connect-Token kann pro PTY angefordert werden (für externe Terminal-Clients)."
+#~ msgstr "Hinweis: Terminal-Rendering folgt nach MVP. Ein Connect-Token kann pro PTY angefordert werden (für externe Terminal-Clients)."
 
 #: src/pages/Settings.tsx
 msgid "Hinzufügen"
@@ -699,6 +765,18 @@ msgstr "Importieren"
 #: src/pages/SessionDetail.tsx
 msgid "Inbox konnte nicht geladen werden."
 msgstr "Inbox konnte nicht geladen werden."
+
+#: src/components/IntegrationsCard.tsx
+msgid "Integration konnte nicht geladen werden."
+msgstr "Integration konnte nicht geladen werden."
+
+#: src/components/IntegrationsCard.tsx
+msgid "Integrationen"
+msgstr "Integrationen"
+
+#: src/components/IntegrationsCard.tsx
+msgid "Integrationen konnten nicht geladen werden."
+msgstr "Integrationen konnten nicht geladen werden."
 
 #: src/pages/AgentDetail.tsx
 msgid "Ja"
@@ -732,6 +810,10 @@ msgstr "Kein Server ausgewählt. Lege unter <0>Einstellungen</0> einen Server an
 msgid "Kein Server ausgewählt. Wähle oben einen Server."
 msgstr "Kein Server ausgewählt. Wähle oben einen Server."
 
+#: src/pages/SessionDetail.tsx
+msgid "Kein Terminal für diese Session."
+msgstr "Kein Terminal für diese Session."
+
 #: src/pages/ServerTools.tsx
 msgid "Keine Agenten."
 msgstr "Keine Agenten."
@@ -743,6 +825,10 @@ msgstr "Keine Anbieter konfiguriert."
 #: src/pages/ServerTools.tsx
 msgid "Keine Änderungen."
 msgstr "Keine Änderungen."
+
+#: src/components/ConfigCard.tsx
+msgid "Keine Angaben"
+msgstr "Keine Angaben"
 
 #: src/pages/AgentDetail.tsx
 msgid "Keine Angaben zu den Modellfähigkeiten."
@@ -763,6 +849,14 @@ msgstr "Keine Einträge in der Warteschlange."
 #: src/pages/ServerTools.tsx
 msgid "Keine Einträge."
 msgstr "Keine Einträge."
+
+#: src/components/IntegrationsCard.tsx
+msgid "Keine Integrationen."
+msgstr "Keine Integrationen."
+
+#: src/components/ConfigCard.tsx
+msgid "Keine Konfiguration."
+msgstr "Keine Konfiguration."
 
 #: src/pages/ServerTools.tsx
 msgid "Keine MCP-Server konfiguriert."
@@ -800,6 +894,7 @@ msgstr "Keine PTYs."
 msgid "Keine Sessions."
 msgstr "Keine Sessions."
 
+#: src/components/ConfigCard.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Keine Shells."
 msgstr "Keine Shells."
@@ -807,6 +902,10 @@ msgstr "Keine Shells."
 #: src/pages/ServerTools.tsx
 msgid "Keine Skills."
 msgstr "Keine Skills."
+
+#: src/components/IntegrationsCard.tsx
+msgid "Keine Verbindungsmethoden."
+msgstr "Keine Verbindungsmethoden."
 
 #: src/pages/ServerTools.tsx
 msgid "Keine Worktrees."
@@ -844,6 +943,10 @@ msgstr "Kompaktierung gestartet – der Kontext wird zusammengefasst."
 msgid "Kompaktierung läuft"
 msgstr "Kompaktierung läuft"
 
+#: src/components/ConfigCard.tsx
+msgid "Konfiguration"
+msgstr "Konfiguration"
+
 #: src/pages/SessionDetail.tsx
 msgid "Kontext der Session zusammenfassen"
 msgstr "Kontext der Session zusammenfassen"
@@ -852,6 +955,7 @@ msgstr "Kontext der Session zusammenfassen"
 msgid "Kosten:"
 msgstr "Kosten:"
 
+#: src/components/IntegrationsCard.tsx
 #: src/pages/AgentDetail.tsx
 #: src/pages/Dashboard.tsx
 #: src/pages/ServerDetail.tsx
@@ -888,6 +992,10 @@ msgstr "Leer lassen, um das gespeicherte Passwort zu behalten. Ein neues Passwor
 msgid "Leere Datei."
 msgstr "Leere Datei."
 
+#: src/pages/SessionDetail.tsx
+msgid "Leeres Terminal."
+msgstr "Leeres Terminal."
+
 #: src/pages/ServerDetail.tsx
 msgid "Live"
 msgstr "Live"
@@ -913,6 +1021,23 @@ msgstr "Menü öffnen"
 msgid "Menü schließen"
 msgstr "Menü schließen"
 
+#: src/components/IntegrationsCard.tsx
+msgid "Methoden-Antwort als JSON"
+msgstr "Methoden-Antwort als JSON"
+
+#: src/components/IntegrationsCard.tsx
+msgid "Methoden-Antwort als JSON (optional)"
+msgstr "Methoden-Antwort als JSON (optional)"
+
+#: src/components/IntegrationsCard.tsx
+msgid "Mit OAuth verbinden"
+msgstr "Mit OAuth verbinden"
+
+#: src/components/IntegrationsCard.tsx
+msgid "Mit Schlüssel verbinden"
+msgstr "Mit Schlüssel verbinden"
+
+#: src/components/ConfigCard.tsx
 #: src/pages/AgentDetail.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Modell"
@@ -1007,6 +1132,14 @@ msgstr "Noch keine Server vorhanden."
 msgid "Noch keine Verbrauchsdaten vorhanden."
 msgstr "Noch keine Verbrauchsdaten vorhanden."
 
+#: src/components/IntegrationsCard.tsx
+msgid "Noch nicht verbunden."
+msgstr "Noch nicht verbunden."
+
+#: src/pages/SessionDetail.tsx
+msgid "Nur lesend: Bildschirminhalt des Session-Terminals als Text. Ohne Emulator, ohne Eingabe."
+msgstr "Nur lesend: Bildschirminhalt des Session-Terminals als Text. Ohne Emulator, ohne Eingabe."
+
 #: src/pages/ServerTools.tsx
 msgid "Nur lesend: geänderte Dateien des Server-Verzeichnisses."
 msgstr "Nur lesend: geänderte Dateien des Server-Verzeichnisses."
@@ -1034,6 +1167,10 @@ msgstr "Nur lesend: verfügbare Slash-Befehle. Ausgeführt wird in der Session."
 #: src/pages/ServerTools.tsx
 msgid "Nur lesend: Verzeichnisse durchsuchen und Dateien ansehen."
 msgstr "Nur lesend: Verzeichnisse durchsuchen und Dateien ansehen."
+
+#: src/components/ConfigCard.tsx
+msgid "Nur lesend: wirksame Konfiguration des Servers. Schreiben ist bewusst nicht implementiert – die globale Konfiguration bleibt dem Server überlassen."
+msgstr "Nur lesend: wirksame Konfiguration des Servers. Schreiben ist bewusst nicht implementiert – die globale Konfiguration bleibt dem Server überlassen."
 
 #: src/pages/ServerTools.tsx
 msgid "Offene Berechtigungen"
@@ -1139,6 +1276,14 @@ msgstr "Revert-Staging verwerfen"
 msgid "Schließen"
 msgstr "Schließen"
 
+#: src/components/IntegrationsCard.tsx
+msgid "Schlüssel gespeichert."
+msgstr "Schlüssel gespeichert."
+
+#: src/components/IntegrationsCard.tsx
+msgid "Schlüssel speichern"
+msgstr "Schlüssel speichern"
+
 #: src/pages/SessionDetail.tsx
 msgid "Senden"
 msgstr "Senden"
@@ -1181,9 +1326,21 @@ msgstr "Server offline – Anbieterliste ist deaktiviert."
 msgid "Server offline – Befehlsliste ist deaktiviert."
 msgstr "Server offline – Befehlsliste ist deaktiviert."
 
+#: src/components/IntegrationsCard.tsx
+msgid "Server offline – Integrationsliste ist deaktiviert."
+msgstr "Server offline – Integrationsliste ist deaktiviert."
+
+#: src/components/ConfigCard.tsx
+msgid "Server offline – Konfiguration ist deaktiviert."
+msgstr "Server offline – Konfiguration ist deaktiviert."
+
 #: src/pages/AgentDetail.tsx
 msgid "Server offline – Neuladen ist deaktiviert."
 msgstr "Server offline – Neuladen ist deaktiviert."
+
+#: src/components/ConfigCard.tsx
+msgid "Server offline – Shell-Liste ist deaktiviert."
+msgstr "Server offline – Shell-Liste ist deaktiviert."
 
 #: src/pages/ServerTools.tsx
 msgid "Server offline – Skill-Liste ist deaktiviert."
@@ -1326,6 +1483,10 @@ msgstr "Sessions konnten nicht nachgeladen werden."
 msgid "Sessions suchen"
 msgstr "Sessions suchen"
 
+#: src/components/ConfigCard.tsx
+msgid "Shell"
+msgstr "Shell"
+
 #. placeholder {0}: s.label
 #: src/pages/ServerDetail.tsx
 #~ msgid "Shell {0} entfernen"
@@ -1396,9 +1557,21 @@ msgstr "Staging starten"
 msgid "Staging verworfen – die Session ist unverändert."
 msgstr "Staging verworfen – die Session ist unverändert."
 
+#: src/components/ConfigCard.tsx
+msgid "Standard"
+msgstr "Standard"
+
 #: src/hooks/useEventNotifications.ts
 msgid "Status geändert{suffix}."
 msgstr "Status geändert{suffix}."
+
+#: src/components/IntegrationsCard.tsx
+msgid "Status konnte nicht geladen werden."
+msgstr "Status konnte nicht geladen werden."
+
+#: src/components/IntegrationsCard.tsx
+msgid "Status prüfen"
+msgstr "Status prüfen"
 
 #: src/pages/Settings.tsx
 msgid "Status:"
@@ -1428,9 +1601,29 @@ msgstr "Suche fehlgeschlagen."
 msgid "Suchen"
 msgstr "Suchen"
 
+#: src/components/ConfigCard.tsx
+msgid "Teilen"
+msgstr "Teilen"
+
 #: src/pages/SessionDetail.tsx
 msgid "Teilen (Export / Import)"
 msgstr "Teilen (Export / Import)"
+
+#: src/pages/SessionDetail.tsx
+msgid "Terminal"
+msgstr "Terminal"
+
+#: src/pages/SessionDetail.tsx
+msgid "Terminal anzeigen"
+msgstr "Terminal anzeigen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Terminal ausblenden"
+msgstr "Terminal ausblenden"
+
+#: src/pages/SessionDetail.tsx
+msgid "Terminal-Ausgabe aktualisieren"
+msgstr "Terminal-Ausgabe aktualisieren"
 
 #: src/pages/ServerDetail.tsx
 msgid "Titel oder ID suchen"
@@ -1457,6 +1650,10 @@ msgstr "Übernehmen"
 msgid "Übersicht"
 msgstr "Übersicht"
 
+#: src/components/IntegrationsCard.tsx
+msgid "Umgebung"
+msgstr "Umgebung"
+
 #: src/lib/opencode.ts
 #: src/pages/Dashboard.tsx
 msgid "Unbekannter Fehler"
@@ -1469,6 +1666,14 @@ msgstr "Unerwartete Agent-Antwort vom Server."
 #: src/lib/opencode.ts
 msgid "Unerwartete Export-Antwort vom Server."
 msgstr "Unerwartete Export-Antwort vom Server."
+
+#: src/lib/opencode.ts
+msgid "Unerwartete Integrations-Antwort vom Server."
+msgstr "Unerwartete Integrations-Antwort vom Server."
+
+#: src/lib/opencode.ts
+msgid "Unerwartete OAuth-Antwort vom Server."
+msgstr "Unerwartete OAuth-Antwort vom Server."
 
 #: src/lib/opencode.ts
 msgid "Unerwartete Revert-Antwort vom Server."
@@ -1486,18 +1691,38 @@ msgstr "Unerwartete Statistik-Antwort vom Server."
 msgid "Unerwartete Such-Antwort vom Server."
 msgstr "Unerwartete Such-Antwort vom Server."
 
+#: src/lib/opencode.ts
+msgid "Unerwartete Terminal-Antwort vom Server."
+msgstr "Unerwartete Terminal-Antwort vom Server."
+
 #: src/pages/ServerDetail.tsx
 msgid "Unerwartete Token-Antwort vom Server."
 msgstr "Unerwartete Token-Antwort vom Server."
+
+#: src/components/ConfigCard.tsx
+msgid "ungeeignet"
+msgstr "ungeeignet"
 
 #: src/pages/ServerDetail.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Unterbrechen"
 msgstr "Unterbrechen"
 
+#: src/components/ConfigCard.tsx
+msgid "Update"
+msgstr "Update"
+
 #: src/pages/SessionDetail.tsx
 msgid "Verbrauch dieser Session"
 msgstr "Verbrauch dieser Session"
+
+#: src/components/IntegrationsCard.tsx
+msgid "Verbunden"
+msgstr "Verbunden"
+
+#: src/components/ConfigCard.tsx
+msgid "Verfügbare Shells"
+msgstr "Verfügbare Shells"
 
 #: src/pages/Dashboard.tsx
 msgid "Version"

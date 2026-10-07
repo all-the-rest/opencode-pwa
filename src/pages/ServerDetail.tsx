@@ -663,8 +663,9 @@ export default function ServerDetail() {
               </h2>
               <p className="text-xs opacity-70">
                 <Trans>
-                  Hinweis: Terminal-Rendering folgt nach MVP. Ein Connect-Token kann pro PTY
-                  angefordert werden (für externe Terminal-Clients).
+                  Hinweis: Der Terminal-Bildschirm einer Session steht lesend in der
+                  Session-Ansicht. Ein Connect-Token kann pro PTY angefordert werden (für
+                  externe Terminal-Clients).
                 </Trans>
               </p>
               {ptyTicketError !== null && (

@@ -3,6 +3,8 @@ import { Trans } from "@lingui/react/macro";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Icon from "../components/Icon.tsx";
+import ConfigCard from "../components/ConfigCard.tsx";
+import IntegrationsCard from "../components/IntegrationsCard.tsx";
 import { useLiveRefresh } from "../hooks/useLiveRefresh.ts";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
 import {
@@ -43,9 +45,10 @@ import { useServers } from "../state/servers.tsx";
 
 /**
  * Read-only parity view for the remaining server tools: file browser, VCS
- * status, worktrees, MCP servers and pending permissions. Writes are limited
- * to answering a permission request — everything risky stays out (no file
- * write, no worktree create/remove, no MCP config editing).
+ * status, worktrees, MCP servers, pending permissions, integrations and the
+ * server config. Writes are limited to answering a permission request and
+ * connecting an integration key — everything risky stays out (no file write,
+ * no worktree create/remove, no MCP config editing, no global-config writes).
  */
 
 interface FilePreview {
@@ -880,6 +883,10 @@ export default function ServerTools() {
             )}
           </div>
         </section>
+
+        <IntegrationsCard server={server} offline={offline} />
+
+        <ConfigCard server={server} offline={offline} />
 
         <section className="card bg-base-200 shadow md:col-span-2" data-testid="permissions-card">
           <div className="card-body">

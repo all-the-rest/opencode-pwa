@@ -23,6 +23,7 @@ import {
   listModels,
   listSessionForms,
   listSessionInbox,
+  readSessionTerminal,
   updateSessionInbox,
   modelOptionValue,
   parseFormAnswerText,
@@ -47,6 +48,7 @@ import {
   type SessionInboxRow,
   type SessionRevertInfo,
   type SessionStatsSummary,
+  type SessionTerminalScreen,
   type TokenUsage,
 } from "../lib/opencode.ts";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
@@ -120,6 +122,12 @@ export default function SessionDetail() {
   const [selectedFormID, setSelectedFormID] = useState("");
   const [formAnswerText, setFormAnswerText] = useState("");
   const [formBusy, setFormBusy] = useState(false);
+  // Parity batch 4: read-only session terminal (no emulator, no input).
+  const [terminalOpen, setTerminalOpen] = useState(false);
+  const [terminalScreen, setTerminalScreen] = useState<SessionTerminalScreen | null>(null);
+  const [terminalLoaded, setTerminalLoaded] = useState(false);
+  const [terminalLoading, setTerminalLoading] = useState(false);
+  const [terminalError, setTerminalError] = useState<string | null>(null);
   const [sessionTokens, setSessionTokens] = useState<TokenUsage | null>(null);
   const [sessionCost, setSessionCost] = useState<number | null>(null);
   const [globalStats, setGlobalStats] = useState<SessionStatsSummary | null>(null);
@@ -212,6 +220,10 @@ export default function SessionDetail() {
     setFormsError(null);
     setSelectedFormID("");
     setFormAnswerText("");
+    setTerminalOpen(false);
+    setTerminalScreen(null);
+    setTerminalLoaded(false);
+    setTerminalError(null);
   }, [id]);
 
   const handleLoadMore = useCallback(() => {
@@ -300,6 +312,7 @@ export default function SessionDetail() {
   const canFormList = isActionEnabled(offline, "session-form-list");
   const canFormReply = isActionEnabled(offline, "session-form-reply");
   const canFormCancel = isActionEnabled(offline, "session-form-cancel");
+  const canTerminal = isActionEnabled(offline, "terminal-read");
   // Lingui messages take plain variables only — no member access or calls —
   // so every formatted stat is hoisted here (see `lingui/no-expression-in-message`).
   const statInput = (sessionTokens?.input ?? 0).toLocaleString("de");
@@ -693,6 +706,31 @@ export default function SessionDetail() {
       prev === null ? prev : prev.filter((row) => row.id !== selectedFormID),
     );
     setSelectedFormID("");
+  }
+
+  // --- Parity batch 4: read-only session terminal (screen text, no input) ---
+
+  async function loadTerminal() {
+    if (server === null || server === undefined || id === undefined) return;
+    setTerminalLoading(true);
+    setTerminalError(null);
+    const result = await readSessionTerminal(server, id, 200);
+    setTerminalLoading(false);
+    if (result.error !== null) {
+      setTerminalError(result.error);
+      return;
+    }
+    setTerminalScreen(result.data);
+    setTerminalLoaded(true);
+  }
+
+  function toggleTerminal() {
+    if (terminalOpen) {
+      setTerminalOpen(false);
+      return;
+    }
+    setTerminalOpen(true);
+    if (!terminalLoaded && !terminalLoading) void loadTerminal();
   }
 
   return (
@@ -1469,6 +1507,75 @@ export default function SessionDetail() {
                         </button>
                       </div>
                     </div>
+                  )}
+                </>
+              )}
+            </div>
+          </section>
+          <section className="card bg-base-200 shadow" data-testid="session-terminal-section">
+            <div className="card-body py-3">
+              <div className="flex items-center gap-2">
+                <h2 className="card-title text-base flex-1">
+                  <Trans>Terminal</Trans>
+                </h2>
+                {terminalOpen && terminalLoaded && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost"
+                    disabled={!canTerminal || terminalLoading}
+                    aria-label={t`Terminal-Ausgabe aktualisieren`}
+                    data-testid="session-terminal-refresh"
+                    onClick={() => void loadTerminal()}
+                  >
+                    <Trans>Aktualisieren</Trans>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  disabled={!canTerminal}
+                  aria-expanded={terminalOpen}
+                  aria-label={terminalOpen ? t`Terminal ausblenden` : t`Terminal anzeigen`}
+                  onClick={toggleTerminal}
+                >
+                  {terminalOpen ? <Trans>Ausblenden</Trans> : <Trans>Anzeigen</Trans>}
+                </button>
+              </div>
+              <p className="text-xs opacity-70">
+                <Trans>
+                  Nur lesend: Bildschirminhalt des Session-Terminals als Text. Ohne Emulator,
+                  ohne Eingabe.
+                </Trans>
+              </p>
+              {terminalOpen && (
+                <>
+                  {terminalLoading && (
+                    <span className="loading loading-spinner loading-sm" aria-label={t`Lädt`} />
+                  )}
+                  {terminalError !== null && (
+                    <div className="alert alert-warning">
+                      <span>{terminalError}</span>
+                    </div>
+                  )}
+                  {!terminalLoading && terminalError === null && terminalLoaded && terminalScreen === null && (
+                    <p className="opacity-70 text-sm">
+                      <Trans>Kein Terminal für diese Session.</Trans>
+                    </p>
+                  )}
+                  {!terminalLoading && terminalError === null && terminalScreen !== null && (
+                    <>
+                      {terminalScreen.title !== null && (
+                        <p className="text-xs opacity-70 break-all" data-testid="session-terminal-title">
+                          {terminalScreen.title} ({terminalScreen.columns}×{terminalScreen.rows})
+                        </p>
+                      )}
+                      <pre
+                        className="text-xs bg-base-300 rounded p-2 whitespace-pre-wrap break-words max-h-72 overflow-auto"
+                        data-testid="session-terminal-output"
+                      >
+                        {terminalScreen.text === "" ? t`Leeres Terminal.` : terminalScreen.text}
+                      </pre>
+                    </>
                   )}
                 </>
               )}

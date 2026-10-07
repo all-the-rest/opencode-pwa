@@ -32,6 +32,13 @@ export type ServerAction =
   | "websearch-query"
   | "agent-detail"
   | "provider-list"
+  | "integration-list"
+  | "integration-detail"
+  | "integration-connect-key"
+  | "integration-oauth"
+  | "config-view"
+  | "config-shells"
+  | "terminal-read"
   | "shell-create"
   | "shell-remove"
   | "shell-output"
@@ -64,6 +71,13 @@ const ACTIONS_REQUIRING_SERVER: ReadonlySet<ServerAction> = new Set<ServerAction
   "websearch-query",
   "agent-detail",
   "provider-list",
+  "integration-list",
+  "integration-detail",
+  "integration-connect-key",
+  "integration-oauth",
+  "config-view",
+  "config-shells",
+  "terminal-read",
   "shell-create",
   "shell-remove",
   "shell-output",

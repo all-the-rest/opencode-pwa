@@ -2085,3 +2085,584 @@ export function cancelSessionForm(server: ServerConfig, sessionID: string, formI
     }
   });
 }
+
+// ---------------------------------------------------------------------------
+// Parity batch 4: integrations, config (read-only), session terminal
+//
+// REST paths verified against the installed package
+// (`node_modules/@opencode/client`, chunk `service-version-nyqggzs9.js`):
+// - `integration.list` → GET /api/integration
+// - `integration.get` → GET /api/integration/{integrationID}
+// - `integration.connect.key` → POST /api/integration/{id}/connect/key
+//   {key, answer?, label?} (204, empty)
+// - `integration.oauth.connect` → POST /api/integration/{id}/connect/oauth
+//   {methodID, answer?, label?} → `{ location, data: IntegrationAttempt }`
+// - `integration.oauth.status` →
+//   GET /api/integration/{id}/connect/oauth/{attemptID} →
+//   `{ location, data: IntegrationAttemptStatus }`
+// - `config.get` → GET /api/config (→ `ConfigEntry[]`, no envelope)
+// - `config.shells` → GET /api/config/shell (→ `ConfigShellOption[]`)
+// - `experimental.persistentPty.read` →
+//   GET /api/experimental/session/{sessionID}/terminal/read (?lines=) → the
+//   `PersistentPtyReadResult` (or null when the session has no terminal).
+//
+// Deliberately NOT implemented (documented in `features/05-parity.md`):
+// - `config.update` (PATCH /api/experimental/config) — global-config writes.
+// - OAuth `complete`/`cancel` and the `command` connect flow — the redirect
+//   and the server-side command run cannot be driven from a static page.
+// - `credential.*` — stored credentials management stays server-side.
+// - `pty.snapshot` (`GET /api/experimental/persistent-pty/{ptyID}/snapshot`)
+//   needs a persistent-PTY id, which no list endpoint hands out statically —
+//   the per-session `terminal/read` above is the static-friendly read path.
+// ---------------------------------------------------------------------------
+
+/** One connect method of an integration (`IntegrationMethod` union). */
+export interface IntegrationMethodRow {
+  kind: "oauth" | "key" | "command" | "env" | "unbekannt";
+  /** The method id (`oauth`/`command` carry one, `key`/`env` do not). */
+  id: string | null;
+  label: string | null;
+}
+
+/** Normalize the `methods` array of one `IntegrationInfo`. */
+export function extractIntegrationMethods(value: unknown): IntegrationMethodRow[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry, index) => {
+    if (entry === null || typeof entry !== "object") {
+      return { kind: "unbekannt" as const, id: null, label: String(entry) };
+    }
+    const record = entry as Record<string, unknown>;
+    const raw = record["type"];
+    const kind =
+      raw === "oauth" || raw === "key" || raw === "command" || raw === "env"
+        ? raw
+        : "unbekannt";
+    return {
+      kind,
+      id: readString(record, ["id"]),
+      label:
+        readString(record, ["label"]) ??
+        (Array.isArray(record["names"])
+          ? (record["names"] as unknown[]).filter((n): n is string => typeof n === "string").join(", ") || null
+          : null) ??
+        (kind === "unbekannt" ? `methode-${index}` : null),
+    };
+  });
+}
+
+export interface IntegrationConnectionRow {
+  kind: "credential" | "env" | "unbekannt";
+  label: string;
+  /** How the connection was made (`key`/`oauth` for credentials). */
+  method: string | null;
+  /** True while the server waits for authentication (`needs_auth`). */
+  needsAuth: boolean;
+  message: string | null;
+  /** Provider URL for finishing authentication, when the server sent one. */
+  url: string | null;
+}
+
+/** Normalize the `connections` array of one `IntegrationInfo`. */
+export function extractIntegrationConnections(value: unknown): IntegrationConnectionRow[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry, index) => {
+    if (entry === null || typeof entry !== "object") {
+      return {
+        kind: "unbekannt" as const,
+        label: String(entry),
+        method: null,
+        needsAuth: false,
+        message: null,
+        url: null,
+      };
+    }
+    const record = entry as Record<string, unknown>;
+    const raw = record["type"];
+    const kind = raw === "credential" || raw === "env" ? raw : "unbekannt";
+    const statusRaw: unknown = record["status"];
+    const statusRecord =
+      statusRaw !== null && typeof statusRaw === "object"
+        ? (statusRaw as Record<string, unknown>)
+        : null;
+    return {
+      kind,
+      label: readString(record, ["label", "name"]) ?? `verbindung-${index}`,
+      method: readString(record, ["method"]),
+      needsAuth: statusRecord?.["status"] === "needs_auth",
+      message: statusRecord === null ? null : readString(statusRecord, ["message"]),
+      url: statusRecord === null ? null : readString(statusRecord, ["url"]),
+    };
+  });
+}
+
+/** One integration (`IntegrationInfo`): id, name, methods and connections. */
+export interface IntegrationRow {
+  id: string;
+  name: string;
+  methods: IntegrationMethodRow[];
+  connections: IntegrationConnectionRow[];
+}
+
+function toIntegrationRow(entry: unknown, index: number): IntegrationRow {
+  if (entry === null || typeof entry !== "object") {
+    const fallback = `integration-${index}`;
+    return { id: fallback, name: String(entry) === "" ? fallback : String(entry), methods: [], connections: [] };
+  }
+  const record = entry as Record<string, unknown>;
+  const id = readString(record, ["id"]) ?? `integration-${index}`;
+  return {
+    id,
+    name: readString(record, ["name"]) ?? id,
+    methods: extractIntegrationMethods(record["methods"]),
+    connections: extractIntegrationConnections(record["connections"]),
+  };
+}
+
+/** Normalize an `integration.list` payload (`{ location, data: [...] }`). */
+export function extractIntegrations(value: unknown): IntegrationRow[] {
+  return extractListRows(value).map(toIntegrationRow);
+}
+
+/** Normalize an `integration.get` payload (`{ location, data: IntegrationInfo }`). */
+export function extractIntegrationDetail(value: unknown): IntegrationRow | null {
+  if (value === null || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const data: unknown = record["data"];
+  if (data !== null && typeof data === "object") return toIntegrationRow(data, 0);
+  // A bare `IntegrationInfo` without envelope passes through as well.
+  if (readString(record, ["id"]) !== null) return toIntegrationRow(record, 0);
+  return null;
+}
+
+/** GET /api/integration — configured integrations with methods and connections. */
+export function listIntegrations(server: ServerConfig): Promise<ApiResult<IntegrationRow[]>> {
+  return guarded(async () => {
+    try {
+      return extractIntegrations(await (await makeClient(server)).integration.list());
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/api/integration`, {
+        headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) },
+      });
+      if (!response.ok) {
+        throw new Error(`GET /api/integration failed with status ${response.status}`);
+      }
+      return extractIntegrations(await response.json());
+    }
+  });
+}
+
+/** GET /api/integration/{integrationID} — detail of one integration. */
+export function getIntegration(
+  server: ServerConfig,
+  integrationID: string,
+): Promise<ApiResult<IntegrationRow>> {
+  return guarded(async () => {
+    try {
+      const detail = extractIntegrationDetail(
+        await (await makeClient(server)).integration.get({ integrationID }),
+      );
+      if (detail === null) throw new Error(t`Unerwartete Integrations-Antwort vom Server.`);
+      return detail;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Unerwartete Integrations")) throw error;
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/integration/${encodeURIComponent(integrationID)}`,
+        { headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) } },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `GET /api/integration/${integrationID} failed with status ${response.status}`,
+        );
+      }
+      const detail = extractIntegrationDetail(await response.json());
+      if (detail === null) throw new Error(t`Unerwartete Integrations-Antwort vom Server.`);
+      return detail;
+    }
+  });
+}
+
+/**
+ * POST /api/integration/{integrationID}/connect/key — connect with an API key.
+ * `answer` carries the key method's form fields when it declares any
+ * (`IntegrationKeyMethod.form`); `label` names the stored credential.
+ */
+export function connectIntegrationKey(
+  server: ServerConfig,
+  integrationID: string,
+  key: string,
+  options: { label?: string; answer?: Record<string, FormAnswerValue> } = {},
+) {
+  return guarded(async () => {
+    const answer = options.answer;
+    const label = options.label !== undefined && options.label !== "" ? options.label : undefined;
+    // The ids travel in the path; the body only carries key material.
+    const body = {
+      key,
+      ...(answer !== undefined ? { answer } : {}),
+      ...(label !== undefined ? { label } : {}),
+    };
+    try {
+      await (await makeClient(server)).integration.connect.key({
+        integrationID,
+        ...body,
+      });
+      return;
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/integration/${encodeURIComponent(integrationID)}/connect/key`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
+          body: JSON.stringify(body),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `POST /api/integration/${integrationID}/connect/key failed with status ${response.status}`,
+        );
+      }
+    }
+  });
+}
+
+/** A started OAuth attempt (`IntegrationAttempt`): URL + instructions. */
+export interface IntegrationOauthAttempt {
+  attemptID: string;
+  url: string;
+  instructions: string;
+  mode: string;
+}
+
+/** Normalize an `oauth.connect` payload (`{ location, data: IntegrationAttempt }`). */
+export function extractIntegrationOauthAttempt(value: unknown): IntegrationOauthAttempt | null {
+  if (value === null || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const data =
+    record["data"] !== null && typeof record["data"] === "object"
+      ? (record["data"] as Record<string, unknown>)
+      : record;
+  const attemptID = readString(data, ["attemptID", "attemptId"]);
+  const url = readString(data, ["url"]);
+  if (attemptID === null || url === null) return null;
+  return {
+    attemptID,
+    url,
+    instructions: readString(data, ["instructions"]) ?? "",
+    mode: readString(data, ["mode"]) ?? "auto",
+  };
+}
+
+/**
+ * POST /api/integration/{integrationID}/connect/oauth — begin an OAuth flow.
+ * Read-only from the PWA side: the returned URL is opened outside the app
+ * (the static page cannot handle the provider redirect), the app only polls
+ * the attempt status via `getIntegrationOauthStatus`.
+ */
+export function beginIntegrationOauth(
+  server: ServerConfig,
+  integrationID: string,
+  methodID: string,
+  label?: string,
+): Promise<ApiResult<IntegrationOauthAttempt>> {
+  return guarded(async () => {
+    // The ids travel in the path; the body only carries the method ref.
+    const body = {
+      methodID,
+      ...(label !== undefined && label !== "" ? { label } : {}),
+    };
+    try {
+      const attempt = extractIntegrationOauthAttempt(
+        await (await makeClient(server)).integration.oauth.connect({ integrationID, ...body }),
+      );
+      if (attempt === null) throw new Error(t`Unerwartete OAuth-Antwort vom Server.`);
+      return attempt;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Unerwartete OAuth")) throw error;
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/integration/${encodeURIComponent(integrationID)}/connect/oauth`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
+          body: JSON.stringify(body),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `POST /api/integration/${integrationID}/connect/oauth failed with status ${response.status}`,
+        );
+      }
+      const attempt = extractIntegrationOauthAttempt(await response.json());
+      if (attempt === null) throw new Error(t`Unerwartete OAuth-Antwort vom Server.`);
+      return attempt;
+    }
+  });
+}
+
+/** State of an OAuth attempt (`IntegrationAttemptStatus`). */
+export type IntegrationAttemptState = "pending" | "complete" | "failed" | "expired";
+
+export interface IntegrationOauthState {
+  status: IntegrationAttemptState;
+  message: string | null;
+}
+
+const OAUTH_STATES: readonly IntegrationAttemptState[] = [
+  "pending",
+  "complete",
+  "failed",
+  "expired",
+];
+
+/** Normalize an `oauth.status` payload; null when the answer is unusable. */
+export function extractIntegrationOauthStatus(value: unknown): IntegrationOauthState | null {
+  if (value === null || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const data =
+    record["data"] !== null && typeof record["data"] === "object"
+      ? (record["data"] as Record<string, unknown>)
+      : record;
+  const raw = readString(data, ["status"]);
+  if (raw === null || !OAUTH_STATES.includes(raw as IntegrationAttemptState)) return null;
+  return { status: raw as IntegrationAttemptState, message: readString(data, ["message"]) };
+}
+
+/**
+ * GET /api/integration/{integrationID}/connect/oauth/{attemptID} — poll the
+ * state of a started OAuth attempt (read-only).
+ */
+export function getIntegrationOauthStatus(
+  server: ServerConfig,
+  integrationID: string,
+  attemptID: string,
+): Promise<ApiResult<IntegrationOauthState>> {
+  return guarded(async () => {
+    try {
+      const state = extractIntegrationOauthStatus(
+        await (await makeClient(server)).integration.oauth.status({ integrationID, attemptID }),
+      );
+      if (state === null) throw new Error(t`Unerwartete OAuth-Antwort vom Server.`);
+      return state;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Unerwartete OAuth")) throw error;
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/integration/${encodeURIComponent(integrationID)}/connect/oauth/${encodeURIComponent(attemptID)}`,
+        { headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) } },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `GET /api/integration/${integrationID}/connect/oauth/${attemptID} failed with status ${response.status}`,
+        );
+      }
+      const state = extractIntegrationOauthStatus(await response.json());
+      if (state === null) throw new Error(t`Unerwartete OAuth-Antwort vom Server.`);
+      return state;
+    }
+  });
+}
+
+/** One config document (`ConfigEntry`: path + the `info` fields worth showing). */
+export interface ConfigEntryRow {
+  path: string | null;
+  shell: string | null;
+  model: string | null;
+  defaultAgent: string | null;
+  update: string | null;
+  share: string | null;
+}
+
+function configModelLabel(value: unknown): string | null {
+  if (typeof value === "string" && value !== "") return value;
+  if (value !== null && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const providerID = readString(record, ["providerID", "providerId"]);
+    const model = readString(record, ["model", "id", "modelID"]);
+    if (providerID !== null && model !== null) {
+      const variant = readString(record, ["variant"]);
+      return variant === null ? `${providerID}/${model}` : `${providerID}/${model}#${variant}`;
+    }
+  }
+  return null;
+}
+
+/** Normalize a `config.get` payload (`ConfigEntry[]`, no envelope). */
+export function extractConfigEntries(value: unknown): ConfigEntryRow[] {
+  const list = Array.isArray(value) ? value : extractListRows(value);
+  return list.map((entry) => {
+    if (entry === null || typeof entry !== "object") {
+      return {
+        path: null,
+        shell: null,
+        model: null,
+        defaultAgent: null,
+        update: null,
+        share: null,
+      };
+    }
+    const record = entry as Record<string, unknown>;
+    const infoRaw: unknown = record["info"];
+    const info =
+      infoRaw !== null && typeof infoRaw === "object"
+        ? (infoRaw as Record<string, unknown>)
+        : record;
+    return {
+      path: readString(record, ["path"]),
+      shell: readString(info, ["shell"]),
+      model: configModelLabel(info["model"]),
+      defaultAgent: readString(info, ["default_agent", "defaultAgent"]),
+      update: readString(info, ["update"]),
+      share: readString(info, ["share"]),
+    };
+  });
+}
+
+/** GET /api/config — effective configuration documents. Read-only. */
+export function getConfig(server: ServerConfig): Promise<ApiResult<ConfigEntryRow[]>> {
+  return guarded(async () => {
+    try {
+      return extractConfigEntries(await (await makeClient(server)).config.get());
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/api/config`, {
+        headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) },
+      });
+      if (!response.ok) {
+        throw new Error(`GET /api/config failed with status ${response.status}`);
+      }
+      return extractConfigEntries(await response.json());
+    }
+  });
+}
+
+/** One usable shell (`ConfigShellOption`): path, display name, acceptability. */
+export interface ConfigShellRow {
+  path: string;
+  name: string;
+  acceptable: boolean;
+}
+
+/** Normalize a `config.shells` payload (`ConfigShellOption[]`, no envelope). */
+export function extractConfigShells(value: unknown): ConfigShellRow[] {
+  const list = Array.isArray(value) ? value : extractListRows(value);
+  return list.map((entry, index) => {
+    if (entry === null || typeof entry !== "object") {
+      const fallback = `shell-${index}`;
+      return { path: fallback, name: String(entry) === "" ? fallback : String(entry), acceptable: false };
+    }
+    const record = entry as Record<string, unknown>;
+    const path = readString(record, ["path"]) ?? `shell-${index}`;
+    return {
+      path,
+      name: readString(record, ["name"]) ?? path,
+      acceptable: record["acceptable"] === true,
+    };
+  });
+}
+
+/** GET /api/config/shell — shells the server accepts. Read-only. */
+export function listConfigShells(server: ServerConfig): Promise<ApiResult<ConfigShellRow[]>> {
+  return guarded(async () => {
+    try {
+      return extractConfigShells(await (await makeClient(server)).config.shells());
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/api/config/shell`, {
+        headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) },
+      });
+      if (!response.ok) {
+        throw new Error(`GET /api/config/shell failed with status ${response.status}`);
+      }
+      return extractConfigShells(await response.json());
+    }
+  });
+}
+
+/** Read-only screen of a session terminal (`PersistentPtyReadResult`). */
+export interface SessionTerminalScreen {
+  title: string | null;
+  columns: number;
+  rows: number;
+  cursorX: number;
+  cursorY: number;
+  text: string;
+}
+
+/**
+ * Normalize a `persistentPty.read` payload. `null` (no terminal attached to
+ * the session) passes through as `null` — it is a valid answer, not an error.
+ * Anything else without a `screen.text` is unusable and stays `null`.
+ */
+export function extractTerminalScreen(value: unknown): SessionTerminalScreen | null {
+  if (value === null) return null;
+  if (typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const data: unknown =
+    record["data"] !== undefined && record["screen"] === undefined ? record["data"] : record;
+  if (data === null) return null;
+  if (typeof data !== "object") return null;
+  const info = data as Record<string, unknown>;
+  const screen: unknown = info["screen"];
+  if (screen === null || typeof screen !== "object") return null;
+  const screenRecord = screen as Record<string, unknown>;
+  if (typeof screenRecord["text"] !== "string") return null;
+  const cursor: unknown = screenRecord["cursor"];
+  const cursorRecord =
+    cursor !== null && typeof cursor === "object" ? (cursor as Record<string, unknown>) : null;
+  const cursorX = cursorRecord?.["x"];
+  const cursorY = cursorRecord?.["y"];
+  return {
+    title: readString(info, ["title"]),
+    columns: typeof screenRecord["cols"] === "number" ? screenRecord["cols"] : 0,
+    rows: typeof screenRecord["rows"] === "number" ? screenRecord["rows"] : 0,
+    cursorX: typeof cursorX === "number" ? cursorX : 0,
+    cursorY: typeof cursorY === "number" ? cursorY : 0,
+    text: screenRecord["text"],
+  };
+}
+
+/**
+ * GET /api/experimental/session/{sessionID}/terminal/read — read-only screen
+ * of the session terminal (`null` when the session has no terminal). No
+ * emulator, no input: the text renders in a `<pre>`, which keeps the bundle
+ * lean (no xterm dependency).
+ */
+export function readSessionTerminal(
+  server: ServerConfig,
+  sessionID: string,
+  lines?: number,
+): Promise<ApiResult<SessionTerminalScreen | null>> {
+  return guarded(async () => {
+    try {
+      const payload = await (await makeClient(server)).experimental.persistentPty.read(
+        lines === undefined ? { sessionID } : { sessionID, lines },
+      );
+      // `null` is a valid answer (the session has no terminal attached).
+      if (payload === null) return null;
+      const screen = extractTerminalScreen(payload);
+      if (screen === null) throw new Error(t`Unerwartete Terminal-Antwort vom Server.`);
+      return screen;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Unerwartete Terminal")) throw error;
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const query = lines === undefined ? "" : `?lines=${encodeURIComponent(String(lines))}`;
+      const response = await fetch(
+        `${baseUrl}/api/experimental/session/${encodeURIComponent(sessionID)}/terminal/read${query}`,
+        { headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) } },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `GET /api/experimental/session/${sessionID}/terminal/read failed with status ${response.status}`,
+        );
+      }
+      const payload: unknown = await response.json();
+      if (payload === null) return null;
+      const screen = extractTerminalScreen(payload);
+      if (screen === null) throw new Error(t`Unerwartete Terminal-Antwort vom Server.`);
+      return screen;
+    }
+  });
+}
