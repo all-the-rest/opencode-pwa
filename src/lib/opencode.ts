@@ -1341,3 +1341,747 @@ export function listProviders(server: ServerConfig): Promise<ApiResult<ProviderR
     }
   });
 }
+
+// ---------------------------------------------------------------------------
+// Parity batch 3: revert, share/export-import, commands/skills, websearch,
+// session inbox, session forms
+//
+// REST paths verified against the installed package
+// (`node_modules/@opencode/client`, chunk `service-version-*`):
+// - `session.revert.stage` → POST /api/session/{id}/revert/stage {messageID}
+// - `session.revert.clear` → DELETE /api/session/{id}/revert
+// - `session.revert.commit` → POST /api/session/{id}/revert/commit
+// - `session.export` → GET /api/experimental/session/{id}/export (?sanitize=)
+// - `session.import` → POST /api/experimental/session/import {info, messages}
+// - `command.list` → GET /api/command, `skill.list` → GET /api/skill
+// - `session.command` → POST /api/session/{id}/command {name, text}
+// - `websearch.providers` → GET /api/websearch/provider
+// - `websearch.query` → POST /api/websearch {query, providerID}
+// - `session.inbox.list` → GET /api/session/{id}/inbox
+// - `session.inbox.cancel` → DELETE /api/session/{id}/inbox/{inboxID}
+// - `session.inbox.update` → PATCH /api/session/{id}/inbox/{inboxID} {delivery}
+// - `session.form.list` → GET /api/session/{id}/form
+// - `session.form.reply` → POST /api/session/{id}/form/{formID}/reply {answer}
+// - `session.form.cancel` → DELETE /api/session/{id}/form/{formID} (?message=)
+//
+// Every call keeps the direct-fetch fallback, because the client throws on an
+// unreachable server before any HTTP status exists.
+// ---------------------------------------------------------------------------
+
+/** A staged revert (`SessionRevert`): which message the reset would return to. */
+export interface SessionRevertInfo {
+  messageID: string;
+  /** Files the revert would touch, null when the server sent none. */
+  fileCount: number | null;
+}
+
+/** Normalize a `revert.stage` payload (`SessionRevert`, possibly enveloped). */
+export function extractSessionRevert(value: unknown): SessionRevertInfo | null {
+  if (value === null || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const data =
+    record["data"] !== null && typeof record["data"] === "object"
+      ? (record["data"] as Record<string, unknown>)
+      : record;
+  const messageID = readString(data, ["messageID", "messageId"]);
+  if (messageID === null) return null;
+  const files = data["files"];
+  return { messageID, fileCount: Array.isArray(files) ? files.length : null };
+}
+
+/** POST /api/session/{sessionID}/revert/stage — stage a revert at one message. */
+export function stageSessionRevert(
+  server: ServerConfig,
+  sessionID: string,
+  messageID: string,
+): Promise<ApiResult<SessionRevertInfo>> {
+  return guarded(async () => {
+    try {
+      const staged = extractSessionRevert(
+        await (await makeClient(server)).session.revert.stage({ sessionID, messageID }),
+      );
+      if (staged === null) throw new Error(t`Unerwartete Revert-Antwort vom Server.`);
+      return staged;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Unerwartete Revert")) throw error;
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/revert/stage`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
+          body: JSON.stringify({ messageID }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `POST /api/session/${sessionID}/revert/stage failed with status ${response.status}`,
+        );
+      }
+      const staged = extractSessionRevert(await response.json());
+      if (staged === null) throw new Error(t`Unerwartete Revert-Antwort vom Server.`);
+      return staged;
+    }
+  });
+}
+
+/** POST /api/session/{sessionID}/revert/commit — apply the staged revert. */
+export function commitSessionRevert(server: ServerConfig, sessionID: string) {
+  return guarded(async () => {
+    try {
+      await (await makeClient(server)).session.revert.commit({ sessionID });
+      return;
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      // The endpoint declares `empty: true` (204, no body) — a bare POST.
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/revert/commit`,
+        {
+          method: "POST",
+          headers: { ...(await fetchAuthHeaders(server)) },
+        },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `POST /api/session/${sessionID}/revert/commit failed with status ${response.status}`,
+        );
+      }
+    }
+  });
+}
+
+/** DELETE /api/session/{sessionID}/revert — drop the staged revert. */
+export function clearSessionRevert(server: ServerConfig, sessionID: string) {
+  return guarded(async () => {
+    try {
+      await (await makeClient(server)).session.revert.clear({ sessionID });
+      return;
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/revert`,
+        {
+          method: "DELETE",
+          headers: { ...(await fetchAuthHeaders(server)) },
+        },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `DELETE /api/session/${sessionID}/revert failed with status ${response.status}`,
+        );
+      }
+    }
+  });
+}
+
+/** A transfer payload keeps `info` + `messages`; `location` passes through when present. */
+export interface SessionTransferPayload {
+  info: Record<string, unknown>;
+  messages: unknown[];
+  location?: Record<string, unknown>;
+}
+
+/** Validate pasted/imported JSON: a transfer needs `info` and `messages`. */
+export function extractSessionTransfer(value: unknown): SessionTransferPayload | null {
+  if (value === null || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const info = record["info"];
+  const messages = record["messages"];
+  if (info === null || typeof info !== "object" || Array.isArray(info)) return null;
+  if (!Array.isArray(messages)) return null;
+  const location = record["location"];
+  const payload: SessionTransferPayload = { info: info as Record<string, unknown>, messages };
+  // `import` accepts an optional `location` (see `SessionImportInput`), so a
+  // re-exported payload keeps working when the export carried one.
+  if (location !== null && typeof location === "object" && !Array.isArray(location)) {
+    payload.location = location as Record<string, unknown>;
+  }
+  return payload;
+}
+
+/** Parse transfer JSON from a file or textarea; null with a German reason on failure. */
+export function parseSessionTransferText(text: string): {
+  payload: SessionTransferPayload | null;
+  error: string | null;
+} {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { payload: null, error: t`Die Datei enthält kein gültiges JSON.` };
+  }
+  const payload = extractSessionTransfer(parsed);
+  if (payload === null) {
+    return {
+      payload: null,
+      error: t`Kein gültiger Session-Export: „info“ und „messages“ fehlen.`,
+    };
+  }
+  return { payload, error: null };
+}
+
+/** GET /api/experimental/session/{sessionID}/export — export sharable JSON. */
+export function exportSession(
+  server: ServerConfig,
+  sessionID: string,
+): Promise<ApiResult<SessionTransferPayload>> {
+  return guarded(async () => {
+    try {
+      const payload = extractSessionTransfer(
+        await (await makeClient(server)).session.export({ sessionID }),
+      );
+      if (payload === null) throw new Error(t`Unerwartete Export-Antwort vom Server.`);
+      return payload;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Unerwartete Export")) throw error;
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/experimental/session/${encodeURIComponent(sessionID)}/export`,
+        { headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) } },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `GET /api/experimental/session/${sessionID}/export failed with status ${response.status}`,
+        );
+      }
+      const payload = extractSessionTransfer(await response.json());
+      if (payload === null) throw new Error(t`Unerwartete Export-Antwort vom Server.`);
+      return payload;
+    }
+  });
+}
+
+/**
+ * POST /api/experimental/session/import — import transfer JSON as a new
+ * session. The client input type is reconstructed from the validated payload
+ * (the cast only bridges the generated input wrapper, the shape is verified).
+ */
+export function importSession(
+  server: ServerConfig,
+  payload: SessionTransferPayload,
+): Promise<ApiResult<SessionInfo>> {
+  return guarded(async () => {
+    try {
+      const client = await makeClient(server);
+      type ImportInput = Parameters<typeof client.session.import>[0];
+      const info = extractSessionInfo(
+        await client.session.import(payload as unknown as ImportInput),
+      );
+      if (info === null) throw new Error(t`Unerwartete Session-Antwort vom Server.`);
+      return info;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Unerwartete Session")) throw error;
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/api/experimental/session/import`, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        throw new Error(
+          `POST /api/experimental/session/import failed with status ${response.status}`,
+        );
+      }
+      const info = extractSessionInfo(await response.json());
+      if (info === null) throw new Error(t`Unerwartete Session-Antwort vom Server.`);
+      return info;
+    }
+  });
+}
+
+/** One runnable slash command (`CommandInfo`): name plus optional description. */
+export interface CommandRow {
+  name: string;
+  description: string | null;
+}
+
+/** Normalize a `command.list` payload (`{ location, data: [...] }`). */
+export function extractCommands(value: unknown): CommandRow[] {
+  return extractListRows(value).map((entry, index) => {
+    if (entry === null || typeof entry !== "object") {
+      return { name: String(entry), description: null };
+    }
+    const record = entry as Record<string, unknown>;
+    return {
+      name: readString(record, ["name"]) ?? `befehl-${index}`,
+      description: readString(record, ["description"]),
+    };
+  });
+}
+
+/** GET /api/command — available slash commands, read-only. */
+export function listCommands(server: ServerConfig): Promise<ApiResult<CommandRow[]>> {
+  return guarded(async () => {
+    try {
+      return extractCommands(await (await makeClient(server)).command.list());
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/api/command`, {
+        headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) },
+      });
+      if (!response.ok) {
+        throw new Error(`GET /api/command failed with status ${response.status}`);
+      }
+      return extractCommands(await response.json());
+    }
+  });
+}
+
+/** One skill (`SkillInfo`): id, name and optional description. */
+export interface SkillRow {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+/** Normalize a `skill.list` payload (`{ location, data: [...] }`). */
+export function extractSkills(value: unknown): SkillRow[] {
+  return extractListRows(value).map((entry, index) => {
+    if (entry === null || typeof entry !== "object") {
+      const fallback = `skill-${index}`;
+      return { id: fallback, name: String(entry) === "" ? fallback : String(entry), description: null };
+    }
+    const record = entry as Record<string, unknown>;
+    const id = readString(record, ["id"]) ?? `skill-${index}`;
+    return {
+      id,
+      name: readString(record, ["name"]) ?? id,
+      description: readString(record, ["description"]),
+    };
+  });
+}
+
+/** GET /api/skill — available skills, read-only. */
+export function listSkills(server: ServerConfig): Promise<ApiResult<SkillRow[]>> {
+  return guarded(async () => {
+    try {
+      return extractSkills(await (await makeClient(server)).skill.list());
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/api/skill`, {
+        headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) },
+      });
+      if (!response.ok) {
+        throw new Error(`GET /api/skill failed with status ${response.status}`);
+      }
+      return extractSkills(await response.json());
+    }
+  });
+}
+
+/** POST /api/session/{sessionID}/command — run a slash command in the session. */
+export function runSessionCommand(
+  server: ServerConfig,
+  sessionID: string,
+  name: string,
+  text: string,
+) {
+  return guarded(async () => {
+    try {
+      await (await makeClient(server)).session.command({ sessionID, name, text });
+      return;
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/command`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
+          body: JSON.stringify({ name, text }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `POST /api/session/${sessionID}/command failed with status ${response.status}`,
+        );
+      }
+    }
+  });
+}
+
+/** One websearch provider (`WebSearchProvider`): id plus display name. */
+export interface WebsearchProviderRow {
+  id: string;
+  name: string;
+}
+
+/** Normalize a `websearch.providers` payload (`{ location, data: [...] }`). */
+export function extractWebsearchProviders(value: unknown): WebsearchProviderRow[] {
+  return extractListRows(value).map((entry, index) => {
+    if (entry === null || typeof entry !== "object") {
+      const fallback = `anbieter-${index}`;
+      return { id: fallback, name: String(entry) === "" ? fallback : String(entry) };
+    }
+    const record = entry as Record<string, unknown>;
+    const id = readString(record, ["id"]) ?? `anbieter-${index}`;
+    return { id, name: readString(record, ["name", "canonical"]) ?? id };
+  });
+}
+
+/** GET /api/websearch/provider — available search providers, read-only. */
+export function listWebsearchProviders(
+  server: ServerConfig,
+): Promise<ApiResult<WebsearchProviderRow[]>> {
+  return guarded(async () => {
+    try {
+      return extractWebsearchProviders(await (await makeClient(server)).websearch.providers());
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/api/websearch/provider`, {
+        headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) },
+      });
+      if (!response.ok) {
+        throw new Error(`GET /api/websearch/provider failed with status ${response.status}`);
+      }
+      return extractWebsearchProviders(await response.json());
+    }
+  });
+}
+
+/** One websearch hit (`WebSearchResult`): URL plus optional title and snippet. */
+export interface WebsearchResultRow {
+  url: string;
+  title: string | null;
+  content: string | null;
+}
+
+/** A finished `websearch.query` call: which provider answered plus its hits. */
+export interface WebsearchAnswer {
+  providerID: string;
+  results: WebsearchResultRow[];
+}
+
+/**
+ * Normalize a `websearch.query` payload (`{ location, data: { providerID,
+ * results } }` — note `data` is an object here, not a row list).
+ */
+export function extractWebsearchAnswer(value: unknown): WebsearchAnswer | null {
+  if (value === null || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const data =
+    record["data"] !== null && typeof record["data"] === "object"
+      ? (record["data"] as Record<string, unknown>)
+      : record;
+  const providerID = readString(data, ["providerID", "providerId"]) ?? "";
+  const raw = data["results"];
+  if (!Array.isArray(raw)) return null;
+  return {
+    providerID,
+    results: raw.map((entry, index) => {
+      if (entry === null || typeof entry !== "object") {
+        return { url: String(entry), title: null, content: null };
+      }
+      const row = entry as Record<string, unknown>;
+      return {
+        url: readString(row, ["url", "link"]) ?? `treffer-${index}`,
+        title: readString(row, ["title"]),
+        content: readString(row, ["content", "snippet"]),
+      };
+    }),
+  };
+}
+
+/** POST /api/websearch — search the web through one provider. */
+export function queryWebsearch(
+  server: ServerConfig,
+  query: string,
+  providerID?: string,
+): Promise<ApiResult<WebsearchAnswer>> {
+  return guarded(async () => {
+    const input = providerID === undefined ? { query } : { query, providerID };
+    try {
+      const answer = extractWebsearchAnswer(
+        await (await makeClient(server)).websearch.query(input),
+      );
+      if (answer === null) throw new Error(t`Unerwartete Such-Antwort vom Server.`);
+      return answer;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Unerwartete Such")) throw error;
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/api/websearch`, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
+        body: JSON.stringify(input),
+      });
+      if (!response.ok) {
+        throw new Error(`POST /api/websearch failed with status ${response.status}`);
+      }
+      const answer = extractWebsearchAnswer(await response.json());
+      if (answer === null) throw new Error(t`Unerwartete Such-Antwort vom Server.`);
+      return answer;
+    }
+  });
+}
+
+/** One queued inbox entry (`SessionInboxInfo`): user/synthetic/compaction/move. */
+export interface SessionInboxRow {
+  id: string;
+  sessionID: string;
+  kind: "user" | "synthetic" | "compaction" | "move" | "unbekannt";
+  summary: string;
+  /** Planned delivery (`SessionInboxDelivery`), null when the server sent none. */
+  delivery: "steer" | "queue" | null;
+}
+
+const INBOX_KINDS: readonly SessionInboxRow["kind"][] = [
+  "user",
+  "synthetic",
+  "compaction",
+  "move",
+];
+
+function inboxSummary(entry: Record<string, unknown>, kind: SessionInboxRow["kind"]): string {
+  const payload: unknown = entry["payload"];
+  if (payload !== null && typeof payload === "object") {
+    const text = readString(payload as Record<string, unknown>, ["text", "description"]);
+    if (text !== null) return text.length > 140 ? `${text.slice(0, 140)}…` : text;
+  }
+  if (kind === "compaction") return "Kompaktierung";
+  if (kind === "move") return "Session-Umzug";
+  return kind;
+}
+
+/** Normalize a `session.inbox.list` payload into queued-entry rows. */
+export function extractSessionInbox(value: unknown): SessionInboxRow[] {
+  return extractListRows(value).map((entry, index) => {
+    if (entry === null || typeof entry !== "object") {
+      return {
+        id: `eintrag-${index}`,
+        sessionID: "",
+        kind: "unbekannt" as const,
+        summary: String(entry),
+        delivery: null,
+      };
+    }
+    const record = entry as Record<string, unknown>;
+    const raw = readString(record, ["type"]);
+    const kind: SessionInboxRow["kind"] = INBOX_KINDS.includes(raw as SessionInboxRow["kind"])
+      ? (raw as SessionInboxRow["kind"])
+      : "unbekannt";
+    const deliveryRaw = record["delivery"];
+    return {
+      id: readString(record, ["id", "inboxID"]) ?? `eintrag-${index}`,
+      sessionID: readString(record, ["sessionID", "sessionId"]) ?? "",
+      kind,
+      summary: inboxSummary(record, kind),
+      delivery: deliveryRaw === "steer" || deliveryRaw === "queue" ? deliveryRaw : null,
+    };
+  });
+}
+
+/** GET /api/session/{sessionID}/inbox — queued entries of one session. */
+export function listSessionInbox(
+  server: ServerConfig,
+  sessionID: string,
+): Promise<ApiResult<SessionInboxRow[]>> {
+  return guarded(async () => {
+    try {
+      return extractSessionInbox(await (await makeClient(server)).session.inbox.list({ sessionID }));
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/inbox`,
+        { headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) } },
+      );
+      if (!response.ok) {
+        throw new Error(`GET /api/session/${sessionID}/inbox failed with status ${response.status}`);
+      }
+      return extractSessionInbox(await response.json());
+    }
+  });
+}
+
+/** Planned delivery of a queued inbox entry (`SessionInboxDelivery`). */
+export type SessionInboxDelivery = "steer" | "queue";
+
+/**
+ * PATCH /api/session/{sessionID}/inbox/{inboxID} — change how a queued entry
+ * is delivered (`steer`: interrupt and run now, `queue`: wait its turn).
+ */
+export function updateSessionInbox(
+  server: ServerConfig,
+  sessionID: string,
+  inboxID: string,
+  delivery: SessionInboxDelivery,
+) {
+  return guarded(async () => {
+    try {
+      await (await makeClient(server)).session.inbox.update({ sessionID, inboxID, delivery });
+      return;
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/inbox/${encodeURIComponent(inboxID)}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
+          body: JSON.stringify({ delivery }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `PATCH /api/session/${sessionID}/inbox/${inboxID} failed with status ${response.status}`,
+        );
+      }
+    }
+  });
+}
+
+/** DELETE /api/session/{sessionID}/inbox/{inboxID} — drop a queued entry. */
+export function cancelSessionInbox(server: ServerConfig, sessionID: string, inboxID: string) {
+  return guarded(async () => {
+    try {
+      await (await makeClient(server)).session.inbox.cancel({ sessionID, inboxID });
+      return;
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/inbox/${encodeURIComponent(inboxID)}`,
+        {
+          method: "DELETE",
+          headers: { ...(await fetchAuthHeaders(server)) },
+        },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `DELETE /api/session/${sessionID}/inbox/${inboxID} failed with status ${response.status}`,
+        );
+      }
+    }
+  });
+}
+
+/** One pending form (`FormInfo`): id, owning session and title. */
+export interface SessionFormRow {
+  id: string;
+  sessionID: string;
+  title: string;
+}
+
+/** Normalize a `session.form.list` payload into pending-form rows. */
+export function extractSessionForms(value: unknown): SessionFormRow[] {
+  return extractListRows(value).map((entry, index) => {
+    if (entry === null || typeof entry !== "object") {
+      return { id: `formular-${index}`, sessionID: "", title: String(entry) };
+    }
+    const record = entry as Record<string, unknown>;
+    const id = readString(record, ["id", "formID"]) ?? `formular-${index}`;
+    return {
+      id,
+      sessionID: readString(record, ["sessionID", "sessionId"]) ?? "",
+      title: readString(record, ["title", "name"]) ?? id,
+    };
+  });
+}
+
+/** GET /api/session/{sessionID}/form — pending forms of one session. */
+export function listSessionForms(
+  server: ServerConfig,
+  sessionID: string,
+): Promise<ApiResult<SessionFormRow[]>> {
+  return guarded(async () => {
+    try {
+      return extractSessionForms(await (await makeClient(server)).session.form.list({ sessionID }));
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/form`,
+        { headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) } },
+      );
+      if (!response.ok) {
+        throw new Error(`GET /api/session/${sessionID}/form failed with status ${response.status}`);
+      }
+      return extractSessionForms(await response.json());
+    }
+  });
+}
+
+/** Answer value of a form reply (`FormAnswer`): one entry per field key. */
+export type FormAnswerValue = string | number | boolean | string[];
+
+/** Validate a pasted reply: it must be a JSON object (the server checks fields). */
+export function parseFormAnswerText(text: string): {
+  answer: Record<string, FormAnswerValue> | null;
+  error: string | null;
+} {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { answer: null, error: t`Die Antwort enthält kein gültiges JSON.` };
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { answer: null, error: t`Die Antwort muss ein JSON-Objekt sein.` };
+  }
+  const answer: Record<string, FormAnswerValue> = {};
+  for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+      answer[key] = value;
+    } else if (
+      Array.isArray(value) &&
+      value.every((entry): entry is string => typeof entry === "string")
+    ) {
+      answer[key] = value;
+    } else {
+      return {
+        answer: null,
+        error: t`Feld „${key}“ hat einen ungültigen Wert (erlaubt: Text, Zahl, Ja/Nein, Textliste).`,
+      };
+    }
+  }
+  return { answer, error: null };
+}
+
+/** POST /api/session/{sessionID}/form/{formID}/reply — answer a pending form. */
+export function replySessionForm(
+  server: ServerConfig,
+  sessionID: string,
+  formID: string,
+  answer: Record<string, FormAnswerValue>,
+) {
+  return guarded(async () => {
+    try {
+      await (await makeClient(server)).session.form.reply({ sessionID, formID, answer });
+      return;
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/form/${encodeURIComponent(formID)}/reply`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
+          body: JSON.stringify({ answer }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `POST /api/session/${sessionID}/form/${formID}/reply failed with status ${response.status}`,
+        );
+      }
+    }
+  });
+}
+
+/** DELETE /api/session/{sessionID}/form/{formID} — cancel a pending form. */
+export function cancelSessionForm(server: ServerConfig, sessionID: string, formID: string) {
+  return guarded(async () => {
+    try {
+      await (await makeClient(server)).session.form.cancel({ sessionID, formID });
+      return;
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/form/${encodeURIComponent(formID)}`,
+        {
+          method: "DELETE",
+          headers: { ...(await fetchAuthHeaders(server)) },
+        },
+      );
+      if (!response.ok) {
+        throw new Error(
+          `DELETE /api/session/${sessionID}/form/${formID} failed with status ${response.status}`,
+        );
+      }
+    }
+  });
+}

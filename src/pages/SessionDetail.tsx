@@ -6,26 +6,46 @@ import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import Icon from "../components/Icon.tsx";
 import { SESSION_PAGE_SIZE, useSessionMessages, type SessionMessageSource } from "../hooks/useSessionMessages.ts";
 import {
+  cancelSessionForm,
+  cancelSessionInbox,
+  clearSessionRevert,
+  commitSessionRevert,
   compactSession,
+  exportSession,
   forkSession,
   getSessionDiff,
   getSessionInfo,
   getSessionStats,
+  importSession,
   interruptSession,
   listAgents,
+  listCommands,
   listModels,
+  listSessionForms,
+  listSessionInbox,
+  updateSessionInbox,
   modelOptionValue,
+  parseFormAnswerText,
   parseModelOptionValue,
+  parseSessionTransferText,
   removeSession,
+  replySessionForm,
+  runSessionCommand,
   sendPrompt,
+  stageSessionRevert,
   switchSessionAgent,
   switchSessionModel,
   toPromptFileUri,
   type AgentOption,
+  type CommandRow,
   type ModelOption,
   type PromptFileAttachment,
   type ServerConfig,
   type SessionDiffRow,
+  type SessionFormRow,
+  type SessionInboxDelivery,
+  type SessionInboxRow,
+  type SessionRevertInfo,
   type SessionStatsSummary,
   type TokenUsage,
 } from "../lib/opencode.ts";
@@ -65,10 +85,41 @@ export default function SessionDetail() {
   const [sendError, setSendError] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<string[]>([]);
   const [attachmentInput, setAttachmentInput] = useState("");
-  const [confirm, setConfirm] = useState<"interrupt" | "delete" | "fork" | "compact" | null>(null);
+  const [confirm, setConfirm] = useState<"interrupt" | "delete" | "fork" | "compact" | "revert-commit" | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  // Parity batch 3: revert staging, share/export-import, command run.
+  const [commands, setCommands] = useState<CommandRow[]>([]);
+  const [revertMessageID, setRevertMessageID] = useState("");
+  const [stagedRevert, setStagedRevert] = useState<SessionRevertInfo | null>(null);
+  const [revertBusy, setRevertBusy] = useState(false);
+  const [revertError, setRevertError] = useState<string | null>(null);
+  const [revertNotice, setRevertNotice] = useState<string | null>(null);
+  const [exportText, setExportText] = useState<string | null>(null);
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [importText, setImportText] = useState("");
+  const [importBusy, setImportBusy] = useState(false);
+  const [commandName, setCommandName] = useState("");
+  const [commandText, setCommandText] = useState("");
+  const [commandBusy, setCommandBusy] = useState(false);
+  const [commandError, setCommandError] = useState<string | null>(null);
+  const [commandNotice, setCommandNotice] = useState<string | null>(null);
+  // Parity batch 3: session inbox (queued entries) and pending forms.
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [inboxRows, setInboxRows] = useState<SessionInboxRow[] | null>(null);
+  const [inboxLoading, setInboxLoading] = useState(false);
+  const [inboxError, setInboxError] = useState<string | null>(null);
+  const [cancellingInbox, setCancellingInbox] = useState<string | null>(null);
+  const [updatingInbox, setUpdatingInbox] = useState<string | null>(null);
+  const [formsOpen, setFormsOpen] = useState(false);
+  const [formRows, setFormRows] = useState<SessionFormRow[] | null>(null);
+  const [formsLoading, setFormsLoading] = useState(false);
+  const [formsError, setFormsError] = useState<string | null>(null);
+  const [selectedFormID, setSelectedFormID] = useState("");
+  const [formAnswerText, setFormAnswerText] = useState("");
+  const [formBusy, setFormBusy] = useState(false);
   const [sessionTokens, setSessionTokens] = useState<TokenUsage | null>(null);
   const [sessionCost, setSessionCost] = useState<number | null>(null);
   const [globalStats, setGlobalStats] = useState<SessionStatsSummary | null>(null);
@@ -142,6 +193,25 @@ export default function SessionDetail() {
     preserveOffsetRef.current = null;
     nearBottomRef.current = true;
     setShowJumpToNewest(false);
+    setStagedRevert(null);
+    setRevertMessageID("");
+    setRevertError(null);
+    setRevertNotice(null);
+    setExportText(null);
+    setShareError(null);
+    setImportText("");
+    setCommandName("");
+    setCommandText("");
+    setCommandError(null);
+    setCommandNotice(null);
+    setInboxOpen(false);
+    setInboxRows(null);
+    setInboxError(null);
+    setFormsOpen(false);
+    setFormRows(null);
+    setFormsError(null);
+    setSelectedFormID("");
+    setFormAnswerText("");
   }, [id]);
 
   const handleLoadMore = useCallback(() => {
@@ -178,7 +248,8 @@ export default function SessionDetail() {
       listModels(activeServer),
       getSessionInfo(activeServer, activeSession),
       getSessionStats(activeServer),
-    ]).then(([agentsRes, modelsRes, infoRes, statsRes]) => {
+      listCommands(activeServer),
+    ]).then(([agentsRes, modelsRes, infoRes, statsRes, commandsRes]) => {
       if (cancelled) return;
       const firstError = agentsRes.error ?? modelsRes.error ?? infoRes.error;
       if (firstError !== null) {
@@ -187,6 +258,7 @@ export default function SessionDetail() {
       }
       setAgents(agentsRes.data ?? []);
       setModels(modelsRes.data ?? []);
+      if (commandsRes.error === null) setCommands(commandsRes.data ?? []);
       const info = infoRes.data;
       setCurrentAgent(info?.agent ?? null);
       setSessionTokens(info?.tokens ?? null);
@@ -218,6 +290,16 @@ export default function SessionDetail() {
   const canFork = isActionEnabled(offline, "session-fork");
   const canCompact = isActionEnabled(offline, "session-compact");
   const canDiff = isActionEnabled(offline, "session-diff");
+  const canRevert = isActionEnabled(offline, "session-revert");
+  const canExport = isActionEnabled(offline, "session-export");
+  const canImport = isActionEnabled(offline, "session-import");
+  const canRunCommand = isActionEnabled(offline, "session-command");
+  const canInbox = isActionEnabled(offline, "session-inbox");
+  const canInboxCancel = isActionEnabled(offline, "session-inbox-cancel");
+  const canInboxUpdate = isActionEnabled(offline, "session-inbox-update");
+  const canFormList = isActionEnabled(offline, "session-form-list");
+  const canFormReply = isActionEnabled(offline, "session-form-reply");
+  const canFormCancel = isActionEnabled(offline, "session-form-cancel");
   // Lingui messages take plain variables only — no member access or calls —
   // so every formatted stat is hoisted here (see `lingui/no-expression-in-message`).
   const statInput = (sessionTokens?.input ?? 0).toLocaleString("de");
@@ -232,6 +314,9 @@ export default function SessionDetail() {
   const totalPrompts = globalStats?.prompts ?? 0;
   const totalSteps = globalStats?.steps ?? 0;
   const totalToolCalls = globalStats?.toolCalls ?? null;
+  // Lingui-safe hoists for the staged revert (no member access in messages).
+  const stagedMessageID = stagedRevert?.messageID ?? "";
+  const stagedFileCount = stagedRevert?.fileCount ?? null;
 
   function addAttachment() {
     const path = attachmentInput.trim().replace(/^\/+/, "");
@@ -339,6 +424,18 @@ export default function SessionDetail() {
       setActionNotice(t`Kompaktierung gestartet – der Kontext wird zusammengefasst.`);
       return;
     }
+    if (confirm === "revert-commit") {
+      const result = await commitSessionRevert(activeServer, activeSession);
+      setConfirmBusy(false);
+      if (result.error !== null) {
+        setConfirmError(result.error);
+        return;
+      }
+      setConfirm(null);
+      setStagedRevert(null);
+      setRevertNotice(t`Revert übernommen – die Session steht auf dem gewählten Stand.`);
+      return;
+    }
     const result =
       confirm === "interrupt"
         ? await interruptSession(activeServer, activeSession)
@@ -373,6 +470,229 @@ export default function SessionDetail() {
       return;
     }
     setDiffRows(result.data);
+  }
+
+  // --- Parity batch 3: staged revert (stage → commit with confirm / clear) ---
+
+  async function handleStageRevert() {
+    if (server === null || server === undefined || id === undefined) return;
+    if (revertMessageID === "" || revertBusy || !canRevert) return;
+    setRevertBusy(true);
+    setRevertError(null);
+    setRevertNotice(null);
+    const result = await stageSessionRevert(server, id, revertMessageID);
+    setRevertBusy(false);
+    if (result.error !== null || result.data === null) {
+      setRevertError(result.error ?? t`Staging fehlgeschlagen.`);
+      return;
+    }
+    setStagedRevert(result.data);
+  }
+
+  async function handleClearRevert() {
+    if (server === null || server === undefined || id === undefined) return;
+    if (revertBusy || !canRevert) return;
+    setRevertBusy(true);
+    setRevertError(null);
+    const result = await clearSessionRevert(server, id);
+    setRevertBusy(false);
+    if (result.error !== null) {
+      setRevertError(result.error);
+      return;
+    }
+    setStagedRevert(null);
+    setRevertNotice(t`Staging verworfen – die Session ist unverändert.`);
+  }
+
+  // --- Parity batch 3: share via export/import JSON ---
+
+  async function handleExport() {
+    if (server === null || server === undefined || id === undefined) return;
+    if (shareBusy || !canExport) return;
+    setShareBusy(true);
+    setShareError(null);
+    const result = await exportSession(server, id);
+    setShareBusy(false);
+    if (result.error !== null || result.data === null) {
+      setShareError(result.error ?? t`Export fehlgeschlagen.`);
+      return;
+    }
+    setExportText(JSON.stringify(result.data, null, 2));
+  }
+
+  function downloadExport() {
+    if (exportText === null || id === undefined) return;
+    const url = URL.createObjectURL(
+      new Blob([exportText], { type: "application/json" }),
+    );
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `session-${id}-export.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleImportFile(file: File | undefined) {
+    if (file === undefined) return;
+    void file.text().then((text) => setImportText(text));
+  }
+
+  async function handleImport() {
+    if (server === null || server === undefined) return;
+    if (importText.trim() === "" || importBusy || !canImport) return;
+    const parsed = parseSessionTransferText(importText);
+    if (parsed.payload === null) {
+      setShareError(parsed.error ?? t`Import fehlgeschlagen.`);
+      return;
+    }
+    setImportBusy(true);
+    setShareError(null);
+    const result = await importSession(server, parsed.payload);
+    setImportBusy(false);
+    if (result.error !== null || result.data === null) {
+      setShareError(result.error ?? t`Import fehlgeschlagen.`);
+      return;
+    }
+    navigate(`/sessions/${result.data.id}?server=${server.id}`);
+  }
+
+  // --- Parity batch 3: run a slash command in this session ---
+
+  async function handleRunCommand() {
+    if (server === null || server === undefined || id === undefined) return;
+    if (commandName === "" || commandBusy || !canRunCommand) return;
+    setCommandBusy(true);
+    setCommandError(null);
+    setCommandNotice(null);
+    const result = await runSessionCommand(server, id, commandName, commandText);
+    setCommandBusy(false);
+    if (result.error !== null) {
+      setCommandError(result.error);
+      return;
+    }
+    setCommandNotice(t`Befehl „${commandName}“ gestartet.`);
+  }
+
+  // --- Parity batch 3: session inbox (queued entries, cancel only) ---
+
+  async function loadInbox() {
+    if (server === null || server === undefined || id === undefined) return;
+    setInboxLoading(true);
+    setInboxError(null);
+    const result = await listSessionInbox(server, id);
+    setInboxLoading(false);
+    if (result.error !== null || result.data === null) {
+      setInboxError(result.error ?? t`Inbox konnte nicht geladen werden.`);
+      return;
+    }
+    setInboxRows(result.data);
+  }
+
+  function toggleInbox() {
+    if (inboxOpen) {
+      setInboxOpen(false);
+      return;
+    }
+    setInboxOpen(true);
+    if (inboxRows === null && !inboxLoading) void loadInbox();
+  }
+
+  async function handleUpdateInbox(inboxID: string, delivery: SessionInboxDelivery) {
+    if (server === null || server === undefined || id === undefined) return;
+    if (updatingInbox !== null || cancellingInbox !== null || !canInboxUpdate) return;
+    setUpdatingInbox(inboxID);
+    setInboxError(null);
+    const result = await updateSessionInbox(server, id, inboxID, delivery);
+    setUpdatingInbox(null);
+    if (result.error !== null) {
+      setInboxError(result.error);
+      return;
+    }
+    setInboxRows((prev) =>
+      prev === null ? prev : prev.map((row) => (row.id === inboxID ? { ...row, delivery } : row)),
+    );
+  }
+
+  async function handleCancelInbox(inboxID: string) {
+    if (server === null || server === undefined || id === undefined) return;
+    if (cancellingInbox !== null || updatingInbox !== null || !canInboxCancel) return;
+    setCancellingInbox(inboxID);
+    setInboxError(null);
+    const result = await cancelSessionInbox(server, id, inboxID);
+    setCancellingInbox(null);
+    if (result.error !== null) {
+      setInboxError(result.error);
+      return;
+    }
+    setInboxRows((prev) => (prev === null ? prev : prev.filter((row) => row.id !== inboxID)));
+  }
+
+  // --- Parity batch 3: pending session forms (reply / cancel) ---
+
+  async function loadForms() {
+    if (server === null || server === undefined || id === undefined) return;
+    setFormsLoading(true);
+    setFormsError(null);
+    const result = await listSessionForms(server, id);
+    setFormsLoading(false);
+    if (result.error !== null || result.data === null) {
+      setFormsError(result.error ?? t`Formulare konnten nicht geladen werden.`);
+      return;
+    }
+    setFormRows(result.data);
+    setSelectedFormID((current) => {
+      if (result.data?.some((row) => row.id === current) === true) return current;
+      return result.data?.[0]?.id ?? "";
+    });
+  }
+
+  function toggleForms() {
+    if (formsOpen) {
+      setFormsOpen(false);
+      return;
+    }
+    setFormsOpen(true);
+    if (formRows === null && !formsLoading) void loadForms();
+  }
+
+  async function handleReplyForm() {
+    if (server === null || server === undefined || id === undefined) return;
+    if (selectedFormID === "" || formBusy || !canFormReply) return;
+    const parsed = parseFormAnswerText(formAnswerText);
+    if (parsed.answer === null) {
+      setFormsError(parsed.error ?? t`Antworten fehlgeschlagen.`);
+      return;
+    }
+    setFormBusy(true);
+    setFormsError(null);
+    const result = await replySessionForm(server, id, selectedFormID, parsed.answer);
+    setFormBusy(false);
+    if (result.error !== null) {
+      setFormsError(result.error);
+      return;
+    }
+    setFormRows((prev) =>
+      prev === null ? prev : prev.filter((row) => row.id !== selectedFormID),
+    );
+    setSelectedFormID("");
+    setFormAnswerText("");
+  }
+
+  async function handleCancelForm() {
+    if (server === null || server === undefined || id === undefined) return;
+    if (selectedFormID === "" || formBusy || !canFormCancel) return;
+    setFormBusy(true);
+    setFormsError(null);
+    const result = await cancelSessionForm(server, id, selectedFormID);
+    setFormBusy(false);
+    if (result.error !== null) {
+      setFormsError(result.error);
+      return;
+    }
+    setFormRows((prev) =>
+      prev === null ? prev : prev.filter((row) => row.id !== selectedFormID),
+    );
+    setSelectedFormID("");
   }
 
   return (
@@ -729,6 +1049,431 @@ export default function SessionDetail() {
               )}
             </div>
           </section>
+          <section className="card bg-base-200 shadow" data-testid="session-revert-section">
+            <div className="card-body py-3">
+              <h2 className="card-title text-base">
+                <Trans>Zurücksetzen (Revert)</Trans>
+              </h2>
+              <p className="text-xs opacity-70">
+                <Trans>
+                  Erst staging starten (ab einer Nachricht), dann übernehmen oder verwerfen. Das
+                  Übernehmen ändert Nachrichten und Dateien unwiderruflich.
+                </Trans>
+              </p>
+              {revertError !== null && (
+                <div className="alert alert-error">
+                  <span>{revertError}</span>
+                </div>
+              )}
+              {revertNotice !== null && (
+                <div className="alert alert-success">
+                  <span>{revertNotice}</span>
+                </div>
+              )}
+              {stagedRevert === null ? (
+                <form
+                  className="flex gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void handleStageRevert();
+                  }}
+                >
+                  <select
+                    className="select select-bordered select-sm flex-1"
+                    value={revertMessageID}
+                    onChange={(e) => setRevertMessageID(e.target.value)}
+                    disabled={!canRevert || revertBusy}
+                    aria-label={t`Nachricht für das Revert`}
+                    data-testid="revert-message-select"
+                  >
+                    <option value="">
+                      <Trans>Nachricht wählen …</Trans>
+                    </option>
+                    {visible.map((m) => (
+                      <option key={m.messageID} value={m.messageID}>
+                        {`${m.role}: ${m.text.slice(0, 80)}`}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="submit"
+                    className="btn btn-sm"
+                    disabled={!canRevert || revertBusy || revertMessageID === ""}
+                    aria-label={t`Revert-Staging starten`}
+                  >
+                    <Trans>Staging starten</Trans>
+                  </button>
+                </form>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2" data-testid="revert-staged">
+                  <span className="text-sm flex-1">
+                    {stagedFileCount === null ? (
+                      <Trans>Staged ab Nachricht {stagedMessageID}.</Trans>
+                    ) : (
+                      <Trans>
+                        Staged ab Nachricht {stagedMessageID} ({stagedFileCount} Dateien).
+                      </Trans>
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-error"
+                    disabled={!canRevert || revertBusy}
+                    aria-label={t`Revert übernehmen`}
+                    onClick={() => {
+                      setConfirmError(null);
+                      setConfirm("revert-commit");
+                    }}
+                  >
+                    <Trans>Übernehmen</Trans>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost"
+                    disabled={!canRevert || revertBusy}
+                    aria-label={t`Revert-Staging verwerfen`}
+                    onClick={() => void handleClearRevert()}
+                  >
+                    <Trans>Verwerfen</Trans>
+                  </button>
+                </div>
+              )}
+            </div>
+          </section>
+          <section className="card bg-base-200 shadow" data-testid="session-share-section">
+            <div className="card-body py-3">
+              <h2 className="card-title text-base">
+                <Trans>Teilen (Export / Import)</Trans>
+              </h2>
+              <p className="text-xs opacity-70">
+                <Trans>
+                  Export als JSON teilen, Import als neue Session übernehmen.
+                </Trans>
+              </p>
+              {shareError !== null && (
+                <div className="alert alert-error">
+                  <span>{shareError}</span>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={!canExport || shareBusy}
+                  aria-label={t`Session exportieren`}
+                  data-testid="session-export-button"
+                  onClick={() => void handleExport()}
+                >
+                  <Trans>Exportieren</Trans>
+                </button>
+                {exportText !== null && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost"
+                    aria-label={t`Export als Datei laden`}
+                    onClick={downloadExport}
+                  >
+                    <Trans>Als Datei laden</Trans>
+                  </button>
+                )}
+              </div>
+              {exportText !== null && (
+                <textarea
+                  className="textarea textarea-bordered font-mono text-xs w-full"
+                  rows={6}
+                  readOnly
+                  value={exportText}
+                  aria-label={t`Exportiertes JSON`}
+                  data-testid="session-export-text"
+                />
+              )}
+              <h3 className="font-semibold text-sm">
+                <Trans>Importieren</Trans>
+              </h3>
+              <input
+                type="file"
+                accept="application/json,.json"
+                className="file-input file-input-bordered file-input-sm w-full"
+                disabled={!canImport}
+                aria-label={t`Exportdatei wählen`}
+                data-testid="session-import-file"
+                onChange={(e) => handleImportFile(e.target.files?.[0])}
+              />
+              <textarea
+                className="textarea textarea-bordered font-mono text-xs w-full"
+                rows={4}
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                placeholder={t`Export-JSON hier einfügen …`}
+                aria-label={t`Export-JSON`}
+                disabled={!canImport}
+                data-testid="session-import-text"
+              />
+              <button
+                type="button"
+                className="btn btn-sm btn-primary w-fit"
+                disabled={!canImport || importBusy || importText.trim() === ""}
+                aria-label={t`Session importieren`}
+                data-testid="session-import-button"
+                onClick={() => void handleImport()}
+              >
+                <Trans>Importieren</Trans>
+              </button>
+            </div>
+          </section>
+          <section className="card bg-base-200 shadow" data-testid="session-command-section">
+            <div className="card-body py-3">
+              <h2 className="card-title text-base">
+                <Trans>Befehl ausführen</Trans>
+              </h2>
+              {commandError !== null && (
+                <div className="alert alert-error">
+                  <span>{commandError}</span>
+                </div>
+              )}
+              {commandNotice !== null && (
+                <div className="alert alert-success">
+                  <span>{commandNotice}</span>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <select
+                  className="select select-bordered select-sm flex-1"
+                  value={commandName}
+                  onChange={(e) => setCommandName(e.target.value)}
+                  disabled={!canRunCommand || commandBusy}
+                  aria-label={t`Befehl`}
+                  data-testid="session-command-select"
+                >
+                  <option value="">
+                    <Trans>Befehl wählen …</Trans>
+                  </option>
+                  {commands.map((c) => (
+                    <option key={c.name} value={c.name}>
+                      {c.description === null ? c.name : `${c.name} – ${c.description}`}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  className="input input-bordered input-sm flex-1"
+                  value={commandText}
+                  onChange={(e) => setCommandText(e.target.value)}
+                  placeholder={t`Zusatztext für den Befehl`}
+                  aria-label={t`Befehlstext`}
+                  disabled={!canRunCommand || commandBusy}
+                  data-testid="session-command-text"
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  disabled={!canRunCommand || commandBusy || commandName === ""}
+                  aria-label={t`Befehl ausführen`}
+                  data-testid="session-command-run"
+                  onClick={() => void handleRunCommand()}
+                >
+                  <Trans>Ausführen</Trans>
+                </button>
+              </div>
+            </div>
+          </section>
+          <section className="card bg-base-200 shadow" data-testid="session-inbox-section">
+            <div className="card-body py-3">
+              <div className="flex items-center gap-2">
+                <h2 className="card-title text-base flex-1">
+                  <Trans>Eingangsbox</Trans>
+                </h2>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  disabled={!canInbox}
+                  aria-expanded={inboxOpen}
+                  aria-label={inboxOpen ? t`Eingangsbox ausblenden` : t`Eingangsbox anzeigen`}
+                  onClick={toggleInbox}
+                >
+                  {inboxOpen ? <Trans>Ausblenden</Trans> : <Trans>Anzeigen</Trans>}
+                </button>
+              </div>
+              <p className="text-xs opacity-70">
+                <Trans>
+                  Einträge in der Warteschlange dieser Session. Beantwortet wird über Formulare
+                  und Berechtigungen – hier kann die Zustellung umgestellt (sofort oder warten)
+                  oder abgebrochen werden.
+                </Trans>
+              </p>
+              {inboxOpen && (
+                <>
+                  {inboxLoading && (
+                    <span className="loading loading-spinner loading-sm" aria-label={t`Lädt`} />
+                  )}
+                  {inboxError !== null && (
+                    <div className="alert alert-warning">
+                      <span>{inboxError}</span>
+                    </div>
+                  )}
+                  {!inboxLoading && inboxError === null && inboxRows !== null && inboxRows.length === 0 && (
+                    <p className="opacity-70 text-sm">
+                      <Trans>Keine Einträge in der Warteschlange.</Trans>
+                    </p>
+                  )}
+                  {!inboxLoading && inboxError === null && inboxRows !== null && inboxRows.length > 0 && (
+                    <ul className="flex flex-col gap-2" data-testid="session-inbox-list">
+                      {inboxRows.map((row) => {
+                        const inboxRowID = row.id;
+                        return (
+                          <li key={inboxRowID} data-testid={`session-inbox-${inboxRowID}`}>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="badge badge-ghost badge-sm">{row.kind}</span>
+                              {row.delivery !== null && (
+                                <span
+                                  className="badge badge-info badge-sm"
+                                  data-testid={`session-inbox-delivery-${inboxRowID}`}
+                                >
+                                  {row.delivery === "steer" ? <Trans>sofort</Trans> : <Trans>Warteschlange</Trans>}
+                                </span>
+                              )}
+                              <span className="flex-1 break-all text-sm">{row.summary}</span>
+                              <button
+                                type="button"
+                                className="btn btn-xs btn-ghost"
+                                disabled={!canInboxUpdate || cancellingInbox !== null || updatingInbox !== null}
+                                aria-label={t`Eintrag ${inboxRowID} sofort ausführen`}
+                                data-testid={`session-inbox-steer-${inboxRowID}`}
+                                onClick={() => void handleUpdateInbox(inboxRowID, "steer")}
+                              >
+                                <Trans>Sofort</Trans>
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-xs btn-ghost"
+                                disabled={!canInboxUpdate || cancellingInbox !== null || updatingInbox !== null}
+                                aria-label={t`Eintrag ${inboxRowID} in die Warteschlange legen`}
+                                data-testid={`session-inbox-queue-${inboxRowID}`}
+                                onClick={() => void handleUpdateInbox(inboxRowID, "queue")}
+                              >
+                                <Trans>Warten</Trans>
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-xs btn-error btn-outline"
+                                disabled={!canInboxCancel || cancellingInbox !== null}
+                                aria-label={t`Eintrag ${inboxRowID} abbrechen`}
+                                onClick={() => void handleCancelInbox(inboxRowID)}
+                              >
+                                <Trans>Abbrechen</Trans>
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
+          </section>
+          <section className="card bg-base-200 shadow" data-testid="session-forms-section">
+            <div className="card-body py-3">
+              <div className="flex items-center gap-2">
+                <h2 className="card-title text-base flex-1">
+                  <Trans>Offene Formulare</Trans>
+                </h2>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  disabled={!canFormList}
+                  aria-expanded={formsOpen}
+                  aria-label={formsOpen ? t`Formulare ausblenden` : t`Formulare anzeigen`}
+                  onClick={toggleForms}
+                >
+                  {formsOpen ? <Trans>Ausblenden</Trans> : <Trans>Anzeigen</Trans>}
+                </button>
+              </div>
+              <p className="text-xs opacity-70">
+                <Trans>
+                  Fragen des Servers an dich. Die Antwort ist ein JSON-Objekt mit einem Eintrag
+                  pro Feld (Text, Zahl, Ja/Nein oder Textliste).
+                </Trans>
+              </p>
+              {formsOpen && (
+                <>
+                  {formsLoading && (
+                    <span className="loading loading-spinner loading-sm" aria-label={t`Lädt`} />
+                  )}
+                  {formsError !== null && (
+                    <div className="alert alert-warning">
+                      <span>{formsError}</span>
+                    </div>
+                  )}
+                  {!formsLoading && formsError === null && formRows !== null && formRows.length === 0 && (
+                    <p className="opacity-70 text-sm">
+                      <Trans>Keine offenen Formulare.</Trans>
+                    </p>
+                  )}
+                  {!formsLoading && formsError === null && formRows !== null && formRows.length > 0 && (
+                    <div className="flex flex-col gap-2" data-testid="session-forms-list">
+                      <ul className="menu gap-1">
+                        {formRows.map((row) => {
+                          const formRowID = row.id;
+                          return (
+                            <li key={formRowID} data-testid={`session-form-${formRowID}`}>
+                              <span className="break-all text-sm">{row.title}</span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      <select
+                        className="select select-bordered select-sm w-full"
+                        value={selectedFormID}
+                        onChange={(e) => setSelectedFormID(e.target.value)}
+                        aria-label={t`Formular`}
+                        data-testid="session-form-select"
+                      >
+                        <option value="">
+                          <Trans>Formular wählen …</Trans>
+                        </option>
+                        {formRows.map((row) => (
+                          <option key={row.id} value={row.id}>
+                            {row.title}
+                          </option>
+                        ))}
+                      </select>
+                      <textarea
+                        className="textarea textarea-bordered font-mono text-xs w-full"
+                        rows={3}
+                        value={formAnswerText}
+                        onChange={(e) => setFormAnswerText(e.target.value)}
+                        placeholder={t`Antwort als JSON-Objekt, z. B. {"ok": true}`}
+                        aria-label={t`Antwort als JSON`}
+                        data-testid="session-form-answer"
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-primary"
+                          disabled={selectedFormID === "" || formBusy || !canFormReply}
+                          aria-label={t`Formular beantworten`}
+                          data-testid="session-form-reply"
+                          onClick={() => void handleReplyForm()}
+                        >
+                          <Trans>Antworten</Trans>
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-error btn-outline"
+                          disabled={selectedFormID === "" || formBusy || !canFormCancel}
+                          aria-label={t`Formular ablehnen`}
+                          data-testid="session-form-cancel"
+                          onClick={() => void handleCancelForm()}
+                        >
+                          <Trans>Ablehnen</Trans>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </section>
           {attachments.length > 0 && (
             <ul className="flex flex-wrap gap-1" data-testid="prompt-attachments" aria-label={t`Angehängte Dateien`}>
               {attachments.map((path) => (
@@ -807,7 +1552,9 @@ export default function SessionDetail() {
               ? t`Session forken`
               : confirm === "compact"
                 ? t`Session kompaktieren`
-                : t`Ausführung unterbrechen`
+                : confirm === "revert-commit"
+                  ? t`Revert übernehmen`
+                  : t`Ausführung unterbrechen`
         }
         message={
           confirm === "delete"
@@ -816,7 +1563,9 @@ export default function SessionDetail() {
               ? t`Die Session wird ab dem aktuellen Stand kopiert. Die neue Session öffnet sich danach automatisch. Fortfahren?`
               : confirm === "compact"
                 ? t`Der Kontext wird zusammengefasst, um Platz zu schaffen. Fortfahren?`
-                : t`Die laufende Ausführung wird unterbrochen. Die Session selbst bleibt erhalten. Fortfahren?`
+                : confirm === "revert-commit"
+                  ? t`Das gestagete Revert wird übernommen. Nachrichten und Dateien nach dem gewählten Stand gehen verloren. Fortfahren?`
+                  : t`Die laufende Ausführung wird unterbrochen. Die Session selbst bleibt erhalten. Fortfahren?`
         }
         confirmLabel={
           confirm === "delete"
@@ -825,7 +1574,9 @@ export default function SessionDetail() {
               ? t`Forken`
               : confirm === "compact"
                 ? t`Kompaktieren`
-                : t`Unterbrechen`
+                : confirm === "revert-commit"
+                  ? t`Übernehmen`
+                  : t`Unterbrechen`
         }
         busy={confirmBusy}
         error={confirmError}

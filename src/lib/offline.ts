@@ -16,6 +16,20 @@ export type ServerAction =
   | "session-compact"
   | "session-diff"
   | "session-stats"
+  | "session-revert"
+  | "session-export"
+  | "session-import"
+  | "session-command"
+  | "session-inbox"
+  | "session-inbox-cancel"
+  | "session-inbox-update"
+  | "session-form-list"
+  | "session-form-reply"
+  | "session-form-cancel"
+  | "command-list"
+  | "skill-list"
+  | "websearch-providers"
+  | "websearch-query"
   | "agent-detail"
   | "provider-list"
   | "shell-create"
@@ -34,6 +48,20 @@ const ACTIONS_REQUIRING_SERVER: ReadonlySet<ServerAction> = new Set<ServerAction
   "session-compact",
   "session-diff",
   "session-stats",
+  "session-revert",
+  "session-export",
+  "session-import",
+  "session-command",
+  "session-inbox",
+  "session-inbox-cancel",
+  "session-inbox-update",
+  "session-form-list",
+  "session-form-reply",
+  "session-form-cancel",
+  "command-list",
+  "skill-list",
+  "websearch-providers",
+  "websearch-query",
   "agent-detail",
   "provider-list",
   "shell-create",

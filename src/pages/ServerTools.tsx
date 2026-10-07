@@ -7,18 +7,23 @@ import { useLiveRefresh } from "../hooks/useLiveRefresh.ts";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
 import {
   listAgents,
+  listCommands,
   listFiles,
   listMcpServers,
   listModels,
   listPendingPermissions,
   listProjects,
   listProviders,
+  listSkills,
   listVcsStatus,
+  listWebsearchProviders,
   listWorktrees,
+  queryWebsearch,
   readFile,
   replyPermission,
   MAX_FILE_PREVIEW_CHARS,
   type AgentOption,
+  type CommandRow,
   type FileContent,
   type FileEntryRow,
   type McpServerRow,
@@ -27,8 +32,11 @@ import {
   type PermissionRequestRow,
   type ProjectInfo,
   type ProviderRow,
+  type SkillRow,
   type VcsChangeKind,
   type VcsStatusRow,
+  type WebsearchProviderRow,
+  type WebsearchResultRow,
   type WorktreeRow,
 } from "../lib/opencode.ts";
 import { useServers } from "../state/servers.tsx";
@@ -129,6 +137,16 @@ export default function ServerTools() {
   const [providers, setProviders] = useState<ProviderRow[]>([]);
   const [models, setModels] = useState<ModelOption[]>([]);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  // Parity batch 3: commands, skills, websearch providers + results.
+  const [commands, setCommands] = useState<CommandRow[]>([]);
+  const [skills, setSkills] = useState<SkillRow[]>([]);
+  const [searchProviders, setSearchProviders] = useState<WebsearchProviderRow[]>([]);
+  const [searchProviderID, setSearchProviderID] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<WebsearchResultRow[]>([]);
+  const [searchAnswerProvider, setSearchAnswerProvider] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [replying, setReplying] = useState<string | null>(null);
@@ -199,11 +217,18 @@ export default function ServerTools() {
     setAgents([]);
     setProviders([]);
     setModels([]);
+    setCommands([]);
+    setSkills([]);
+    setSearchProviders([]);
+    setSearchProviderID("");
     void Promise.all([
       listAgents(activeServer),
       listProviders(activeServer),
       listModels(activeServer),
-    ]).then(([agentsRes, providersRes, modelsRes]) => {
+      listCommands(activeServer),
+      listSkills(activeServer),
+      listWebsearchProviders(activeServer),
+    ]).then(([agentsRes, providersRes, modelsRes, commandsRes, skillsRes, searchRes]) => {
       if (cancelled) return;
       const firstError = agentsRes.error ?? providersRes.error ?? modelsRes.error;
       if (firstError !== null) {
@@ -213,6 +238,11 @@ export default function ServerTools() {
       setAgents(agentsRes.data ?? []);
       setProviders(providersRes.data ?? []);
       setModels(modelsRes.data ?? []);
+      // Commands/skills/websearch are best-effort: a missing endpoint must
+      // not hide the agent/provider/model overview above.
+      if (commandsRes.error === null) setCommands(commandsRes.data ?? []);
+      if (skillsRes.error === null) setSkills(skillsRes.data ?? []);
+      if (searchRes.error === null) setSearchProviders(searchRes.data ?? []);
     });
     return () => {
       cancelled = true;
@@ -269,6 +299,10 @@ export default function ServerTools() {
   const canReplyPermission = isActionEnabled(offline, "permission-reply");
   const canAgentDetail = isActionEnabled(offline, "agent-detail");
   const canProviderList = isActionEnabled(offline, "provider-list");
+  const canCommandList = isActionEnabled(offline, "command-list");
+  const canSkillList = isActionEnabled(offline, "skill-list");
+  const canWebsearch = isActionEnabled(offline, "websearch-query")
+    && isActionEnabled(offline, "websearch-providers");
   const serverName = server.name;
   const previewLimit = MAX_FILE_PREVIEW_CHARS.toLocaleString("de");
   const parent = parentPath(path);
@@ -321,6 +355,29 @@ export default function ServerTools() {
       permissions: prev.permissions.filter((item) => item.id !== request.id),
     }));
     reloadOverview();
+  }
+
+  async function handleWebsearch(e: React.FormEvent) {
+    e.preventDefault();
+    if (activeServer === null || searching || !canWebsearch) return;
+    const query = searchQuery.trim();
+    if (query === "") return;
+    setSearching(true);
+    setSearchError(null);
+    const result = await queryWebsearch(
+      activeServer,
+      query,
+      searchProviderID === "" ? undefined : searchProviderID,
+    );
+    setSearching(false);
+    if (result.error !== null || result.data === null) {
+      setSearchResults([]);
+      setSearchAnswerProvider(null);
+      setSearchError(result.error ?? t`Suche fehlgeschlagen.`);
+      return;
+    }
+    setSearchResults(result.data.results);
+    setSearchAnswerProvider(result.data.providerID === "" ? null : result.data.providerID);
   }
 
   return (
@@ -672,6 +729,153 @@ export default function ServerTools() {
                     </div>
                   </li>
                 )}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <section className="card bg-base-200 shadow" data-testid="commands-card">
+          <div className="card-body">
+            <h2 className="card-title">
+              <Icon name="session" /> <Trans>Befehle</Trans>
+            </h2>
+            <p className="text-xs opacity-70">
+              <Trans>Nur lesend: verfügbare Slash-Befehle. Ausgeführt wird in der Session.</Trans>
+            </p>
+            {!canCommandList ? (
+              <p className="opacity-70 text-sm">
+                <Trans>Server offline – Befehlsliste ist deaktiviert.</Trans>
+              </p>
+            ) : commands.length === 0 ? (
+              <p className="opacity-70 text-sm">
+                <Trans>Keine Befehle.</Trans>
+              </p>
+            ) : (
+              <ul className="menu gap-1" data-testid="command-list">
+                {commands.map((command) => (
+                  <li key={command.name} data-testid={`command-row-${command.name}`}>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-mono text-sm break-all">{command.name}</span>
+                      {command.description !== null && (
+                        <span className="text-xs opacity-70 break-all">{command.description}</span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <section className="card bg-base-200 shadow" data-testid="skills-card">
+          <div className="card-body">
+            <h2 className="card-title">
+              <Icon name="session" /> <Trans>Skills</Trans>
+            </h2>
+            <p className="text-xs opacity-70">
+              <Trans>Nur lesend: verfügbare Skills des Servers.</Trans>
+            </p>
+            {!canSkillList ? (
+              <p className="opacity-70 text-sm">
+                <Trans>Server offline – Skill-Liste ist deaktiviert.</Trans>
+              </p>
+            ) : skills.length === 0 ? (
+              <p className="opacity-70 text-sm">
+                <Trans>Keine Skills.</Trans>
+              </p>
+            ) : (
+              <ul className="menu gap-1" data-testid="skill-list">
+                {skills.map((skill) => (
+                  <li key={skill.id} data-testid={`skill-row-${skill.id}`}>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-mono text-sm break-all">{skill.name}</span>
+                      {skill.description !== null && (
+                        <span className="text-xs opacity-70 break-all">{skill.description}</span>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <section className="card bg-base-200 shadow md:col-span-2" data-testid="websearch-card">
+          <div className="card-body">
+            <h2 className="card-title">
+              <Icon name="server" /> <Trans>Websuche</Trans>
+            </h2>
+            <p className="text-xs opacity-70">
+              <Trans>Über einen Anbieter des Servers im Web suchen.</Trans>
+            </p>
+            {searchError !== null && (
+              <div className="alert alert-warning">
+                <span>{searchError}</span>
+              </div>
+            )}
+            <form className="flex flex-wrap gap-2" onSubmit={(e) => void handleWebsearch(e)}>
+              <select
+                className="select select-bordered select-sm"
+                value={searchProviderID}
+                onChange={(e) => setSearchProviderID(e.target.value)}
+                disabled={!canWebsearch || searching}
+                aria-label={t`Suchanbieter`}
+                data-testid="websearch-provider"
+              >
+                <option value="">
+                  <Trans>Automatisch</Trans>
+                </option>
+                {searchProviders.map((provider) => (
+                  <option key={provider.id} value={provider.id}>
+                    {provider.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                className="input input-bordered input-sm flex-1"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t`Suchbegriff …`}
+                aria-label={t`Websuche`}
+                disabled={!canWebsearch || searching}
+                data-testid="websearch-query"
+              />
+              <button
+                type="submit"
+                className="btn btn-sm btn-primary"
+                disabled={!canWebsearch || searching || searchQuery.trim() === ""}
+                aria-label={t`Websuche starten`}
+                data-testid="websearch-submit"
+              >
+                <Trans>Suchen</Trans>
+              </button>
+            </form>
+            {searching && <span className="loading loading-spinner loading-sm" aria-label={t`Lädt`} />}
+            {!searching && searchError === null && searchAnswerProvider !== null && (
+              <p className="text-xs opacity-70">
+                <Trans>Anbieter: {searchAnswerProvider}</Trans>
+              </p>
+            )}
+            {!searching && searchError === null && searchResults.length > 0 && (
+              <ul className="flex flex-col gap-2" data-testid="websearch-results">
+                {searchResults.map((hit, index) => (
+                  <li key={`${hit.url}-${index}`} data-testid={`websearch-result-${index}`}>
+                    <div className="flex flex-col gap-0.5">
+                      <a
+                        className="link link-primary text-sm break-all"
+                        href={hit.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {hit.title ?? hit.url}
+                      </a>
+                      <span className="text-xs opacity-70 font-mono break-all">{hit.url}</span>
+                      {hit.content !== null && (
+                        <span className="text-xs break-all">{hit.content}</span>
+                      )}
+                    </div>
+                  </li>
+                ))}
               </ul>
             )}
           </div>

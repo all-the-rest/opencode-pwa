@@ -36,7 +36,37 @@ Legend: ✅ in this app · 🚧 partial · ❌ missing (post-MVP unless noted).
 - ✅ File attachments in prompts: workspace paths attached in the prompt box
   (mention input + chips), sent as `SessionPromptInput.files` (`file://` URIs
   — verified in the installed client package, so no UI-only limitation).
-- ❌ Revert/share: not surfaced yet.
+- ✅ Revert/share on SessionDetail: staged revert (`POST
+  /api/session/{id}/revert/stage {messageID}` → commit with a German confirm
+  dialog / discard via `DELETE /api/session/{id}/revert`; commit is a bare POST,
+  the endpoint declares `empty: true`), plus export/import share (`GET
+  /api/experimental/session/{id}/export` shown as JSON with file download,
+  import from file or pasted JSON via `POST /api/experimental/session/import`;
+  an optional export `location` passes through so re-imports keep working).
+- ✅ Commands in the session (`GET /api/command` listed read-only on
+  Server-Werkzeuge, run in the session via `POST /api/session/{id}/command
+  {name, text}`) + skills list (`GET /api/skill`, read-only overview).
+- ✅ Websearch on Server-Werkzeuge: providers from `GET /api/websearch/provider`
+  (select, "Automatisch" = server default), search via `POST /api/websearch
+  {query, providerID?}`, hits as links with snippet, answering provider shown.
+- ✅ Session inbox on SessionDetail (queued entries from `GET
+  /api/session/{id}/inbox` with kind badge + delivery badge): delivery change
+  via `PATCH /api/session/{id}/inbox/{inboxID} {delivery: "steer"|"queue"}`
+  ("Sofort"/"Warten"), cancel via `DELETE .../inbox/{inboxID}`. Answering
+  happens through forms/permissions — the inbox itself is never a reply box.
+- ✅ Pending forms overview on SessionDetail (`GET /api/session/{id}/form`):
+  select a form, paste the answer as a JSON object (validated client-side:
+  Text/Zahl/Ja-Nein/Textliste pro Feld), reply via `POST .../form/{formID}/reply
+  {answer}`, reject via `DELETE .../form/{formID}`.
+- ✅ Offline policy covers the new writes: `session-revert`, `session-export`,
+  `session-import`, `session-command`, `session-inbox`, `session-inbox-cancel`,
+  `session-inbox-update`, `session-form-list`, `session-form-reply`,
+  `session-form-cancel`, `command-list`, `skill-list`, `websearch-providers`,
+  `websearch-query` are all blocked while offline (`src/lib/offline.ts`).
+- Covered by `src/lib/parity3.test.ts` (extractors + fallback-fetch paths with
+  a throwing client, so every URL/method/body is pinned) and E2E
+  `tests/e2e/w8-parity3.spec.ts` (`@feature` for revert flow, command run,
+  websearch, command/skill lists, inbox cancel + delivery, form reply).
 
 ## Shells & Tasks
 
@@ -98,8 +128,7 @@ cards, rows extracted with the `{ data: [...] }`-tolerant patterns in
   `permission-reply` are disabled, so nothing is written to an unreachable
   server. VCS/MCP/permissions reload on the 5 s live refresh.
 
-Still missing in this section: commands/skills (`command.*`, `skill.*`),
-integration management, config editing, websearch, forms, revert/share.
+Still missing in this section: integration management, config editing.
 
 ## Credential Vault (AES-GCM + Web Crypto)
 

@@ -36,11 +36,13 @@ msgid "1 Nachricht"
 msgstr "1 Nachricht"
 
 #: src/components/ConfirmDialog.tsx
+#: src/pages/SessionDetail.tsx
 #: src/pages/Settings.tsx
 msgid "Abbrechen"
 msgstr "Abbrechen"
 
 #: src/pages/ServerTools.tsx
+#: src/pages/SessionDetail.tsx
 msgid "Ablehnen"
 msgstr "Ablehnen"
 
@@ -109,6 +111,10 @@ msgid "Alle Server ({serverCount})"
 msgstr "Alle Server ({serverCount})"
 
 #: src/pages/SessionDetail.tsx
+msgid "Als Datei laden"
+msgstr "Als Datei laden"
+
+#: src/pages/SessionDetail.tsx
 msgid "Ältere Nachrichten laden"
 msgstr "Ältere Nachrichten laden"
 
@@ -124,6 +130,10 @@ msgstr "Ältere Nachrichten laden ({remaining} weitere)"
 #: src/pages/ServerTools.tsx
 msgid "Anbieter & Modelle"
 msgstr "Anbieter & Modelle"
+
+#: src/pages/ServerTools.tsx
+msgid "Anbieter: {searchAnswerProvider}"
+msgstr "Anbieter: {searchAnswerProvider}"
 
 #: src/pages/ServerTools.tsx
 msgid "Anfrage {requestId} ablehnen"
@@ -149,6 +159,22 @@ msgstr "Anhang {path} entfernen"
 msgid "Anhängen"
 msgstr "Anhängen"
 
+#: src/pages/SessionDetail.tsx
+msgid "Antwort als JSON"
+msgstr "Antwort als JSON"
+
+#: src/pages/SessionDetail.tsx
+msgid "Antwort als JSON-Objekt, z. B. {\"ok\": true}"
+msgstr "Antwort als JSON-Objekt, z. B. {\"ok\": true}"
+
+#: src/pages/SessionDetail.tsx
+msgid "Antworten"
+msgstr "Antworten"
+
+#: src/pages/SessionDetail.tsx
+msgid "Antworten fehlgeschlagen."
+msgstr "Antworten fehlgeschlagen."
+
 #: src/pages/ServerTools.tsx
 #~ msgid "Anzeige auf {MAX_FILE_PREVIEW_CHARS} Zeichen gekürzt."
 #~ msgstr "Anzeige auf {MAX_FILE_PREVIEW_CHARS} Zeichen gekürzt."
@@ -158,6 +184,7 @@ msgid "Anzeige auf {previewLimit} Zeichen gekürzt."
 msgstr "Anzeige auf {previewLimit} Zeichen gekürzt."
 
 #: src/pages/Dashboard.tsx
+#: src/pages/SessionDetail.tsx
 msgid "Anzeigen"
 msgstr "Anzeigen"
 
@@ -165,6 +192,10 @@ msgstr "Anzeigen"
 #: src/pages/SessionDetail.tsx
 msgid "Ausblenden"
 msgstr "Ausblenden"
+
+#: src/pages/SessionDetail.tsx
+msgid "Ausführen"
+msgstr "Ausführen"
 
 #: src/hooks/useEventNotifications.ts
 msgid "Ausführung fehlgeschlagen"
@@ -221,6 +252,10 @@ msgstr "Ausgabe:"
 msgid "Ausgabeformate:"
 msgstr "Ausgabeformate:"
 
+#: src/pages/ServerTools.tsx
+msgid "Automatisch"
+msgstr "Automatisch"
+
 #: src/pages/Settings.tsx
 msgid "Basis-URL"
 msgstr "Basis-URL"
@@ -237,9 +272,33 @@ msgstr "Basis-URL muss mit http:// oder https:// beginnen."
 msgid "Bearbeiten"
 msgstr "Bearbeiten"
 
+#: src/pages/SessionDetail.tsx
+msgid "Befehl"
+msgstr "Befehl"
+
+#: src/pages/SessionDetail.tsx
+msgid "Befehl „{commandName}“ gestartet."
+msgstr "Befehl „{commandName}“ gestartet."
+
+#: src/pages/SessionDetail.tsx
+msgid "Befehl ausführen"
+msgstr "Befehl ausführen"
+
 #: src/pages/ServerDetail.tsx
 msgid "Befehl starten, z. B. sleep 60"
 msgstr "Befehl starten, z. B. sleep 60"
+
+#: src/pages/SessionDetail.tsx
+msgid "Befehl wählen …"
+msgstr "Befehl wählen …"
+
+#: src/pages/ServerTools.tsx
+msgid "Befehle"
+msgstr "Befehle"
+
+#: src/pages/SessionDetail.tsx
+msgid "Befehlstext"
+msgstr "Befehlstext"
 
 #: src/pages/Settings.tsx
 msgid "Benachrichtigungen"
@@ -286,6 +345,10 @@ msgstr "Cache (lesen/schreiben):"
 #: src/pages/ServerDetail.tsx
 msgid "Connect-Token für {label} anfordern"
 msgstr "Connect-Token für {label} anfordern"
+
+#: src/pages/SessionDetail.tsx
+msgid "Das gestagete Revert wird übernommen. Nachrichten und Dateien nach dem gewählten Stand gehen verloren. Fortfahren?"
+msgstr "Das gestagete Revert wird übernommen. Nachrichten und Dateien nach dem gewählten Stand gehen verloren. Fortfahren?"
 
 #: src/pages/ServerTools.tsx
 msgid "Datei"
@@ -343,6 +406,14 @@ msgstr "Details öffnen"
 msgid "Details zu Agent {agentLabel} anzeigen"
 msgstr "Details zu Agent {agentLabel} anzeigen"
 
+#: src/lib/opencode.ts
+msgid "Die Antwort enthält kein gültiges JSON."
+msgstr "Die Antwort enthält kein gültiges JSON."
+
+#: src/lib/opencode.ts
+msgid "Die Antwort muss ein JSON-Objekt sein."
+msgstr "Die Antwort muss ein JSON-Objekt sein."
+
 #: src/hooks/useEventNotifications.ts
 msgid "Die Ausführung war erfolgreich{suffix}."
 msgstr "Die Ausführung war erfolgreich{suffix}."
@@ -350,6 +421,10 @@ msgstr "Die Ausführung war erfolgreich{suffix}."
 #: src/hooks/useEventNotifications.ts
 msgid "Die Ausführung wurde unterbrochen{suffix}."
 msgstr "Die Ausführung wurde unterbrochen{suffix}."
+
+#: src/lib/opencode.ts
+msgid "Die Datei enthält kein gültiges JSON."
+msgstr "Die Datei enthält kein gültiges JSON."
 
 #: src/hooks/useEventNotifications.ts
 msgid "Die Freigabe wurde beantwortet{suffix}."
@@ -438,6 +513,18 @@ msgstr "Eingabeformate:"
 msgid "Eingang für Session{suffix}."
 msgstr "Eingang für Session{suffix}."
 
+#: src/pages/SessionDetail.tsx
+msgid "Eingangsbox"
+msgstr "Eingangsbox"
+
+#: src/pages/SessionDetail.tsx
+msgid "Eingangsbox anzeigen"
+msgstr "Eingangsbox anzeigen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Eingangsbox ausblenden"
+msgstr "Eingangsbox ausblenden"
+
 #: src/pages/ServerTools.tsx
 msgid "Einmal erlauben"
 msgstr "Einmal erlauben"
@@ -447,14 +534,74 @@ msgstr "Einmal erlauben"
 msgid "Einstellungen"
 msgstr "Einstellungen"
 
+#: src/pages/SessionDetail.tsx
+msgid "Eintrag {inboxRowID} abbrechen"
+msgstr "Eintrag {inboxRowID} abbrechen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Eintrag {inboxRowID} in die Warteschlange legen"
+msgstr "Eintrag {inboxRowID} in die Warteschlange legen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Eintrag {inboxRowID} sofort ausführen"
+msgstr "Eintrag {inboxRowID} sofort ausführen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Einträge in der Warteschlange dieser Session. Beantwortet wird über Formulare und Berechtigungen – hier kann die Zustellung umgestellt (sofort oder warten) oder abgebrochen werden."
+msgstr "Einträge in der Warteschlange dieser Session. Beantwortet wird über Formulare und Berechtigungen – hier kann die Zustellung umgestellt (sofort oder warten) oder abgebrochen werden."
+
+#: src/pages/SessionDetail.tsx
+#~ msgid "Einträge in der Warteschlange dieser Session. Beantwortet wird über Formulare und Berechtigungen – hier kann nur abgebrochen werden."
+#~ msgstr "Einträge in der Warteschlange dieser Session. Beantwortet wird über Formulare und Berechtigungen – hier kann nur abgebrochen werden."
+
 #: src/pages/ServerDetail.tsx
 #: src/pages/Settings.tsx
 msgid "Entfernen"
 msgstr "Entfernen"
 
+#: src/pages/SessionDetail.tsx
+msgid "Erst staging starten (ab einer Nachricht), dann übernehmen oder verwerfen. Das Übernehmen ändert Nachrichten und Dateien unwiderruflich."
+msgstr "Erst staging starten (ab einer Nachricht), dann übernehmen oder verwerfen. Das Übernehmen ändert Nachrichten und Dateien unwiderruflich."
+
+#: src/pages/SessionDetail.tsx
+msgid "Export als Datei laden"
+msgstr "Export als Datei laden"
+
+#: src/pages/SessionDetail.tsx
+msgid "Export als JSON teilen, Import als neue Session übernehmen."
+msgstr "Export als JSON teilen, Import als neue Session übernehmen."
+
+#: src/pages/SessionDetail.tsx
+msgid "Export fehlgeschlagen."
+msgstr "Export fehlgeschlagen."
+
+#: src/pages/SessionDetail.tsx
+msgid "Export-JSON"
+msgstr "Export-JSON"
+
+#: src/pages/SessionDetail.tsx
+msgid "Export-JSON hier einfügen …"
+msgstr "Export-JSON hier einfügen …"
+
+#: src/pages/SessionDetail.tsx
+msgid "Exportdatei wählen"
+msgstr "Exportdatei wählen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Exportieren"
+msgstr "Exportieren"
+
+#: src/pages/SessionDetail.tsx
+msgid "Exportiertes JSON"
+msgstr "Exportiertes JSON"
+
 #: src/pages/AgentDetail.tsx
 msgid "Fähigkeiten"
 msgstr "Fähigkeiten"
+
+#: src/lib/opencode.ts
+msgid "Feld „{key}“ hat einen ungültigen Wert (erlaubt: Text, Zahl, Ja/Nein, Textliste)."
+msgstr "Feld „{key}“ hat einen ungültigen Wert (erlaubt: Text, Zahl, Ja/Nein, Textliste)."
 
 #: src/pages/SessionDetail.tsx
 msgid "Forken"
@@ -463,6 +610,38 @@ msgstr "Forken"
 #: src/pages/SessionDetail.tsx
 msgid "Forken fehlgeschlagen."
 msgstr "Forken fehlgeschlagen."
+
+#: src/pages/SessionDetail.tsx
+msgid "Formular"
+msgstr "Formular"
+
+#: src/pages/SessionDetail.tsx
+msgid "Formular ablehnen"
+msgstr "Formular ablehnen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Formular beantworten"
+msgstr "Formular beantworten"
+
+#: src/pages/SessionDetail.tsx
+msgid "Formular wählen …"
+msgstr "Formular wählen …"
+
+#: src/pages/SessionDetail.tsx
+msgid "Formulare anzeigen"
+msgstr "Formulare anzeigen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Formulare ausblenden"
+msgstr "Formulare ausblenden"
+
+#: src/pages/SessionDetail.tsx
+msgid "Formulare konnten nicht geladen werden."
+msgstr "Formulare konnten nicht geladen werden."
+
+#: src/pages/SessionDetail.tsx
+msgid "Fragen des Servers an dich. Die Antwort ist ein JSON-Objekt mit einem Eintrag pro Feld (Text, Zahl, Ja/Nein oder Textliste)."
+msgstr "Fragen des Servers an dich. Die Antwort ist ein JSON-Objekt mit einem Eintrag pro Feld (Text, Zahl, Ja/Nein oder Textliste)."
 
 #: src/hooks/useEventNotifications.ts
 msgid "Freigabe beantwortet"
@@ -509,9 +688,25 @@ msgstr "Hinweis: Terminal-Rendering folgt nach MVP. Ein Connect-Token kann pro P
 msgid "Hinzufügen"
 msgstr "Hinzufügen"
 
+#: src/pages/SessionDetail.tsx
+msgid "Import fehlgeschlagen."
+msgstr "Import fehlgeschlagen."
+
+#: src/pages/SessionDetail.tsx
+msgid "Importieren"
+msgstr "Importieren"
+
+#: src/pages/SessionDetail.tsx
+msgid "Inbox konnte nicht geladen werden."
+msgstr "Inbox konnte nicht geladen werden."
+
 #: src/pages/AgentDetail.tsx
 msgid "Ja"
 msgstr "Ja"
+
+#: src/lib/opencode.ts
+msgid "Kein gültiger Session-Export: „info“ und „messages“ fehlen."
+msgstr "Kein gültiger Session-Export: „info“ und „messages“ fehlen."
 
 #: src/pages/AgentDetail.tsx
 msgid "Kein Modell zugewiesen."
@@ -553,9 +748,17 @@ msgstr "Keine Änderungen."
 msgid "Keine Angaben zu den Modellfähigkeiten."
 msgstr "Keine Angaben zu den Modellfähigkeiten."
 
+#: src/pages/ServerTools.tsx
+msgid "Keine Befehle."
+msgstr "Keine Befehle."
+
 #: src/pages/SessionDetail.tsx
 msgid "Keine Dateiänderungen in dieser Session."
 msgstr "Keine Dateiänderungen in dieser Session."
+
+#: src/pages/SessionDetail.tsx
+msgid "Keine Einträge in der Warteschlange."
+msgstr "Keine Einträge in der Warteschlange."
 
 #: src/pages/ServerTools.tsx
 msgid "Keine Einträge."
@@ -577,6 +780,10 @@ msgstr "Keine Nachrichten vorhanden."
 msgid "Keine offenen Anfragen."
 msgstr "Keine offenen Anfragen."
 
+#: src/pages/SessionDetail.tsx
+msgid "Keine offenen Formulare."
+msgstr "Keine offenen Formulare."
+
 #: src/pages/ServerTools.tsx
 msgid "Keine Projekte"
 msgstr "Keine Projekte"
@@ -596,6 +803,10 @@ msgstr "Keine Sessions."
 #: src/pages/ServerDetail.tsx
 msgid "Keine Shells."
 msgstr "Keine Shells."
+
+#: src/pages/ServerTools.tsx
+msgid "Keine Skills."
+msgstr "Keine Skills."
 
 #: src/pages/ServerTools.tsx
 msgid "Keine Worktrees."
@@ -724,12 +935,20 @@ msgid "Nach Projekt filtern"
 msgstr "Nach Projekt filtern"
 
 #: src/pages/SessionDetail.tsx
+msgid "Nachricht für das Revert"
+msgstr "Nachricht für das Revert"
+
+#: src/pages/SessionDetail.tsx
 msgid "Nachricht schreiben"
 msgstr "Nachricht schreiben"
 
 #: src/pages/SessionDetail.tsx
 msgid "Nachricht senden"
 msgstr "Nachricht senden"
+
+#: src/pages/SessionDetail.tsx
+msgid "Nachricht wählen …"
+msgstr "Nachricht wählen …"
 
 #: src/pages/SessionDetail.tsx
 msgid "Nachrichten konnten nicht geladen werden (offline?): {error}"
@@ -805,12 +1024,24 @@ msgid "Nur lesend: konfigurierte MCP-Server und ihr Verbindungsstatus."
 msgstr "Nur lesend: konfigurierte MCP-Server und ihr Verbindungsstatus."
 
 #: src/pages/ServerTools.tsx
+msgid "Nur lesend: verfügbare Skills des Servers."
+msgstr "Nur lesend: verfügbare Skills des Servers."
+
+#: src/pages/ServerTools.tsx
+msgid "Nur lesend: verfügbare Slash-Befehle. Ausgeführt wird in der Session."
+msgstr "Nur lesend: verfügbare Slash-Befehle. Ausgeführt wird in der Session."
+
+#: src/pages/ServerTools.tsx
 msgid "Nur lesend: Verzeichnisse durchsuchen und Dateien ansehen."
 msgstr "Nur lesend: Verzeichnisse durchsuchen und Dateien ansehen."
 
 #: src/pages/ServerTools.tsx
 msgid "Offene Berechtigungen"
 msgstr "Offene Berechtigungen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Offene Formulare"
+msgstr "Offene Formulare"
 
 #: src/pages/Dashboard.tsx
 #: src/pages/ServerDetail.tsx
@@ -888,6 +1119,22 @@ msgstr "Projekte ({projectCount})"
 msgid "PTYs ({ptyCount})"
 msgstr "PTYs ({ptyCount})"
 
+#: src/pages/SessionDetail.tsx
+msgid "Revert übernehmen"
+msgstr "Revert übernehmen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Revert übernommen – die Session steht auf dem gewählten Stand."
+msgstr "Revert übernommen – die Session steht auf dem gewählten Stand."
+
+#: src/pages/SessionDetail.tsx
+msgid "Revert-Staging starten"
+msgstr "Revert-Staging starten"
+
+#: src/pages/SessionDetail.tsx
+msgid "Revert-Staging verwerfen"
+msgstr "Revert-Staging verwerfen"
+
 #: src/pages/ServerTools.tsx
 msgid "Schließen"
 msgstr "Schließen"
@@ -930,9 +1177,17 @@ msgstr "Server nicht gefunden"
 msgid "Server offline – Anbieterliste ist deaktiviert."
 msgstr "Server offline – Anbieterliste ist deaktiviert."
 
+#: src/pages/ServerTools.tsx
+msgid "Server offline – Befehlsliste ist deaktiviert."
+msgstr "Server offline – Befehlsliste ist deaktiviert."
+
 #: src/pages/AgentDetail.tsx
 msgid "Server offline – Neuladen ist deaktiviert."
 msgstr "Server offline – Neuladen ist deaktiviert."
+
+#: src/pages/ServerTools.tsx
+msgid "Server offline – Skill-Liste ist deaktiviert."
+msgstr "Server offline – Skill-Liste ist deaktiviert."
 
 #: src/pages/Dashboard.tsx
 #: src/pages/ServerDetail.tsx
@@ -1019,12 +1274,20 @@ msgid "Session erstellt{suffix}."
 msgstr "Session erstellt{suffix}."
 
 #: src/pages/SessionDetail.tsx
+msgid "Session exportieren"
+msgstr "Session exportieren"
+
+#: src/pages/SessionDetail.tsx
 msgid "Session forken"
 msgstr "Session forken"
 
 #: src/hooks/useEventNotifications.ts
 msgid "Session gelöscht"
 msgstr "Session gelöscht"
+
+#: src/pages/SessionDetail.tsx
+msgid "Session importieren"
+msgstr "Session importieren"
 
 #: src/hooks/useEventNotifications.ts
 msgid "Session ist bereit{suffix}."
@@ -1097,9 +1360,41 @@ msgstr "Shells ({shellCount})"
 msgid "Sicherer Passwortspeicher nicht verfügbar (WebCrypto oder IndexedDB fehlt). Passwörter bleiben nur für diese Sitzung im Arbeitsspeicher und werden nicht dauerhaft gespeichert. Nach einem Neuladen bitte neu eingeben."
 msgstr "Sicherer Passwortspeicher nicht verfügbar (WebCrypto oder IndexedDB fehlt). Passwörter bleiben nur für diese Sitzung im Arbeitsspeicher und werden nicht dauerhaft gespeichert. Nach einem Neuladen bitte neu eingeben."
 
+#: src/pages/ServerTools.tsx
+msgid "Skills"
+msgstr "Skills"
+
+#: src/pages/SessionDetail.tsx
+msgid "sofort"
+msgstr "sofort"
+
+#: src/pages/SessionDetail.tsx
+msgid "Sofort"
+msgstr "Sofort"
+
 #: src/pages/Settings.tsx
 msgid "Speichern"
 msgstr "Speichern"
+
+#: src/pages/SessionDetail.tsx
+msgid "Staged ab Nachricht {stagedMessageID} ({stagedFileCount} Dateien)."
+msgstr "Staged ab Nachricht {stagedMessageID} ({stagedFileCount} Dateien)."
+
+#: src/pages/SessionDetail.tsx
+msgid "Staged ab Nachricht {stagedMessageID}."
+msgstr "Staged ab Nachricht {stagedMessageID}."
+
+#: src/pages/SessionDetail.tsx
+msgid "Staging fehlgeschlagen."
+msgstr "Staging fehlgeschlagen."
+
+#: src/pages/SessionDetail.tsx
+msgid "Staging starten"
+msgstr "Staging starten"
+
+#: src/pages/SessionDetail.tsx
+msgid "Staging verworfen – die Session ist unverändert."
+msgstr "Staging verworfen – die Session ist unverändert."
 
 #: src/hooks/useEventNotifications.ts
 msgid "Status geändert{suffix}."
@@ -1113,9 +1408,29 @@ msgstr "Status:"
 msgid "Status: {permission}"
 msgstr "Status: {permission}"
 
+#: src/pages/ServerTools.tsx
+msgid "Suchanbieter"
+msgstr "Suchanbieter"
+
+#: src/pages/ServerTools.tsx
+msgid "Suchbegriff …"
+msgstr "Suchbegriff …"
+
 #: src/pages/ServerDetail.tsx
 msgid "Suche"
 msgstr "Suche"
+
+#: src/pages/ServerTools.tsx
+msgid "Suche fehlgeschlagen."
+msgstr "Suche fehlgeschlagen."
+
+#: src/pages/ServerTools.tsx
+msgid "Suchen"
+msgstr "Suchen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Teilen (Export / Import)"
+msgstr "Teilen (Export / Import)"
 
 #: src/pages/ServerDetail.tsx
 msgid "Titel oder ID suchen"
@@ -1128,6 +1443,14 @@ msgstr "Token"
 #: src/pages/ServerDetail.tsx
 msgid "Token konnte nicht angefordert werden."
 msgstr "Token konnte nicht angefordert werden."
+
+#: src/pages/ServerTools.tsx
+msgid "Über einen Anbieter des Servers im Web suchen."
+msgstr "Über einen Anbieter des Servers im Web suchen."
+
+#: src/pages/SessionDetail.tsx
+msgid "Übernehmen"
+msgstr "Übernehmen"
 
 #: src/components/Layout.tsx
 #: src/pages/Dashboard.tsx
@@ -1144,12 +1467,24 @@ msgid "Unerwartete Agent-Antwort vom Server."
 msgstr "Unerwartete Agent-Antwort vom Server."
 
 #: src/lib/opencode.ts
+msgid "Unerwartete Export-Antwort vom Server."
+msgstr "Unerwartete Export-Antwort vom Server."
+
+#: src/lib/opencode.ts
+msgid "Unerwartete Revert-Antwort vom Server."
+msgstr "Unerwartete Revert-Antwort vom Server."
+
+#: src/lib/opencode.ts
 msgid "Unerwartete Session-Antwort vom Server."
 msgstr "Unerwartete Session-Antwort vom Server."
 
 #: src/lib/opencode.ts
 msgid "Unerwartete Statistik-Antwort vom Server."
 msgstr "Unerwartete Statistik-Antwort vom Server."
+
+#: src/lib/opencode.ts
+msgid "Unerwartete Such-Antwort vom Server."
+msgstr "Unerwartete Such-Antwort vom Server."
 
 #: src/pages/ServerDetail.tsx
 msgid "Unerwartete Token-Antwort vom Server."
@@ -1168,9 +1503,29 @@ msgstr "Verbrauch dieser Session"
 msgid "Version"
 msgstr "Version"
 
+#: src/pages/SessionDetail.tsx
+msgid "Verwerfen"
+msgstr "Verwerfen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Warten"
+msgstr "Warten"
+
+#: src/pages/SessionDetail.tsx
+msgid "Warteschlange"
+msgstr "Warteschlange"
+
 #: src/components/Layout.tsx
 msgid "Web PWA for Opencode · <0>GitHub-Repository</0>"
 msgstr "Web PWA for Opencode · <0>GitHub-Repository</0>"
+
+#: src/pages/ServerTools.tsx
+msgid "Websuche"
+msgstr "Websuche"
+
+#: src/pages/ServerTools.tsx
+msgid "Websuche starten"
+msgstr "Websuche starten"
 
 #: src/pages/ServerDetail.tsx
 msgid "Weitere Sessions laden"
@@ -1209,3 +1564,11 @@ msgstr "Zurück zu den Serverdetails"
 #: src/pages/ServerTools.tsx
 msgid "Zurück zur Übersicht"
 msgstr "Zurück zur Übersicht"
+
+#: src/pages/SessionDetail.tsx
+msgid "Zurücksetzen (Revert)"
+msgstr "Zurücksetzen (Revert)"
+
+#: src/pages/SessionDetail.tsx
+msgid "Zusatztext für den Befehl"
+msgstr "Zusatztext für den Befehl"
