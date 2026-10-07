@@ -17,6 +17,7 @@ import {
   type VaultMode,
 } from "../lib/credentialVault.ts";
 import type { ServerConfig } from "../lib/opencode.ts";
+import { defaultServerColor, parseServerColor } from "../lib/serverColor.ts";
 
 const STORAGE_KEY = "opencode-pwa:servers";
 const SERVER_EVENT_PREFS_KEY = "opencode-pwa:server-event-notifications";
@@ -27,6 +28,11 @@ export interface ServerInput {
   baseUrl: string;
   username: string;
   password: string;
+  /**
+   * Palette color for the server. Optional on input so callers that only
+   * rename (ServerDetail) keep the stored color by omitting it.
+   */
+  color?: string;
 }
 
 function createId(): string {
@@ -47,11 +53,15 @@ function toServerConfig(entry: unknown): ServerConfig | null {
   if (typeof record["id"] !== "string") return null;
   if (typeof record["name"] !== "string") return null;
   if (typeof record["baseUrl"] !== "string") return null;
+  // Tolerant color: old entries have none, invalid values are dropped (the
+  // hash default in `serverColor()` takes over instead of failing the parse).
+  const color = parseServerColor(record["color"]);
   return {
     id: record["id"],
     name: record["name"],
     baseUrl: record["baseUrl"],
     username: typeof record["username"] === "string" ? record["username"] : "",
+    ...(color !== undefined ? { color } : {}),
   };
 }
 
@@ -179,11 +189,16 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addServer = useCallback(async (input: ServerInput): Promise<ServerConfig> => {
+    const id = createId();
+    const color = parseServerColor(input.color) ?? defaultServerColor(id);
     const server: ServerConfig = {
-      id: createId(),
+      id,
       name: input.name,
       baseUrl: input.baseUrl,
       username: input.username,
+      // A fresh server always carries an explicit palette color (picked or
+      // derived from the new id), so the dot never depends on the fallback.
+      color,
     };
     setServers((prev) => {
       const next = [...prev, server];
@@ -196,10 +211,19 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateServer = useCallback(async (id: string, input: ServerInput): Promise<void> => {
+    const nextColor = parseServerColor(input.color);
     setServers((prev) =>
       prev.map((s) =>
         s.id === id
-          ? { id, name: input.name, baseUrl: input.baseUrl, username: input.username }
+          ? {
+              id,
+              name: input.name,
+              baseUrl: input.baseUrl,
+              username: input.username,
+              // Omitted color keeps the stored one (rename flow); an explicit
+              // palette color replaces it; invalid values are ignored.
+              color: nextColor ?? s.color ?? defaultServerColor(id),
+            }
           : s,
       ),
     );

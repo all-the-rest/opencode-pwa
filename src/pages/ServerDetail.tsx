@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import Icon from "../components/Icon.tsx";
+import ServerDot from "../components/ServerDot.tsx";
 import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
 import { useShellOutputStream } from "../hooks/useShellOutputStream.ts";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
@@ -26,6 +27,8 @@ import {
   type SessionRow,
 } from "../lib/opencode.ts";
 import { useServers } from "../state/servers.tsx";
+import { useSessionTabs } from "../state/sessionTabs.tsx";
+import { serverColor } from "../lib/serverColor.ts";
 
 const SESSION_PAGE_LIMIT = 50;
 
@@ -189,7 +192,8 @@ function OfflineBadge({ testId = "offline-badge" }: { testId?: string }) {
 export default function ServerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { servers } = useServers();
+  const { servers, updateServer, removeServer } = useServers();
+  const { openTab } = useSessionTabs();
   const server = servers.find((s) => s.id === id) ?? null;
 
   const [sessions, setSessions] = useState<SessionRow[]>([]);
@@ -216,6 +220,16 @@ export default function ServerDetail() {
 
   const [ptyTickets, setPtyTickets] = useState<Record<string, string>>({});
   const [ptyTicketError, setPtyTicketError] = useState<string | null>(null);
+
+  // Inline rename (local-only: updateServer touches only the stored entry and
+  // never calls the API, so a failed/unreachable server stays untouched).
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [renameBusy, setRenameBusy] = useState(false);
+  // Server delete is local-only as well: it removes the stored entry (and its
+  // vault credential) and never touches the server itself.
+  const [confirmDeleteServer, setConfirmDeleteServer] = useState(false);
 
   const reload = useCallback(() => {
     if (server === null) return;
@@ -256,6 +270,10 @@ export default function ServerDetail() {
     setSearch("");
     setExpandedShell(null);
     setPtyTickets({});
+    setRenaming(false);
+    setRenameValue("");
+    setRenameError(null);
+    setConfirmDeleteServer(false);
     Promise.all([
       listSessionsPaged(server, { limit: SESSION_PAGE_LIMIT }),
       listShells(server),
@@ -409,6 +427,42 @@ export default function ServerDetail() {
     setPtyTickets((prev) => ({ ...prev, [ptyID]: ticket }));
   }
 
+  async function handleRename() {
+    const name = renameValue.trim();
+    if (name === "" || renameBusy) {
+      setRenameError(t`Name darf nicht leer sein.`);
+      return;
+    }
+    setRenameBusy(true);
+    setRenameError(null);
+    try {
+      // Local-only: baseUrl/username stay as-is, blank password keeps the
+      // vault credential, omitted color keeps the stored color. No API call,
+      // so an unreachable server is never modified remotely.
+      await updateServer(activeServer.id, {
+        name,
+        baseUrl: activeServer.baseUrl,
+        username: activeServer.username,
+        password: "",
+      });
+      setRenaming(false);
+    } catch (failure) {
+      setRenameError(
+        failure instanceof Error ? failure.message : t`Umbenennen fehlgeschlagen.`,
+      );
+    } finally {
+      setRenameBusy(false);
+    }
+  }
+
+  function handleDeleteServer() {
+    // Local-only: removes the stored entry (and its vault credential); the
+    // server itself is never contacted and stays untouched.
+    removeServer(activeServer.id);
+    setConfirmDeleteServer(false);
+    navigate("/");
+  }
+
   const agents = [...new Set(sessions.map((s) => s.agent).filter((a): a is string => a !== null))].sort();
   const filtered = filterSessionRows(sessions, {
     agent: agentFilter === "" ? null : agentFilter,
@@ -420,7 +474,11 @@ export default function ServerDetail() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-bold">
+      <h1
+        className="text-2xl font-bold flex items-center gap-2 pb-1 border-b-2"
+        style={{ borderColor: serverColor(activeServer) }}
+      >
+        <ServerDot server={activeServer} testId="server-detail-dot" />
         <Trans>Server: {serverName}</Trans>
       </h1>
       <div className="flex flex-wrap items-center gap-2">
@@ -428,7 +486,71 @@ export default function ServerDetail() {
         <Link className="btn btn-sm btn-ghost" to={`/servers/${server.id}/tools`}>
           <Trans>Server-Werkzeuge</Trans>
         </Link>
+        {renaming ? (
+          <form
+            className="flex flex-wrap items-center gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void handleRename();
+            }}
+          >
+            <input
+              className="input input-bordered input-sm"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              aria-label={t`Servername`}
+              placeholder={t`Neuer Servername`}
+              data-testid="server-rename-input"
+            />
+            <button
+              type="submit"
+              className="btn btn-sm btn-primary"
+              disabled={renameBusy || renameValue.trim() === ""}
+              data-testid="server-rename-save"
+            >
+              <Trans>Speichern</Trans>
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              disabled={renameBusy}
+              onClick={() => {
+                setRenaming(false);
+                setRenameError(null);
+              }}
+              data-testid="server-rename-cancel"
+            >
+              <Trans>Abbrechen</Trans>
+            </button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            onClick={() => {
+              setRenameValue(server.name);
+              setRenameError(null);
+              setRenaming(true);
+            }}
+            data-testid="server-rename-button"
+          >
+            <Trans>Umbenennen</Trans>
+          </button>
+        )}
+        <button
+          type="button"
+          className="btn btn-sm btn-ghost text-error"
+          onClick={() => setConfirmDeleteServer(true)}
+          data-testid="server-delete-button"
+        >
+          <Trans>Server löschen</Trans>
+        </button>
       </div>
+      {renameError !== null && (
+        <div className="alert alert-error" data-testid="server-rename-error">
+          <span>{renameError}</span>
+        </div>
+      )}
       {loading && <span className="loading loading-spinner loading-md" aria-label={t`Lädt`} />}
       {error !== null && (
         <div className="alert alert-warning" data-testid="offline-alert">
@@ -554,6 +676,9 @@ export default function ServerDetail() {
                                 to={`/sessions/${s.id}?server=${server.id}`}
                                 tabIndex={offline ? -1 : 0}
                                 aria-disabled={offline}
+                                onClick={() =>
+                                  openTab({ serverID: server.id, sessionID: s.id, title: s.label })
+                                }
                               >
                                 {s.label}
                               </Link>
@@ -728,6 +853,16 @@ export default function ServerDetail() {
             setKillError(null);
           }
         }}
+      />
+      <ConfirmDialog
+        open={confirmDeleteServer}
+        title={t`Server löschen`}
+        message={t`Der Server „${serverName}“ wird aus dieser App entfernt. Dabei werden nur die lokal gespeicherten Daten (Eintrag und Passwort) gelöscht – der Server selbst bleibt unverändert. Fortfahren?`}
+        confirmLabel={t`Entfernen`}
+        busy={false}
+        error={null}
+        onConfirm={handleDeleteServer}
+        onCancel={() => setConfirmDeleteServer(false)}
       />
     </div>
   );

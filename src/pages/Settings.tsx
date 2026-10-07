@@ -7,16 +7,19 @@ import {
   isNotificationSupported,
   type NotificationPermissionState,
 } from "../lib/notify.ts";
+import { SERVER_COLOR_PALETTE, serverColor } from "../lib/serverColor.ts";
 import { useServers } from "../state/servers.tsx";
+import ServerDot from "../components/ServerDot.tsx";
 
 interface FormState {
   name: string;
   baseUrl: string;
   username: string;
   password: string;
+  color: string;
 }
 
-const emptyForm: FormState = { name: "", baseUrl: "", username: "", password: "" };
+const emptyForm: FormState = { name: "", baseUrl: "", username: "", password: "", color: SERVER_COLOR_PALETTE[0] ?? "#3b82f6" };
 
 export default function Settings() {
   const {
@@ -78,6 +81,7 @@ export default function Settings() {
       baseUrl,
       username: form.username.trim(),
       password: form.password,
+      color: form.color,
     };
     setSaving(true);
     try {
@@ -106,6 +110,7 @@ export default function Settings() {
       baseUrl: server.baseUrl,
       username: server.username,
       password: "",
+      color: serverColor(server),
     });
     setEditingId(id);
     setFormError(null);
@@ -209,6 +214,42 @@ export default function Settings() {
                 </span>
               )}
             </label>
+            <div className="flex flex-col gap-1">
+              <span className="label label-text" id="server-color-label">
+                <Trans>Farbe</Trans>
+              </span>
+              <div
+                className="flex flex-wrap gap-2"
+                role="radiogroup"
+                aria-labelledby="server-color-label"
+                data-testid="server-color-picker"
+              >
+                {SERVER_COLOR_PALETTE.map((entry) => {
+                  const selected = form.color === entry;
+                  return (
+                    <button
+                      key={entry}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      aria-label={t`Serverfarbe ${entry}`}
+                      title={entry}
+                      data-testid={`server-color-${entry}`}
+                      onClick={() => setForm({ ...form, color: entry })}
+                      className={`h-8 w-8 rounded-full border-2 ${
+                        selected ? "border-base-content scale-110" : "border-transparent"
+                      }`}
+                      style={{ backgroundColor: entry }}
+                    />
+                  );
+                })}
+              </div>
+              <span className="text-xs opacity-70">
+                <Trans>
+                  Kennzeichnet Tabs, Listen und Badges dieses Servers.
+                </Trans>
+              </span>
+            </div>
             {formError !== null && (
               <div className="alert alert-error">
                 <span>{formError}</span>
@@ -301,7 +342,10 @@ export default function Settings() {
                 <li key={s.id} className="card bg-base-200 shadow">
                   <div className="card-body p-4 flex-row items-center justify-between gap-2">
                     <div>
-                      <div className="font-semibold">{s.name}</div>
+                      <div className="font-semibold flex items-center gap-2">
+                        <ServerDot server={s} />
+                        {s.name}
+                      </div>
                       <div className="text-sm opacity-70">{s.baseUrl}</div>
                       <label className="flex items-center gap-2 mt-2 cursor-pointer">
                         <input

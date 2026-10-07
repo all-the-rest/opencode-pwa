@@ -7,6 +7,7 @@ import App from "./App.tsx";
 import "./index.css";
 import { I18nProvider } from "./logic/I18nProvider.tsx";
 import { ServerProvider } from "./state/servers.tsx";
+import { SessionTabsProvider } from "./state/sessionTabs.tsx";
 
 registerSW({ immediate: true });
 
@@ -19,7 +20,9 @@ createRoot(rootElement).render(
   <StrictMode>
     <I18nProvider>
       <ServerProvider>
-        <App />
+        <SessionTabsProvider>
+          <App />
+        </SessionTabsProvider>
       </ServerProvider>
     </I18nProvider>
   </StrictMode>,

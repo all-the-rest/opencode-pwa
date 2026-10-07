@@ -53,6 +53,7 @@ import {
 } from "../lib/opencode.ts";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
 import { useServers } from "../state/servers.tsx";
+import { useSessionTabs } from "../state/sessionTabs.tsx";
 
 function countLabel(total: number, source: SessionMessageSource): string {
   const base = total === 1 ? t`1 Nachricht` : t`${total} Nachrichten`;
@@ -66,8 +67,19 @@ export default function SessionDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { servers, selectedServer } = useServers();
+  const { ensureTab } = useSessionTabs();
   const serverId = searchParams.get("server") ?? selectedServer?.id ?? null;
   const server = servers.find((s) => s.id === serverId) ?? selectedServer;
+
+  // Opening a session registers its tab (server-bound). Direct navigation
+  // uses the session id as the label; the ServerDetail link passes the real
+  // title via `openTab`, which must not be downgraded — so a missing tab is
+  // only added, never refreshed. `ensureTab` is state-only (no `tabs`
+  // dependency), so closing a tab never re-registers it before unmount.
+  useEffect(() => {
+    if (server === null || server === undefined || id === undefined) return;
+    ensureTab({ serverID: server.id, sessionID: id, title: id });
+  }, [server, id, ensureTab]);
 
   const {
     visible,

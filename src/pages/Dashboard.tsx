@@ -2,6 +2,7 @@ import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import ServerDot from "../components/ServerDot.tsx";
 import { useLiveRefresh } from "../hooks/useLiveRefresh.ts";
 import { reachability } from "../lib/offline.ts";
 import {
@@ -131,6 +132,7 @@ export default function Dashboard() {
         <section className="card bg-base-200 shadow">
           <div className="card-body">
             <h2 className="card-title">
+              <ServerDot server={selectedServer} testId="dashboard-server-dot" />
               <Trans>Aktiver Server: {selectedServerName}</Trans>
             </h2>
             <p className="text-sm opacity-70">{selectedServer.baseUrl}</p>
@@ -206,7 +208,10 @@ export default function Dashboard() {
               return (
               <li key={s.id} className="card bg-base-200 shadow">
                 <div className="card-body p-4">
-                  <span className="font-semibold">{s.name}</span>
+                  <span className="font-semibold flex items-center gap-2">
+                    <ServerDot server={s} />
+                    {s.name}
+                  </span>
                   <span className="text-sm opacity-70">{s.baseUrl}</span>
                   {isOffline && (
                     <span className="badge badge-warning w-fit" data-testid="dashboard-offline-badge">

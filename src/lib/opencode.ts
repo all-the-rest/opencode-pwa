@@ -12,6 +12,12 @@ export interface ServerConfig {
   name: string;
   baseUrl: string;
   username: string;
+  /**
+   * Per-server color (one of `SERVER_COLOR_PALETTE`). Optional so old entries
+   * without a color keep parsing — they get the hash default via
+   * `serverColor()` instead.
+   */
+  color?: string;
 }
 
 export interface ServerCredentials {

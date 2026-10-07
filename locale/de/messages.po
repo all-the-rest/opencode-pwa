@@ -48,6 +48,7 @@ msgid "1 Verbindung"
 msgstr "1 Verbindung"
 
 #: src/components/ConfirmDialog.tsx
+#: src/pages/ServerDetail.tsx
 #: src/pages/SessionDetail.tsx
 #: src/pages/Settings.tsx
 msgid "Abbrechen"
@@ -448,6 +449,10 @@ msgid "Der Kontext wird zusammengefasst, um Platz zu schaffen. Fortfahren?"
 msgstr "Der Kontext wird zusammengefasst, um Platz zu schaffen. Fortfahren?"
 
 #: src/pages/ServerDetail.tsx
+msgid "Der Server „{serverName}“ wird aus dieser App entfernt. Dabei werden nur die lokal gespeicherten Daten (Eintrag und Passwort) gelöscht – der Server selbst bleibt unverändert. Fortfahren?"
+msgstr "Der Server „{serverName}“ wird aus dieser App entfernt. Dabei werden nur die lokal gespeicherten Daten (Eintrag und Passwort) gelöscht – der Server selbst bleibt unverändert. Fortfahren?"
+
+#: src/pages/ServerDetail.tsx
 msgid "Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions und Aktionen sind bis dahin deaktiviert."
 msgstr "Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions und Aktionen sind bis dahin deaktiviert."
 
@@ -660,6 +665,10 @@ msgstr "Exportiertes JSON"
 #: src/pages/AgentDetail.tsx
 msgid "Fähigkeiten"
 msgstr "Fähigkeiten"
+
+#: src/pages/Settings.tsx
+msgid "Farbe"
+msgstr "Farbe"
 
 #: src/lib/opencode.ts
 msgid "Feld „{key}“ hat einen ungültigen Wert (erlaubt: Text, Zahl, Ja/Nein, Textliste)."
@@ -923,6 +932,10 @@ msgstr "Keiner"
 msgid "Keines"
 msgstr "Keines"
 
+#: src/pages/Settings.tsx
+msgid "Kennzeichnet Tabs, Listen und Badges dieses Servers."
+msgstr "Kennzeichnet Tabs, Listen und Badges dieses Servers."
+
 #: src/pages/SessionDetail.tsx
 msgid "Kompaktieren"
 msgstr "Kompaktieren"
@@ -1091,6 +1104,10 @@ msgstr "Nachrichten werden geladen …"
 msgid "Name"
 msgstr "Name"
 
+#: src/pages/ServerDetail.tsx
+msgid "Name darf nicht leer sein."
+msgstr "Name darf nicht leer sein."
+
 #: src/pages/Settings.tsx
 msgid "Name und Basis-URL sind Pflichtfelder."
 msgstr "Name und Basis-URL sind Pflichtfelder."
@@ -1106,6 +1123,10 @@ msgstr "Neue Inbox-Nachricht"
 #: src/hooks/useEventNotifications.ts
 msgid "Neue Session"
 msgstr "Neue Session"
+
+#: src/pages/ServerDetail.tsx
+msgid "Neuer Servername"
+msgstr "Neuer Servername"
 
 #: src/pages/ServerDetail.tsx
 msgid "Neuer Shell-Befehl"
@@ -1183,6 +1204,10 @@ msgstr "Offene Berechtigungen"
 #: src/pages/SessionDetail.tsx
 msgid "Offene Formulare"
 msgstr "Offene Formulare"
+
+#: src/components/SessionTabBar.tsx
+msgid "Offene Sessions"
+msgstr "Offene Sessions"
 
 #: src/pages/Dashboard.tsx
 #: src/pages/ServerDetail.tsx
@@ -1276,6 +1301,7 @@ msgstr "Revert-Staging starten"
 msgid "Revert-Staging verwerfen"
 msgstr "Revert-Staging verwerfen"
 
+#: src/components/SessionTabBar.tsx
 #: src/pages/ServerTools.tsx
 msgid "Schließen"
 msgstr "Schließen"
@@ -1315,6 +1341,10 @@ msgstr "Server hinzufügen"
 #: src/pages/ServerDetail.tsx
 msgid "Server ist offline – Aktionen sind deaktiviert."
 msgstr "Server ist offline – Aktionen sind deaktiviert."
+
+#: src/pages/ServerDetail.tsx
+msgid "Server löschen"
+msgstr "Server löschen"
 
 #: src/pages/AgentDetail.tsx
 #: src/pages/ServerDetail.tsx
@@ -1392,6 +1422,11 @@ msgstr "Server: {serverName}"
 msgid "Serverdetails"
 msgstr "Serverdetails"
 
+#: src/pages/Settings.tsx
+msgid "Serverfarbe {entry}"
+msgstr "Serverfarbe {entry}"
+
+#: src/pages/ServerDetail.tsx
 #: src/pages/Settings.tsx
 msgid "Servername"
 msgstr "Servername"
@@ -1537,6 +1572,7 @@ msgstr "sofort"
 msgid "Sofort"
 msgstr "Sofort"
 
+#: src/pages/ServerDetail.tsx
 #: src/pages/Settings.tsx
 msgid "Speichern"
 msgstr "Speichern"
@@ -1605,6 +1641,10 @@ msgstr "Suche fehlgeschlagen."
 msgid "Suchen"
 msgstr "Suchen"
 
+#: src/components/SessionTabBar.tsx
+msgid "Tab {tabTitle} schließen"
+msgstr "Tab {tabTitle} schließen"
+
 #: src/components/ConfigCard.tsx
 msgid "Teilen"
 msgstr "Teilen"
@@ -1653,6 +1693,14 @@ msgstr "Übernehmen"
 #: src/pages/Dashboard.tsx
 msgid "Übersicht"
 msgstr "Übersicht"
+
+#: src/pages/ServerDetail.tsx
+msgid "Umbenennen"
+msgstr "Umbenennen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Umbenennen fehlgeschlagen."
+msgstr "Umbenennen fehlgeschlagen."
 
 #: src/components/IntegrationsCard.tsx
 msgid "Umgebung"

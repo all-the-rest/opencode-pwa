@@ -1,9 +1,13 @@
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
+import { useEffect } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import Icon from "./Icon.tsx";
+import ServerDot from "./ServerDot.tsx";
+import SessionTabBar from "./SessionTabBar.tsx";
 import { useEventNotifications } from "../hooks/useEventNotifications.ts";
 import { useServers } from "../state/servers.tsx";
+import { useSessionTabs } from "../state/sessionTabs.tsx";
 
 export const GITHUB_URL = "https://github.com/all-the-rest/opencode-pwa";
 
@@ -13,7 +17,13 @@ function navClass(isActive: boolean): string {
 
 export default function Layout() {
   const { servers, selectedServer, selectServer } = useServers();
+  const { pruneTabs } = useSessionTabs();
   useEventNotifications(selectedServer);
+
+  // Tabs of removed servers have no target left — drop them.
+  useEffect(() => {
+    pruneTabs(servers.map((s) => s.id));
+  }, [servers, pruneTabs]);
 
   return (
     <div className="drawer min-h-screen lg:drawer-open">
@@ -58,6 +68,7 @@ export default function Layout() {
             </select>
           </div>
         </header>
+        <SessionTabBar />
         <main className="flex-1 p-4">
           <Outlet />
         </main>
@@ -119,6 +130,7 @@ export default function Layout() {
                 to={`/servers/${s.id}`}
                 className={({ isActive }) => navClass(isActive)}
               >
+                <ServerDot server={s} />
                 {s.name}
               </NavLink>
             </li>
