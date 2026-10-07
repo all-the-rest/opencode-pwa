@@ -345,6 +345,10 @@ msgstr "Basis-URL"
 msgid "Basis-URL ist ungültig."
 msgstr "Basis-URL ist ungültig."
 
+#: src/lib/serverConnectionTest.ts
+msgid "Basis-URL ist ungültig. Bitte mit http:// oder https:// eingeben."
+msgstr "Basis-URL ist ungültig. Bitte mit http:// oder https:// eingeben."
+
 #: src/pages/Settings.tsx
 msgid "Basis-URL muss mit http:// oder https:// beginnen."
 msgstr "Basis-URL muss mit http:// oder https:// beginnen."
@@ -1474,6 +1478,18 @@ msgstr "Server"
 msgid "Server anlegen"
 msgstr "Server anlegen"
 
+#: src/lib/serverConnectionTest.ts
+msgid "Server antwortet mit einer Login-Seite statt mit der API. Bitte zuerst im Browser einloggen (Cookie-Gate)."
+msgstr "Server antwortet mit einer Login-Seite statt mit der API. Bitte zuerst im Browser einloggen (Cookie-Gate)."
+
+#: src/lib/serverConnectionTest.ts
+msgid "Server antwortet mit Fehler-Status {status}."
+msgstr "Server antwortet mit Fehler-Status {status}."
+
+#: src/lib/serverConnectionTest.ts
+msgid "Server antwortet unerwartet (kein JSON). Bitte Basis-URL prüfen."
+msgstr "Server antwortet unerwartet (kein JSON). Bitte Basis-URL prüfen."
+
 #: src/pages/Settings.tsx
 msgid "Server bearbeiten"
 msgstr "Server bearbeiten"
@@ -1489,6 +1505,10 @@ msgstr "Server ist offline – Aktionen sind deaktiviert."
 #: src/pages/ServerDetail.tsx
 msgid "Server löschen"
 msgstr "Server löschen"
+
+#: src/lib/serverConnectionTest.ts
+msgid "Server nicht erreichbar (Netzwerk- oder CORS-Fehler). Bitte prüfen, ob der Server läuft, und CORS beachten (opencode serve --cors)."
+msgstr "Server nicht erreichbar (Netzwerk- oder CORS-Fehler). Bitte prüfen, ob der Server läuft, und CORS beachten (opencode serve --cors)."
 
 #: src/pages/AgentDetail.tsx
 #: src/pages/ProjectDetail.tsx
@@ -1833,6 +1853,10 @@ msgstr "Terminal ausblenden"
 msgid "Terminal-Ausgabe aktualisieren"
 msgstr "Terminal-Ausgabe aktualisieren"
 
+#: src/pages/Settings.tsx
+msgid "Teste …"
+msgstr "Teste …"
+
 #: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Titel oder ID suchen"
@@ -1929,6 +1953,18 @@ msgstr "Unterbrechen"
 #: src/components/ConfigCard.tsx
 msgid "Update"
 msgstr "Update"
+
+#: src/lib/serverConnectionTest.ts
+msgid "Verbindung erfolgreich (Version {version})."
+msgstr "Verbindung erfolgreich (Version {version})."
+
+#: src/lib/serverConnectionTest.ts
+msgid "Verbindung erfolgreich."
+msgstr "Verbindung erfolgreich."
+
+#: src/pages/Settings.tsx
+msgid "Verbindung testen"
+msgstr "Verbindung testen"
 
 #: src/pages/SessionDetail.tsx
 msgid "Verbrauch dieser Session"

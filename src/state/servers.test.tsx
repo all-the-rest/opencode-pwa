@@ -209,6 +209,34 @@ describe("ServerProvider", () => {
     );
     expect(screen.getByTestId("count")).toHaveTextContent("0");
   });
+
+  it("migrates stored baseUrls with path/api suffix to the origin on load", async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify([
+        { id: "deep-1", name: "Api-Suffix", baseUrl: "https://host.example/api" },
+        { id: "deep-2", name: "Session-Link", baseUrl: "https://host.example/sessions/abc?x=1" },
+        { id: "plain-1", name: "Ok", baseUrl: "https://plain.example:8080" },
+      ]),
+    );
+    function UrlProbe() {
+      const { servers } = useServers();
+      return <div data-testid="urls">{servers.map((s) => s.baseUrl).join("|")}</div>;
+    }
+    await mountProvider(
+      <ServerProvider>
+        <UrlProbe />
+      </ServerProvider>,
+    );
+    expect(screen.getByTestId("urls")).toHaveTextContent(
+      "https://host.example|https://host.example|https://plain.example:8080",
+    );
+    // The persist effect writes the normalized list back (one-time migration).
+    await waitFor(() => {
+      expect(localStorage.getItem(STORAGE_KEY)).not.toContain("/api");
+    });
+    expect(localStorage.getItem(STORAGE_KEY)).not.toContain("/sessions/");
+  });
 });
 
 describe("credential vault", () => {

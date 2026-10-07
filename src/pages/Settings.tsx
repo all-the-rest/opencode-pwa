@@ -8,6 +8,12 @@ import {
   type NotificationPermissionState,
 } from "../lib/notify.ts";
 import { SERVER_COLOR_PALETTE, serverColor } from "../lib/serverColor.ts";
+import { normalizeServerBaseUrlOnPaste } from "../lib/serverBaseUrl.ts";
+import {
+  connectionUnreachableMessage,
+  testServerConnection,
+  type ConnectionTestResult,
+} from "../lib/serverConnectionTest.ts";
 import { useServers } from "../state/servers.tsx";
 import ServerDot from "../components/ServerDot.tsx";
 
@@ -35,6 +41,8 @@ export default function Settings() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null);
   const [permission, setPermission] = useState<NotificationPermissionState>(() =>
     getPermissionStatus(),
   );
@@ -55,6 +63,64 @@ export default function Settings() {
     setForm(emptyForm);
     setEditingId(null);
     setFormError(null);
+    setTestResult(null);
+  }
+
+  /**
+   * Field edits invalidate a previous connection-test result: it was measured
+   * with older values and must not linger as a stale success.
+   */
+  function updateForm(patch: Partial<FormState>) {
+    setForm((prev) => ({ ...prev, ...patch }));
+    setTestResult(null);
+  }
+
+  /**
+   * Deep-URL paste normalization: a pasted deep URL (session link, /api/…
+   * path, PWA URL) collapses ONCE to the server origin. Manual typing goes
+   * through `onChange` and is untouched.
+   */
+  function handleBaseUrlPaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const pasted = e.clipboardData.getData("text");
+    if (pasted === "") return;
+    e.preventDefault();
+    updateForm({ baseUrl: normalizeServerBaseUrlOnPaste(pasted) });
+    // The programmatic value reset leaves the caret at position 0 — park it
+    // at the end, so typing right after a paste appends instead of prepending.
+    const target = e.currentTarget;
+    requestAnimationFrame(() => {
+      target.setSelectionRange(target.value.length, target.value.length);
+    });
+  }
+
+  /**
+   * Connection test before save: GET {baseUrl}/api/info with the ENTERED
+   * credentials. Nothing is persisted here — the form values are used
+   * directly, `addServer`/`updateServer` are never called. Save stays
+   * independent: it is not disabled while a test runs and vice versa.
+   */
+  async function handleTestConnection() {
+    if (testing) return;
+    setTesting(true);
+    setTestResult(null);
+    try {
+      setTestResult(
+        await testServerConnection({
+          baseUrl: form.baseUrl,
+          username: form.username,
+          password: form.password,
+        }),
+      );
+    } catch {
+      setTestResult({
+        status: "unreachable",
+        message: connectionUnreachableMessage(),
+        version: null,
+        url: null,
+      });
+    } finally {
+      setTesting(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -114,6 +180,7 @@ export default function Settings() {
     });
     setEditingId(id);
     setFormError(null);
+    setTestResult(null);
   }
 
   return (
@@ -153,7 +220,7 @@ export default function Settings() {
               <input
                 className="input input-bordered w-full"
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(e) => updateForm({ name: e.target.value })}
                 placeholder={t`z. B. Heimserver`}
                 aria-label={t`Servername`}
               />
@@ -165,7 +232,8 @@ export default function Settings() {
               <input
                 className="input input-bordered w-full"
                 value={form.baseUrl}
-                onChange={(e) => setForm({ ...form, baseUrl: e.target.value })}
+                onChange={(e) => updateForm({ baseUrl: e.target.value })}
+                onPaste={handleBaseUrlPaste}
                 placeholder="https://opencode.example.com"
                 inputMode="url"
                 aria-label={t`Basis-URL`}
@@ -190,7 +258,7 @@ export default function Settings() {
               <input
                 className="input input-bordered w-full"
                 value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
+                onChange={(e) => updateForm({ username: e.target.value })}
                 autoComplete="username"
                 aria-label={t`Benutzer`}
               />
@@ -207,7 +275,7 @@ export default function Settings() {
                 className="input input-bordered w-full"
                 type="password"
                 value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                onChange={(e) => updateForm({ password: e.target.value })}
                 autoComplete="current-password"
                 aria-label={t`Passwort`}
                 placeholder={
@@ -247,7 +315,7 @@ export default function Settings() {
                       aria-label={t`Serverfarbe ${entry}`}
                       title={entry}
                       data-testid={`server-color-${entry}`}
-                      onClick={() => setForm({ ...form, color: entry })}
+                      onClick={() => updateForm({ color: entry })}
                       className={`h-8 w-8 rounded-full border-2 ${
                         selected ? "border-base-content scale-110" : "border-transparent"
                       }`}
@@ -267,9 +335,34 @@ export default function Settings() {
                 <span>{formError}</span>
               </div>
             )}
+            {testResult !== null && (
+              <div
+                className={`alert ${testResult.status === "success" ? "alert-success" : "alert-error"}`}
+                data-testid="connection-test-result"
+                role="status"
+              >
+                <span>{testResult.message}</span>
+                {testResult.url !== null && (
+                  <code
+                    className="block text-xs break-all opacity-70"
+                    data-testid="connection-test-url"
+                  >
+                    {testResult.url}
+                  </code>
+                )}
+              </div>
+            )}
             <div className="flex gap-2 mt-2">
               <button className="btn btn-primary" type="submit" disabled={saving}>
                 {editingId === null ? <Trans>Hinzufügen</Trans> : <Trans>Speichern</Trans>}
+              </button>
+              <button
+                className="btn btn-secondary"
+                type="button"
+                onClick={() => void handleTestConnection()}
+                disabled={testing}
+              >
+                {testing ? <Trans>Teste …</Trans> : <Trans>Verbindung testen</Trans>}
               </button>
               {editingId !== null && (
                 <button className="btn btn-ghost" type="button" onClick={resetForm}>

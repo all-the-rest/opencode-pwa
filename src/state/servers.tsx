@@ -17,6 +17,7 @@ import {
   type VaultMode,
 } from "../lib/credentialVault.ts";
 import type { ServerConfig } from "../lib/opencode.ts";
+import { normalizeServerBaseUrlOnPaste } from "../lib/serverBaseUrl.ts";
 import { defaultServerColor, parseServerColor } from "../lib/serverColor.ts";
 
 const STORAGE_KEY = "opencode-pwa:servers";
@@ -85,13 +86,24 @@ function loadInitial(): InitialLoad {
     for (const entry of parsed) {
       const server = toServerConfig(entry);
       if (server === null) continue;
+      // One-time load migration: stored baseUrls with a path/`/api` suffix
+      // (e.g. a pasted deep URL like `https://host/api` or
+      // `https://host/sessions/…`) would build broken requests
+      // (`/api/api/info` → 404 as text/plain → an auth-looking
+      // `UnsupportedContentType` error despite a correct password). Collapse
+      // them to the origin once here; the persist effect below writes the
+      // normalized list back, so the migration applies exactly once.
+      const migrated: ServerConfig = {
+        ...server,
+        baseUrl: normalizeServerBaseUrlOnPaste(server.baseUrl),
+      };
       if (entry !== null && typeof entry === "object") {
         const password: unknown = (entry as Record<string, unknown>)["password"];
         if (typeof password === "string" && password !== "") {
-          legacy.push({ id: server.id, password });
+          legacy.push({ id: migrated.id, password });
         }
       }
-      servers.push(server);
+      servers.push(migrated);
     }
   }
   // Registered synchronously during the first render, so every later
