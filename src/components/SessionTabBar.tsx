@@ -130,7 +130,7 @@ export default function SessionTabBar() {
   return (
     <div className="flex items-stretch border-b border-base-300">
       <nav ref={navRef} aria-label={t`Offene Sessions`} className="min-w-0 flex-1 overflow-x-auto scroll-smooth">
-        <ul className="flex gap-1 px-4 pt-2" role="tablist" data-testid="session-tab-bar">
+        <ul className="oc-dense flex gap-1 px-4 pt-2" role="tablist" data-testid="session-tab-bar">
           {tabs.map((tab) => {
             const active = isActiveTab(tab.serverID, tab.sessionID);
             const server = serverById.get(tab.serverID);
@@ -145,7 +145,7 @@ export default function SessionTabBar() {
                   aria-selected={active}
                   data-testid={`session-tab-${tab.sessionID}`}
                   ref={active ? activeRef : undefined}
-                  className={`flex max-w-56 items-center gap-1.5 rounded-t-lg border border-b-0 px-2 py-1.5 text-sm ${
+                  className={`oc-dense flex max-w-56 items-center gap-1.5 rounded-t-lg border border-b-0 px-2 py-1.5 ${
                     active
                       ? "border-base-300 bg-base-200 font-semibold shadow-sm"
                       : "border-transparent opacity-70 hover:bg-base-200 hover:opacity-100"

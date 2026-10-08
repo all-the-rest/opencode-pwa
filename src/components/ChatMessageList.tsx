@@ -5,6 +5,7 @@ import Icon from "./Icon.tsx";
 import Markdown from "./Markdown.tsx";
 import {
   formatChatTime,
+  resolveModelLabel,
   type ChatNoteKind,
   type ChatPart,
   type ChatToolPart,
@@ -449,8 +450,13 @@ function turnDurationLabel(durationMs: number): string {
 }
 
 /** `agent · model` prefix of the chat chrome, or null when nothing is known. */
-function metaHead(agent: string | null, model: string | null): string | null {
-  const items = [agent, model].filter((value): value is string => value !== null);
+function metaHead(
+  agent: string | null,
+  model: string | null,
+  modelNames: Readonly<Record<string, string>>,
+): string | null {
+  const label = resolveModelLabel(model, modelNames);
+  const items = [agent, label].filter((value): value is string => value !== null);
   return items.length === 0 ? null : items.join(" · ");
 }
 
@@ -458,9 +464,16 @@ function isNote(message: CachedMessage): boolean {
   return message.role !== "user" && message.role !== "assistant";
 }
 
-export default function ChatMessageList({ messages }: { messages: CachedMessage[] }) {
+export default function ChatMessageList({
+  messages,
+  modelNames = {},
+}: {
+  messages: CachedMessage[];
+  /** `provider/model` → display name, so the chrome shows the model's name. */
+  modelNames?: Readonly<Record<string, string>>;
+}) {
   return (
-    <ul className="flex flex-col gap-2" data-testid="message-list">
+    <ul className="oc-dense flex flex-col gap-2" data-testid="message-list">
       {messages.map((message) => {
         const time = formatChatTime(message.created);
         // Legacy cache rows carry no parts: fall back to the plain stored
@@ -514,7 +527,7 @@ export default function ChatMessageList({ messages }: { messages: CachedMessage[
                 )}
                 {time !== "" && (
                   <p className="mt-1 text-[11px] opacity-60">
-                    <time dateTime={new Date(message.created).toISOString()} className="tabular-nums">{time}</time>
+                    <time dateTime={new Date(message.created).toISOString()} className="oc-tabular">{time}</time>
                   </p>
                 )}
               </div>
@@ -527,7 +540,7 @@ export default function ChatMessageList({ messages }: { messages: CachedMessage[
           .map((part) => part.text)
           .join("\n\n");
         const showCopy = !own && copyText !== "";
-        const head = metaHead(message.agent, message.model);
+        const head = metaHead(message.agent, message.model, modelNames);
         const duration =
           message.durationMs !== null && message.durationMs > 0
             ? turnDurationLabel(message.durationMs)
@@ -539,7 +552,7 @@ export default function ChatMessageList({ messages }: { messages: CachedMessage[
             data-role={message.role}
             className={own ? "chat chat-end" : "chat chat-start"}
           >
-            <div className="chat-header text-[11px] opacity-60 mb-1">
+            <div className="chat-header oc-micro opacity-60 mb-1">
               {own ? <Trans>Du</Trans> : <Trans>Assistent</Trans>}
               {head !== null && (
                 <>
@@ -552,13 +565,13 @@ export default function ChatMessageList({ messages }: { messages: CachedMessage[
               {duration !== null && (
                 <>
                   {" · "}
-                  <span className="tabular-nums">{duration}</span>
+                  <span className="oc-tabular">{duration}</span>
                 </>
               )}
               {time !== "" && (
                 <>
                   {" · "}
-                  <time dateTime={new Date(message.created).toISOString()} className="tabular-nums">{time}</time>
+                  <time dateTime={new Date(message.created).toISOString()} className="oc-tabular">{time}</time>
                 </>
               )}
             </div>

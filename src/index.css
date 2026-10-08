@@ -1,6 +1,68 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+/* --- Type & density tokens (parity with the original's v2 type scale) ---
+
+   The original web UI runs a dense 13px UI text with the Inter variable
+   weight scale (440 regular / 530 emphasis, -0.04px tracking) and tabular
+   numbers for timestamps, durations and counters. These tokens reproduce
+   that density on top of the existing daisyUI/Tailwind setup — no new
+   runtime dependency, no font file (Inter is only *requested* first and the
+   system stack takes over when it is not installed). */
+
+@layer components {
+  :root {
+    --oc-font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --oc-text-dense: 13px;
+    --oc-text-micro: 11px;
+    --oc-weight-regular: 440;
+    --oc-weight-emphasis: 530;
+    --oc-tracking-dense: -0.04px;
+  }
+
+  /* Dense UI text: chat rows, composer, tab bar. */
+  .oc-dense {
+    font-family: var(--oc-font-sans);
+    font-size: var(--oc-text-dense);
+    font-weight: var(--oc-weight-regular);
+    letter-spacing: var(--oc-tracking-dense);
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Emphasis inside a dense row (labels, counts, the attachment card title). */
+  .oc-dense-strong {
+    font-weight: var(--oc-weight-emphasis);
+  }
+
+  /* Micro chrome: meta lines, captions, attachment subtitles. */
+  .oc-micro {
+    font-size: var(--oc-text-micro);
+    font-weight: var(--oc-weight-emphasis);
+    letter-spacing: 0.05px;
+    line-height: 12px;
+  }
+
+  /* Timestamps, durations, counters — never let digits reflow. */
+  .oc-tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Composer editor: grows with the text, then scrolls (see composer.ts). */
+  .oc-composer-input {
+    resize: none;
+    overflow-y: hidden;
+  }
+
+  /* 160px two-line attachment card (parity with `attachment-card-v2`). */
+  .oc-attachment-card {
+    width: 160px;
+    min-width: 160px;
+    max-width: 160px;
+  }
+}
+
 /* --- Tool cards (parity with the original's basic-tool look) --- */
 
 /* Title shimmer while a tool call runs (original: TextShimmer). */

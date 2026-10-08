@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   extractContentUpdateMessage,
   extractMessageFromEvent,
+  latestSessionMeta,
   readEventSessionID,
   readEventType,
 } from "./eventMessages.ts";
@@ -180,5 +181,56 @@ describe("extractContentUpdateMessage", () => {
         data: { sessionID: "s", messageID: "a", content: [] },
       }),
     ).toBeNull();
+  });
+
+  it("carries the session agent/model forward when the snapshot declares none", () => {
+    // The streaming bubble's `agent · model` header must not be empty until
+    // the full message arrives: the previous turn's meta fills the gap.
+    const event = {
+      type: "session.message.content.updated",
+      created: 40,
+      data: { sessionID: "s", messageID: "a-2", content: [{ type: "text", text: "läuft" }] },
+    };
+    expect(
+      extractContentUpdateMessage(event, 40, { agent: "coder", model: "anthropic/claude" }),
+    ).toMatchObject({ agent: "coder", model: "anthropic/claude" });
+    // Without a fallback the meta stays empty (previous behaviour).
+    expect(extractContentUpdateMessage(event, 40)).toMatchObject({ agent: null, model: null });
+  });
+
+  it("keeps a snapshot's own agent/model over the fallback", () => {
+    const event = {
+      type: "session.message.content.updated",
+      created: 50,
+      data: {
+        sessionID: "s",
+        messageID: "a-3",
+        agent: "plan",
+        model: { providerID: "openai", modelID: "gpt" },
+        content: [{ type: "text", text: "Fertig" }],
+      },
+    };
+    expect(extractContentUpdateMessage(event, 50, { agent: "coder", model: "anthropic/claude" })).toMatchObject({
+      agent: "plan",
+      model: "openai/gpt",
+    });
+  });
+});
+
+describe("latestSessionMeta", () => {
+  it("takes the newest message that declares an agent or model", () => {
+    expect(
+      latestSessionMeta([
+        { agent: null, model: null },
+        { agent: null, model: null },
+        { agent: "plan", model: "openai/gpt" },
+        { agent: "coder", model: "anthropic/claude" },
+      ]),
+    ).toEqual({ agent: "plan", model: "openai/gpt" });
+  });
+
+  it("falls back to empty meta when nothing declares one", () => {
+    expect(latestSessionMeta([{ agent: null, model: null }])).toEqual({ agent: null, model: null });
+    expect(latestSessionMeta([])).toEqual({ agent: null, model: null });
   });
 });

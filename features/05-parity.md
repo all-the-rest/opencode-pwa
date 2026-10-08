@@ -36,6 +36,20 @@ Legend: ✅ in this app · 🚧 partial · ❌ missing (post-MVP unless noted).
 - ✅ File attachments in prompts: workspace paths attached in the prompt box
   (mention input + chips), sent as `SessionPromptInput.files` (`file://` URIs
   — verified in the installed client package, so no UI-only limitation).
+- ✅ Composer (wave 3, parity with the original's `PromptInputV2`):
+  autogrowing textarea (Enter sends, Shift+Enter newline, clamps at 180px then
+  scrolls); agent/model chips moved into the composer (same `<select>`
+  controls); drag & drop + file picker with the original's accept list, as
+  removable 160px two-line attachment cards with image previews; Send becomes
+  Stop while a turn runs (`POST /api/session/{id}/interrupt`). Attachments
+  travel in the encoded V2 `PromptFileAttachment` shape (verified in
+  `@opencode/client` `generated/types.d.ts`): picked/dropped files as
+  `{ data: <base64>, mime, source: { type: "inline" }, name }`, workspace paths
+  as `{ data: "", mime: "", source: { type: "uri", uri }, name }`. The V2
+  `data`/`source` fields have no representation in the client's legacy `files`
+  input type, so prompts with attachments POST directly to
+  `/api/session/{id}/prompt`; text-only prompts keep the typed client.
+  Density tokens (13px/440, 530 emphasis, tabular-nums) live in `src/index.css`.
 - ✅ Revert/share on SessionDetail: staged revert (`POST
   /api/session/{id}/revert/stage {messageID}` → commit with a German confirm
   dialog / discard via `DELETE /api/session/{id}/revert`; commit is a bare POST,

@@ -36,6 +36,27 @@ function readStringField(record: Record<string, unknown>, keys: string[]): strin
 /** The `session.message.content.updated` event type (streaming assistant turns). */
 export const CONTENT_UPDATED_EVENT = "session.message.content.updated";
 
+/**
+ * Agent/model of a session, carried into streaming snapshots that declare
+ * neither (the event payload only repeats the content array).
+ */
+export interface SessionMetaFallback {
+  agent: string | null;
+  model: string | null;
+}
+
+/** Agent/model of the newest message that declares one, else empty meta. */
+export function latestSessionMeta(
+  messages: readonly { agent: string | null; model: string | null }[],
+): SessionMetaFallback {
+  for (const message of messages) {
+    if (message.agent !== null || message.model !== null) {
+      return { agent: message.agent, model: message.model };
+    }
+  }
+  return { agent: null, model: null };
+}
+
 export function readEventType(event: unknown): string | null {
   if (event === null || typeof event !== "object") return null;
   return readStringField(event as Record<string, unknown>, ["type"]);
@@ -138,10 +159,16 @@ export function extractMessageFromEvent(event: unknown, now: number = Date.now()
  *
  * The message is keyed by `data.messageID`; the caller merges it into the cache
  * so repeated snapshots for the same id simply grow the assistant text.
+ *
+ * `fallback` carries the session's current agent/model from the previous turn
+ * (the last message that declared them). Snapshots declare neither, so without
+ * it the streaming bubble's `agent · model` header stays empty until the full
+ * message arrives from `message.list`.
  */
 export function extractContentUpdateMessage(
   event: unknown,
   now: number = Date.now(),
+  fallback?: SessionMetaFallback,
 ): EventMessage | null {
   if (readEventType(event) !== CONTENT_UPDATED_EVENT) return null;
   if (event === null || typeof event !== "object") return null;
@@ -155,8 +182,17 @@ export function extractContentUpdateMessage(
   if (!Array.isArray(content) || content.length === 0) return null;
   // Reuse the assistant-message builder: it maps `content[]` through the exact
   // same part parser as `message.list`, so text/reasoning/tool parts live-render
-  // identically. `created` falls back to the event's own timestamp.
-  const synthetic = { type: "assistant", id: messageID, content, time: { created: readEventCreated(event) ?? now } };
+  // identically. `created` falls back to the event's own timestamp; `agent` /
+  // `model` pass through when the snapshot carries them.
+  const agent = readStringField(dataRecord, ["agent"]);
+  const synthetic = {
+    type: "assistant",
+    id: messageID,
+    content,
+    time: { created: readEventCreated(event) ?? now },
+    ...(agent !== null ? { agent } : {}),
+    ...(dataRecord["model"] !== undefined ? { model: dataRecord["model"] } : {}),
+  };
   const parsed = parseSessionMessages([synthetic], now)[0];
   if (parsed === undefined || parsed.role !== "assistant") return null;
   // A snapshot whose only parts degrade to `unknown` carries no real content —
@@ -171,8 +207,8 @@ export function extractContentUpdateMessage(
     noteKind: parsed.noteKind,
     noteDetail: parsed.noteDetail,
     parts: parsed.parts,
-    agent: parsed.agent,
-    model: parsed.model,
+    agent: parsed.agent ?? fallback?.agent ?? null,
+    model: parsed.model ?? fallback?.model ?? null,
     durationMs: parsed.durationMs,
   };
 }

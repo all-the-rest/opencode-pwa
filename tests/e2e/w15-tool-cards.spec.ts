@@ -336,7 +336,10 @@ test(
     const userMeta = page.getByTestId("message-meta-m1");
     await expect(userMeta).toBeVisible();
     await expect(userMeta).toContainText("coder");
-    await expect(userMeta).toContainText("anthropic/claude-sonnet-4");
+    // Wave 3: the model label resolves its display name from the model list
+    // (`anthropic/claude-sonnet-4` → "Claude") instead of showing the raw ref.
+    await expect(userMeta).toContainText("Claude");
+    await expect(userMeta).not.toContainText("anthropic/claude-sonnet-4");
 
     // The assistant turn took 2300 - 900 = 1400 ms ("1,4 s").
     const assistantHeader = page.locator('li[data-role="assistant"]').first().locator(".chat-header");

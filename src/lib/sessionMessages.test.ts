@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatChatTime, parseSessionMessages } from "./sessionMessages.ts";
+import { formatChatTime, parseSessionMessages, resolveModelLabel } from "./sessionMessages.ts";
 
 const NOW = 1_700_000_000_000;
 
@@ -454,6 +454,20 @@ describe("chat chrome meta (agent · model · duration)", () => {
   it("leaves agent/model null when the session never sent them", () => {
     const message = single({ type: "user", id: "u1", text: "Hallo" });
     expect(message).toMatchObject({ agent: null, model: null, durationMs: null });
+  });
+});
+
+describe("resolveModelLabel", () => {
+  it("replaces a provider/model label with the model's display name", () => {
+    expect(resolveModelLabel("anthropic/sonnet", { "anthropic/sonnet": "Claude Sonnet 4" })).toBe(
+      "Claude Sonnet 4",
+    );
+  });
+
+  it("keeps the label when the model list does not know it", () => {
+    expect(resolveModelLabel("anthropic/sonnet", {})).toBe("anthropic/sonnet");
+    expect(resolveModelLabel("anthropic/sonnet", { "anthropic/sonnet": "" })).toBe("anthropic/sonnet");
+    expect(resolveModelLabel(null, { "anthropic/sonnet": "Claude Sonnet 4" })).toBeNull();
   });
 });
 

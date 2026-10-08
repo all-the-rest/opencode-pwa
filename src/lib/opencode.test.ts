@@ -33,6 +33,7 @@ import {
   listAgents,
   listProviders,
   MAX_FILE_PREVIEW_CHARS,
+  modelLabelLookup,
   modelOptionValue,
   parseModelOptionValue,
   renameSession,
@@ -826,6 +827,33 @@ describe("toPromptFileUri", () => {
 
   it("passes real URIs through", () => {
     expect(toPromptFileUri("file:///repo/a.ts")).toBe("file:///repo/a.ts");
+  });
+});
+
+describe("modelLabelLookup", () => {
+  it("maps provider/model to the model's display name", () => {
+    expect(
+      modelLabelLookup([
+        { id: "sonnet", providerID: "anthropic", name: "Claude Sonnet 4" },
+        { id: "gpt", providerID: "openai", name: "GPT" },
+      ]),
+    ).toEqual({
+      "anthropic/sonnet": "Claude Sonnet 4",
+      "openai/gpt": "GPT",
+    });
+  });
+
+  it("prefers the bare entry over an expanded variant spelling", () => {
+    expect(
+      modelLabelLookup([
+        { id: "sonnet", providerID: "anthropic", name: "Claude Sonnet 4 (high)", variant: "high" },
+        { id: "sonnet", providerID: "anthropic", name: "Claude Sonnet 4" },
+      ]),
+    ).toEqual({ "anthropic/sonnet": "Claude Sonnet 4" });
+  });
+
+  it("skips entries without a provider", () => {
+    expect(modelLabelLookup([{ id: "m1", providerID: "", name: "Nameless" }])).toEqual({});
   });
 });
 

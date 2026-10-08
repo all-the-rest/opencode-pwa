@@ -465,10 +465,28 @@ export function removeSession(server: ServerConfig, sessionID: string) {
   return guarded(async () => (await makeClient(server)).session.remove({ sessionID }));
 }
 
-/** One workspace file attached to a prompt (`SessionPromptInput.files`). */
+/**
+ * Where an attached file lives. Verified in the installed client
+ * (`@opencode/client` `generated/types.d.ts`):
+ *   `{ type: "inline" }` — the payload travels as base64 in `data`;
+ *   `{ type: "uri"; uri }` — the server reads the file itself (`file://…`).
+ */
+export type PromptFileSource = { type: "inline" } | { type: "uri"; uri: string };
+
+/**
+ * One file attached to a prompt — the client's encoded V2 shape (verified in
+ * the installed `@opencode/client` `generated/types.d.ts`, the same type
+ * `SessionMessageUser.files` uses). Picked/dropped files send base64 `data`
+ * with an `inline` source; workspace paths keep their `file://…` URI as a
+ * `uri` source.
+ */
 export interface PromptFileAttachment {
-  uri: string;
+  /** Base64 payload (`PromptBase64`); empty for `uri` sources. */
+  data: string;
+  mime: string;
+  source: PromptFileSource;
   name?: string;
+  description?: string;
 }
 
 /**
@@ -490,28 +508,33 @@ export function sendPrompt(
   files: PromptFileAttachment[] = [],
 ) {
   return guarded(async () => {
-    const input =
-      files.length > 0 ? { sessionID, text, files } : { sessionID, text };
-    try {
-      // Verified against the installed package: `session.prompt()` accepts
-      // `files` (node_modules/@opencode/client `SessionPromptInput.files`).
-      return await (await makeClient(server)).session.prompt(input);
-    } catch {
-      const baseUrl = server.baseUrl.replace(/\/$/, "");
-      const response = await fetch(
-        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/prompt`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
-          body: JSON.stringify(input),
-        },
-      );
+    const baseUrl = server.baseUrl.replace(/\/$/, "");
+    const url = `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/prompt`;
+    const body = JSON.stringify({ sessionID, text, ...(files.length > 0 ? { files } : {}) });
+    const post = async (): Promise<unknown> => {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
+        body,
+      });
       if (!response.ok) {
         throw new Error(
           `POST /api/session/${sessionID}/prompt failed with status ${response.status}`,
         );
       }
       return response.json();
+    };
+    try {
+      // Text-only prompts go through the typed client (auth, typed result).
+      // Attachments carry the encoded V2 `PromptFileAttachment` shape (base64
+      // `data` + `source`), which the installed client's legacy `files` input
+      // type cannot express — those POSTs go straight to the endpoint.
+      if (files.length === 0) {
+        return await (await makeClient(server)).session.prompt({ sessionID, text });
+      }
+      return await post();
+    } catch {
+      return await post();
     }
   });
 }
@@ -543,6 +566,25 @@ export function parseModelOptionValue(value: string): SessionModelRef | null {
   const id = head.slice(slash + 1);
   if (providerID === "" || id === "") return null;
   return { id, providerID, ...(variant !== undefined && variant !== "" ? { variant } : {}) };
+}
+
+/**
+ * `provider/model` → display name lookup built from the loaded model list, so
+ * chat rows and the composer can show the model's name instead of its ref.
+ * A bare entry wins over an expanded variant entry (`Name (variant)`), and a
+ * duplicate name never overwrites the first.
+ */
+export function modelLabelLookup(models: readonly ModelOption[]): Record<string, string> {
+  const bare: Record<string, string> = {};
+  const variants: Record<string, string> = {};
+  for (const model of models) {
+    if (model.providerID === "") continue;
+    const key = `${model.providerID}/${model.id}`;
+    if (model.variant === undefined) bare[key] = model.name;
+    else if (variants[key] === undefined) variants[key] = model.name;
+  }
+  // A bare entry wins over the expanded `Name (variant)` spelling.
+  return { ...variants, ...bare };
 }
 
 export interface SessionInfo {

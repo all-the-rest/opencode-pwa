@@ -1,9 +1,10 @@
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import ChatMessageList from "../components/ChatMessageList.tsx";
+import PromptComposer from "../components/PromptComposer.tsx";
 import SessionRunIndicators from "../components/SessionRunIndicators.tsx";
 import Icon from "../components/Icon.tsx";
 import { SESSION_PAGE_SIZE, useSessionMessages, type SessionMessageSource } from "../hooks/useSessionMessages.ts";
@@ -32,6 +33,7 @@ import {
   readSessionTerminal,
   renameSession,
   updateSessionInbox,
+  modelLabelLookup,
   modelOptionValue,
   parseFormAnswerText,
   parseModelOptionValue,
@@ -44,11 +46,9 @@ import {
   stageSessionRevert,
   switchSessionAgent,
   switchSessionModel,
-  toPromptFileUri,
   type AgentOption,
   type CommandRow,
   type ModelOption,
-  type PromptFileAttachment,
   type ServerConfig,
   type SessionDiffRow,
   type SessionFormRow,
@@ -60,6 +60,12 @@ import {
   type TokenUsage,
 } from "../lib/opencode.ts";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
+import {
+  createFileAttachment,
+  pathAttachmentID,
+  toPromptFileAttachments,
+  type PromptAttachment,
+} from "../lib/promptAttachments.ts";
 import { subscribeServerEvents } from "../lib/eventHub.ts";
 import { useServers } from "../state/servers.tsx";
 import { useToast } from "../state/toast.tsx";
@@ -149,8 +155,6 @@ export default function SessionDetail() {
   const [renaming, setRenaming] = useState(false);
   const [renameText, setRenameText] = useState("");
   const [renameBusy, setRenameBusy] = useState(false);
-  const [attachments, setAttachments] = useState<string[]>([]);
-  const [attachmentInput, setAttachmentInput] = useState("");
   const [confirm, setConfirm] = useState<"interrupt" | "delete" | "fork" | "compact" | "revert-commit" | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   // Parity batch 3: revert staging, share/export-import, command run.
@@ -273,6 +277,12 @@ export default function SessionDetail() {
   const [currentModelValue, setCurrentModelValue] = useState<string>("");
   const [pickerError, setPickerError] = useState<string | null>(null);
   const [switching, setSwitching] = useState(false);
+  // Composer attachments: workspace-path chips (`file://…`) plus picked or
+  // dropped files (base64, sent inline). The mapping to the client's
+  // `PromptFileAttachment` shape lives in `promptAttachments.ts`.
+  const [attachments, setAttachments] = useState<PromptAttachment[]>([]);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const modelLabels = useMemo(() => modelLabelLookup(models), [models]);
 
   useEffect(() => {
     initialScrollDoneRef.current = false;
@@ -414,35 +424,49 @@ export default function SessionDetail() {
   const tabTitle = tabs.find((entry) => entry.serverID === server?.id && entry.sessionID === id)?.title;
   const displayTitle = id === undefined ? null : sessionTitle(tabTitle, id);
 
-  function addAttachment() {
-    const path = attachmentInput.trim().replace(/^\/+/, "");
-    if (path === "" || attachments.includes(path)) return;
-    setAttachments((prev) => [...prev, path]);
-    setAttachmentInput("");
+  function addAttachment(path: string) {
+    setAttachmentError(null);
+    setAttachments((prev) => {
+      const id = pathAttachmentID(path);
+      if (prev.some((entry) => entry.id === id)) return prev;
+      return [...prev, { kind: "path", id, path }];
+    });
   }
 
-  function removeAttachment(path: string) {
-    setAttachments((prev) => prev.filter((entry) => entry !== path));
+  function removeAttachment(id: string) {
+    setAttachments((prev) => prev.filter((entry) => entry.id !== id));
   }
 
-  function toAttachmentFiles(paths: string[]): PromptFileAttachment[] {
-    return paths.map((path) => ({
-      uri: toPromptFileUri(path),
-      name: path.split("/").pop() ?? path,
-    }));
+  /** Read picked/dropped files as base64 and attach the usable ones. */
+  async function handleAttachFiles(files: File[]) {
+    setAttachmentError(null);
+    let rejected = false;
+    for (const file of files) {
+      const result = await createFileAttachment(file);
+      if (!result.ok) {
+        rejected = true;
+        continue;
+      }
+      setAttachments((prev) =>
+        prev.some((entry) => entry.id === result.attachment.id) ? prev : [...prev, result.attachment],
+      );
+    }
+    if (rejected) {
+      setAttachmentError(t`Einige Dateien wurden nicht angehängt (Typ oder Größe).`);
+    }
   }
 
-  async function handleSend(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSend(e?: React.FormEvent) {
+    e?.preventDefault();
     const text = draft.trim();
     if (server === null || server === undefined || id === undefined) return;
     if (text === "" || sending) return;
     const activeServer: ServerConfig = server;
     const activeSession: string = id;
-    const files = toAttachmentFiles(attachments);
+    const files = toPromptFileAttachments(attachments);
+    const attached = attachments;
     setDraft("");
     setAttachments([]);
-    setAttachmentInput("");
     setSendError(null);
     const localID = addLocalMessage("user", text);
     stickAfterSendRef.current = true;
@@ -455,8 +479,19 @@ export default function SessionDetail() {
     if (result.error !== null) {
       setSendError(result.error);
       setDraft(text);
-      setAttachments(attachments);
+      setAttachments(attached);
     }
+  }
+
+  function handleStop() {
+    if (server === null || server === undefined || id === undefined) return;
+    void interruptSession(server, id).then((result) => {
+      if (result.error !== null) {
+        setSendError(result.error);
+        return;
+      }
+      notify(t`Ausführung unterbrochen.`, "success");
+    });
   }
 
   async function handleAgentChange(value: string) {
@@ -932,59 +967,17 @@ export default function SessionDetail() {
           <p className="text-sm opacity-70">
             <Trans>Server: {serverName}</Trans>
           </p>
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="flex flex-col gap-1">
-              <span className="label label-text">
-                <Trans>Agent</Trans>
-              </span>
-              <select
-                className="select select-bordered select-sm"
-                value={currentAgent ?? ""}
-                onChange={(e) => void handleAgentChange(e.target.value)}
-                disabled={switching || agents.length === 0}
-                aria-label={t`Agent der Session`}
-                data-testid="session-agent-select"
-              >
-                <option value="">
-                  <Trans>Keiner</Trans>
-                </option>
-                {agents.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="label label-text">
-                <Trans>Modell</Trans>
-              </span>
-              <select
-                className="select select-bordered select-sm"
-                value={currentModelValue}
-                onChange={(e) => void handleModelChange(e.target.value)}
-                disabled={switching || models.length === 0}
-                aria-label={t`Modell der Session`}
-                data-testid="session-model-select"
-              >
-                <option value="">
-                  <Trans>Keines</Trans>
-                </option>
-                {models.map((m) => {
-                  const optionValue = modelOptionValue(m);
-                  return (
-                    <option key={optionValue} value={optionValue}>
-                      {m.name}
-                    </option>
-                  );
-                })}
-              </select>
-            </label>
-          </div>
           {pickerError !== null && (
             <div className="alert alert-error">
               <span>
                 <Trans>Agent/Modell konnte nicht gewechselt werden: {pickerError}</Trans>
+              </span>
+            </div>
+          )}
+          {attachmentError !== null && (
+            <div className="alert alert-warning">
+              <span>
+                <Trans>Anhang fehlgeschlagen: {attachmentError}</Trans>
               </span>
             </div>
           )}
@@ -1049,7 +1042,7 @@ export default function SessionDetail() {
                   <Trans>Ältere Nachrichten laden ({remaining} weitere)</Trans>
                 </button>
               )}
-              <ChatMessageList messages={visible} />
+              <ChatMessageList messages={visible} modelNames={modelLabels} />
               <SessionRunIndicators run={run} showWorking={showWorking} />
             </>
           )}
@@ -1064,94 +1057,29 @@ export default function SessionDetail() {
               <Trans>Neueste ↓</Trans>
             </button>
           )}
-          {/* Chat-first: attachments + sticky composer directly below the
-              conversation; the secondary panels follow as a collapsed
-              accordion and never push the composer down. */}
-          {/* Chat-first: single rounded composer below the conversation (attach
-              row + message row + round send button); the secondary panels
-              follow as a collapsed accordion and never push it down. */}
-          <div
-            className="sticky bottom-4 z-10 rounded-2xl border border-base-300 bg-base-100 p-2 shadow-sm"
-            data-testid="session-composer"
-          >
-            {attachments.length > 0 && (
-              <ul
-                className="flex flex-wrap gap-1 pb-2"
-                data-testid="prompt-attachments"
-                aria-label={t`Angehängte Dateien`}
-              >
-                {attachments.map((path) => (
-                  <li
-                    key={path}
-                    data-testid={`prompt-attachment-${path}`}
-                    className="badge badge-primary gap-1 py-3"
-                  >
-                    <Icon name="file" />
-                    <span className="font-mono max-w-48 truncate" title={path}>
-                      {path}
-                    </span>
-                    <button
-                      type="button"
-                      className="btn btn-xs btn-ghost"
-                      aria-label={t`Anhang ${path} entfernen`}
-                      onClick={() => removeAttachment(path)}
-                    >
-                      <Icon name="close" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <form
-              className="flex items-center gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                addAttachment();
-              }}
-            >
-              <input
-                className="input input-bordered input-sm flex-1 font-mono"
-                placeholder={t`Dateipfad anhängen, z. B. src/app.ts`}
-                value={attachmentInput}
-                onChange={(e) => setAttachmentInput(e.target.value)}
-                aria-label={t`Datei an den Prompt anhängen`}
-                disabled={sending}
-                data-testid="prompt-attachment-input"
-              />
-              <button
-                type="submit"
-                className="btn btn-sm btn-ghost shrink-0"
-                disabled={sending || attachmentInput.trim() === ""}
-                aria-label={t`Datei anhängen`}
-                title={t`Datei anhängen`}
-              >
-                <Icon name="plus" /> <Trans>Anhängen</Trans>
-              </button>
-            </form>
-            <div className="divider my-1" aria-hidden="true" />
-            <form
-              className="flex items-center gap-2"
-              onSubmit={(e) => void handleSend(e)}
-            >
-              <input
-                className="input input-ghost flex-1 focus:bg-transparent"
-                placeholder={t`Beliebige Frage stellen, / für Befehle, @ für Kontext…`}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                aria-label={t`Nachricht schreiben`}
-                disabled={sending}
-              />
-              <button
-                className="btn btn-circle btn-primary shrink-0"
-                type="submit"
-                disabled={sending || draft.trim() === ""}
-                aria-label={t`Nachricht senden`}
-                title={t`Nachricht senden`}
-              >
-                <Icon name="send" />
-              </button>
-            </form>
-          </div>
+          {/* Chat-first: the composer sits directly below the conversation
+              (attachments + autogrowing editor + agent/model chips + send/stop);
+              the secondary panels follow as a collapsed accordion and never
+              push the composer down. */}
+          <PromptComposer
+            draft={draft}
+            onDraftChange={setDraft}
+            attachments={attachments}
+            onRemoveAttachment={removeAttachment}
+            onAttachPath={addAttachment}
+            onAttachFiles={(files) => void handleAttachFiles(files)}
+            onSubmit={() => void handleSend()}
+            onStop={handleStop}
+            busy={sending}
+            runActive={run.status === "active"}
+            agents={agents}
+            models={models}
+            currentAgent={currentAgent}
+            currentModelValue={currentModelValue}
+            onAgentChange={(value) => void handleAgentChange(value)}
+            onModelChange={(value) => void handleModelChange(value)}
+            switching={switching}
+          />
           {/* Secondary panels behind one "Mehr…" disclosure: chat + composer
               dominate, everything else is one tap away (one tab at a time). */}
           <div data-testid="session-panels">

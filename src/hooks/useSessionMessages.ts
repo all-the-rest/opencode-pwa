@@ -1,6 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { subscribeServerEvents } from "../lib/eventHub.ts";
-import { extractContentUpdateMessage, extractMessageFromEvent } from "../lib/eventMessages.ts";
+import {
+  extractContentUpdateMessage,
+  extractMessageFromEvent,
+  latestSessionMeta,
+} from "../lib/eventMessages.ts";
 import {
   extractMessageInputs,
   mergeMessageLists,
@@ -56,6 +60,11 @@ export function useSessionMessages(
   const [source, setSource] = useState<SessionMessageSource>("live");
   const [liveCount, setLiveCount] = useState<number>(0);
   const [local, setLocal] = useState<CachedMessage[]>([]);
+  // Agent/model of the last turn that declared them. Streaming snapshots
+  // (`session.message.content.updated`) repeat only the content array, so the
+  // live bubble would otherwise show an empty `agent · model` header until the
+  // full message arrives. The ref keeps the event subscription stable.
+  const sessionMetaRef = useRef(latestSessionMeta([]));
 
   useEffect(() => {
     if (server === null || server === undefined || sessionID === undefined) {
@@ -136,7 +145,7 @@ export function useSessionMessages(
       // incrementally) into the cached message, keyed by the message id. This
       // replaces the previous mis-parse of `content.updated` into an
       // "Unbekannter Inhalt" note that then got persisted as if final.
-      const update = extractContentUpdateMessage(event);
+      const update = extractContentUpdateMessage(event, Date.now(), sessionMetaRef.current);
       if (update !== null) {
         if (update.sessionID !== activeSession) return;
         const updateInput = {
@@ -222,6 +231,12 @@ export function useSessionMessages(
   // Chat style: `all` is newest-first (eviction order), the visible window
   // shows the newest N oldest-first — oldest at the top, newest at the bottom.
   const visible = [...all.slice(0, visibleCount)].reverse().concat(local);
+  // Synced after render (never during it), so the streaming fallback in the
+  // event subscription above always sees the current session meta without the
+  // subscription having to re-subscribe.
+  useEffect(() => {
+    sessionMetaRef.current = latestSessionMeta(all);
+  }, [all]);
   return {
     visible,
     total: local.length + all.length,

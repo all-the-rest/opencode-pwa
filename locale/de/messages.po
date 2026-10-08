@@ -115,11 +115,10 @@ msgstr "Ablehnen"
 #: src/components/ConfigCard.tsx
 #: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
-#: src/pages/SessionDetail.tsx
 msgid "Agent"
 msgstr "Agent"
 
-#: src/pages/SessionDetail.tsx
+#: src/components/PromptComposer.tsx
 msgid "Agent der Session"
 msgstr "Agent der Session"
 
@@ -134,6 +133,10 @@ msgstr "Agent konnte nicht geladen werden: {error}"
 #: src/pages/AgentDetail.tsx
 msgid "Agent konnte nicht geladen werden."
 msgstr "Agent konnte nicht geladen werden."
+
+#: src/components/PromptComposer.tsx
+msgid "Agent wählen"
+msgstr "Agent wählen"
 
 #: src/pages/AgentDetail.tsx
 msgid "Agent: {agentName}"
@@ -273,15 +276,23 @@ msgstr "Anfrage {requestId} einmalig erlauben"
 msgid "Anfragen des Servers, die auf eine Entscheidung warten. Erlaubt wird einmalig („Einmal erlauben“) oder abgelehnt."
 msgstr "Anfragen des Servers, die auf eine Entscheidung warten. Erlaubt wird einmalig („Einmal erlauben“) oder abgelehnt."
 
-#: src/pages/SessionDetail.tsx
+#: src/components/PromptComposer.tsx
 msgid "Angehängte Dateien"
 msgstr "Angehängte Dateien"
 
-#: src/pages/SessionDetail.tsx
-msgid "Anhang {path} entfernen"
-msgstr "Anhang {path} entfernen"
+#: src/components/PromptComposer.tsx
+msgid "Anhang {name} entfernen"
+msgstr "Anhang {name} entfernen"
 
 #: src/pages/SessionDetail.tsx
+#~ msgid "Anhang {path} entfernen"
+#~ msgstr "Anhang {path} entfernen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Anhang fehlgeschlagen: {attachmentError}"
+msgstr "Anhang fehlgeschlagen: {attachmentError}"
+
+#: src/components/PromptComposer.tsx
 msgid "Anhängen"
 msgstr "Anhängen"
 
@@ -386,6 +397,10 @@ msgstr "Ausführung fehlgeschlagen"
 #: src/hooks/useEventNotifications.ts
 msgid "Ausführung fertig"
 msgstr "Ausführung fertig"
+
+#: src/components/PromptComposer.tsx
+msgid "Ausführung stoppen"
+msgstr "Ausführung stoppen"
 
 #: src/pages/ServerDetail.tsx
 #: src/pages/SessionDetail.tsx
@@ -500,7 +515,7 @@ msgstr "Befehle"
 msgid "Befehlstext"
 msgstr "Befehlstext"
 
-#: src/pages/SessionDetail.tsx
+#: src/components/PromptComposer.tsx
 msgid "Beliebige Frage stellen, / für Befehle, @ für Kontext…"
 msgstr "Beliebige Frage stellen, / für Befehle, @ für Kontext…"
 
@@ -575,13 +590,17 @@ msgstr "Das gestagete Revert wird übernommen. Nachrichten und Dateien nach dem 
 msgid "Datei"
 msgstr "Datei"
 
-#: src/pages/SessionDetail.tsx
+#: src/components/PromptComposer.tsx
 msgid "Datei an den Prompt anhängen"
 msgstr "Datei an den Prompt anhängen"
 
-#: src/pages/SessionDetail.tsx
+#: src/components/PromptComposer.tsx
 msgid "Datei anhängen"
 msgstr "Datei anhängen"
+
+#: src/components/PromptComposer.tsx
+msgid "Datei hier ablegen"
+msgstr "Datei hier ablegen"
 
 #: src/pages/ServerTools.tsx
 msgid "Datei konnte nicht gelesen werden."
@@ -591,15 +610,24 @@ msgstr "Datei konnte nicht gelesen werden."
 msgid "Dateiänderungen"
 msgstr "Dateiänderungen"
 
+#: src/components/PromptComposer.tsx
 #: src/pages/ServerTools.tsx
 msgid "Dateien"
 msgstr "Dateien"
+
+#: src/components/PromptComposer.tsx
+msgid "Dateien auswählen"
+msgstr "Dateien auswählen"
+
+#: src/components/PromptComposer.tsx
+msgid "Dateien für den Prompt auswählen"
+msgstr "Dateien für den Prompt auswählen"
 
 #: src/pages/ServerTools.tsx
 msgid "Dateien konnten nicht geladen werden."
 msgstr "Dateien konnten nicht geladen werden."
 
-#: src/pages/SessionDetail.tsx
+#: src/components/PromptComposer.tsx
 msgid "Dateipfad anhängen, z. B. src/app.ts"
 msgstr "Dateipfad anhängen, z. B. src/app.ts"
 
@@ -782,6 +810,10 @@ msgstr "Eingangsbox"
 #: src/pages/SessionDetail.tsx
 #~ msgid "Eingangsbox ausblenden"
 #~ msgstr "Eingangsbox ausblenden"
+
+#: src/pages/SessionDetail.tsx
+msgid "Einige Dateien wurden nicht angehängt (Typ oder Größe)."
+msgstr "Einige Dateien wurden nicht angehängt (Typ oder Größe)."
 
 #: src/pages/ServerTools.tsx
 msgid "Einmal erlauben"
@@ -1210,11 +1242,11 @@ msgstr "Keine Verbindungsmethoden."
 msgid "Keine Worktrees."
 msgstr "Keine Worktrees."
 
-#: src/pages/SessionDetail.tsx
+#: src/components/PromptComposer.tsx
 msgid "Keiner"
 msgstr "Keiner"
 
-#: src/pages/SessionDetail.tsx
+#: src/components/PromptComposer.tsx
 msgid "Keines"
 msgstr "Keines"
 
@@ -1397,17 +1429,20 @@ msgstr "Mit Schlüssel verbinden"
 
 #: src/components/ConfigCard.tsx
 #: src/pages/AgentDetail.tsx
-#: src/pages/SessionDetail.tsx
 msgid "Modell"
 msgstr "Modell"
 
-#: src/pages/SessionDetail.tsx
+#: src/components/PromptComposer.tsx
 msgid "Modell der Session"
 msgstr "Modell der Session"
 
 #: src/components/ChatMessageList.tsx
 msgid "Modell gewechselt"
 msgstr "Modell gewechselt"
+
+#: src/components/PromptComposer.tsx
+msgid "Modell wählen"
+msgstr "Modell wählen"
 
 #: src/pages/AgentDetail.tsx
 msgid "Modus:"
@@ -1426,11 +1461,11 @@ msgstr "Nach Projekt filtern"
 msgid "Nachricht für das Revert"
 msgstr "Nachricht für das Revert"
 
-#: src/pages/SessionDetail.tsx
+#: src/components/PromptComposer.tsx
 msgid "Nachricht schreiben"
 msgstr "Nachricht schreiben"
 
-#: src/pages/SessionDetail.tsx
+#: src/components/PromptComposer.tsx
 msgid "Nachricht senden"
 msgstr "Nachricht senden"
 

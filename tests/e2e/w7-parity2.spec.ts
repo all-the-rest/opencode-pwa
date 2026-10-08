@@ -20,7 +20,7 @@ const server = {
 interface PromptCall {
   sessionID: string;
   text: string;
-  files: Array<{ uri: string; name?: string }>;
+  files: Array<Record<string, unknown>>;
 }
 
 interface CallLog {
@@ -339,7 +339,9 @@ test(
       .toContainEqual({
         sessionID: "ses-1",
         text: "Erkläre diese Datei",
-        files: [{ uri: "file:///src/app.ts", name: "app.ts" }],
+        // Wave 3: the encoded V2 `PromptFileAttachment` shape — a workspace
+        // path travels as a `file://…` uri source.
+        files: [{ data: "", mime: "", source: { type: "uri", uri: "file:///src/app.ts" }, name: "app.ts" }],
       });
   },
 );

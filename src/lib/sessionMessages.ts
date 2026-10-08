@@ -165,6 +165,20 @@ function modelLabel(value: unknown): string | null {
   return modelID ?? providerID;
 }
 
+/**
+ * Resolve a `provider/model` label to the model's display name when the
+ * session page has the model list loaded. Unknown labels (offline, a model
+ * that vanished from the list) keep their ref — never an invented name.
+ */
+export function resolveModelLabel(
+  label: string | null,
+  names: Readonly<Record<string, string>>,
+): string | null {
+  if (label === null) return null;
+  const name = names[label];
+  return name !== undefined && name !== "" ? name : label;
+}
+
 interface MessageMeta {
   agent: string | null;
   model: string | null;
