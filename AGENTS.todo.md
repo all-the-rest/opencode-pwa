@@ -31,10 +31,15 @@ Reihenfolge steht, jede Welle wird vor dem commit verifiziert (lint/test/build/e
       „Läuft"-Streifen mit **Laufzeit** je Shell und Subagent (`shell.list`, `pty.list`,
       `GET /api/session/active`), Desktop mit mehr Details; Modus-Umschalter Einfach/Experte
       ( persistent), Einfach = Chat + Composer + Läuft-Streifen.
-- [ ] **Welle 7 — Projekt-Displayname + Ordner-Baum** (research erledigt): `project.update` existiert
+- [ ] **Welle 7 — Projekt-Displayname + Ordner-Baum + Projekt anlegen** (research erledigt): `project.update` existiert
       (`ProjectUpdateInput.canonical?: { name, icon?: { url, override, color }, commands? }`, Client
       `client.d.ts:147-149`), das Event `project.updated` (`types.d.ts:2254`) erlaubt Live-Sync —
-      also Projekt-Unbenennung mit Farbe/Icon wie im Original, oder klappt das bei euch nicht?
+      also Projekt-Umbenennung mit Farbe/Icon. Ein Create-Endpoint gibt es **nicht** (nur `list`/`update`):
+      „Neues Projekt" läuft über den Folder-Picker des Servers — `file.list({path})` liefert
+      `FileSystemEntry { path, type: "file" | "directory" }` (`types.d.ts:528`), `file.find({ query, type: "directory" })`
+      sucht Verzeichnisse; unser `listFiles` (`src/lib/opencode.ts:1031`) nutzt das schon in den Server-Werkzeugen.
+      Geplant: (a) Evaluierung Baum-Darstellung, wenn Projektnamen Pfade sind (Verschachtelung nach kanonischem Pfad),
+      (b) Rename + Farbe/Icon mit Live-Sync, (c) Projekt-Anlage über Server-Ordner-Picker → Session im Verzeichnis.
 
 
 ## Bewusst offen/dokumentiert (kein Handlungsbedarf)
