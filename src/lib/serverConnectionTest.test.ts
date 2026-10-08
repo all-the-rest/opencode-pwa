@@ -191,6 +191,11 @@ describe("testServerConnection", () => {
     expect(result.message).toContain("--cors");
   });
 
+  it("caps a hanging test at a short timeout so the UI never hangs long", () => {
+    expect(CONNECTION_TEST_TIMEOUT_MS).toBe(4_000);
+    expect(connectionTimeoutMessage()).toContain("4 Sekunden");
+  });
+
   it("aborts a hanging test after the timeout with a German timeout message", async () => {
     vi.useFakeTimers();
     try {

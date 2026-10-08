@@ -365,7 +365,11 @@ export default function Settings() {
                 type="button"
                 onClick={() => void handleTestConnection()}
                 disabled={testing}
+                aria-busy={testing}
               >
+                {testing && (
+                  <span className="loading loading-spinner loading-sm" aria-hidden="true" />
+                )}
                 {testing ? <Trans>Teste …</Trans> : <Trans>Verbindung testen</Trans>}
               </button>
               {editingId !== null && (

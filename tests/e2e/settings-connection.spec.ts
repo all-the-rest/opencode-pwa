@@ -57,6 +57,20 @@ test(
 );
 
 test(
+  "pasting a base64-embedded server link resolves to the decoded origin",
+  { tag: ["@feature", "@feature:settings-connection"] },
+  async ({ page }) => {
+    await gotoSettings(page);
+    await baseUrlField(page).focus();
+    await pasteIntoBaseUrl(
+      page,
+      "https://app.example/server/aHR0cHM6Ly9yZW1vdGUtY29kZS5hbGwtdGhlLnJlc3Q/session/abc-123",
+    );
+    await expect(baseUrlField(page)).toHaveValue("https://remote-code.all-the.rest");
+  },
+);
+
+test(
   "successful connection test shows the version and the tested URL without saving",
   { tag: ["@feature", "@feature:settings-connection"] },
   async ({ page }) => {
@@ -177,7 +191,7 @@ test(
   "a hanging connection test aborts after the timeout with a German message",
   { tag: ["@feature", "@feature:settings-connection"] },
   async ({ page }) => {
-    test.setTimeout(45_000);
+    test.setTimeout(15_000);
     // Same-origin so the fetch cannot be blocked by CORS before it hangs; a
     // server that never answers must be given up on by the client itself.
     await gotoSettings(page);
@@ -188,9 +202,16 @@ test(
     await fillForm(page, origin);
 
     await page.getByRole("button", { name: "Verbindung testen" }).click();
+    // Visible waiting state while the test runs: spinner, busy flag, disabled.
+    const testingButton = page.getByRole("button", { name: "Teste …" });
+    await expect(testingButton).toBeDisabled();
+    await expect(testingButton).toHaveAttribute("aria-busy", "true");
+    await expect(testingButton.locator(".loading-spinner")).toBeVisible();
     const result = page.getByTestId("connection-test-result");
-    await expect(result).toContainText("Zeitüberschreitung", { timeout: 20_000 });
+    await expect(result).toContainText("Zeitüberschreitung", { timeout: 10_000 });
     await expect(result).toContainText("erreichbar");
+    // The waiting state clears once the timeout resolves.
+    await expect(page.getByRole("button", { name: "Verbindung testen" })).toBeEnabled();
     expect(await storedServerCount(page)).toBe(0);
   },
 );

@@ -2032,8 +2032,12 @@ msgid "z. B. Heimserver"
 msgstr "z. B. Heimserver"
 
 #: src/lib/serverConnectionTest.ts
-msgid "Zeitüberschreitung: Der Server hat nicht innerhalb von 15 Sekunden geantwortet. Bitte prüfen, ob der Server erreichbar ist."
-msgstr "Zeitüberschreitung: Der Server hat nicht innerhalb von 15 Sekunden geantwortet. Bitte prüfen, ob der Server erreichbar ist."
+#~ msgid "Zeitüberschreitung: Der Server hat nicht innerhalb von 15 Sekunden geantwortet. Bitte prüfen, ob der Server erreichbar ist."
+#~ msgstr "Zeitüberschreitung: Der Server hat nicht innerhalb von 15 Sekunden geantwortet. Bitte prüfen, ob der Server erreichbar ist."
+
+#: src/lib/serverConnectionTest.ts
+msgid "Zeitüberschreitung: Der Server hat nicht innerhalb von 4 Sekunden geantwortet. Bitte prüfen, ob der Server erreichbar ist."
+msgstr "Zeitüberschreitung: Der Server hat nicht innerhalb von 4 Sekunden geantwortet. Bitte prüfen, ob der Server erreichbar ist."
 
 #: src/pages/SessionDetail.tsx
 msgid "Zu neuesten springen"

@@ -19,7 +19,7 @@ import { normalizeServerBaseUrl } from "./serverBaseUrl.ts";
  * via the shared auth-error mapping (`src/lib/serverAuthError.ts`), 302/HTML
  * login page via the gate detection (`src/lib/opencodeCookie.ts`), a foreign
  * origin that serves a page instead of the API, network/CORS failure with an
- * Erreichbarkeits-Hinweis mentioning `--cors`, and a 15s timeout.
+ * Erreichbarkeits-Hinweis mentioning `--cors`, and a 4s timeout.
  *
  * Gate vs. foreign origin: the cookie gate answers API requests with a
  * redirect (verified: `302 → /login.html`), so a followed redirect to the
@@ -66,7 +66,7 @@ export type ConnectionTestFetch = (
 ) => Promise<Response>;
 
 /** Hard cap for one connection test; a hanging host must not hang the UI. */
-export const CONNECTION_TEST_TIMEOUT_MS = 15_000;
+export const CONNECTION_TEST_TIMEOUT_MS = 4_000;
 
 /** Sentinel thrown by the timeout timer so it is not confused with a real failure. */
 class ConnectionTimeoutError extends Error {}
@@ -90,7 +90,7 @@ export function connectionNoApiMessage(): string {
 }
 
 export function connectionTimeoutMessage(): string {
-  return t`Zeitüberschreitung: Der Server hat nicht innerhalb von 15 Sekunden geantwortet. Bitte prüfen, ob der Server erreichbar ist.`;
+  return t`Zeitüberschreitung: Der Server hat nicht innerhalb von 4 Sekunden geantwortet. Bitte prüfen, ob der Server erreichbar ist.`;
 }
 
 export function connectionUnreachableMessage(): string {
