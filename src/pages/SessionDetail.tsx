@@ -4,8 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import ChatMessageList from "../components/ChatMessageList.tsx";
+import SessionRunIndicators from "../components/SessionRunIndicators.tsx";
 import Icon from "../components/Icon.tsx";
 import { SESSION_PAGE_SIZE, useSessionMessages, type SessionMessageSource } from "../hooks/useSessionMessages.ts";
+import { useSessionRunState } from "../hooks/useSessionRunState.ts";
 import {
   cancelSessionForm,
   cancelSessionInbox,
@@ -138,6 +140,9 @@ export default function SessionDetail() {
     addLocalMessage,
     dropLocalMessage,
   } = useSessionMessages(server, id, SESSION_PAGE_SIZE);
+  // Derived run state drives the live progress indicators (working row, retry
+  // card, interrupted/error divider) below the message list.
+  const run = useSessionRunState(server, id);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -248,6 +253,20 @@ export default function SessionDetail() {
     }
   }, [loading, visible.length]);
 
+  // Streaming stickiness keyed to the run state: while a turn is active and the
+  // user is already near the bottom (or just sent a message), follow the
+  // arriving content. `liveCount` bumps on every `content.updated` snapshot, so
+  // the view tracks streamed text without yanking a reader scrolled into
+  // history. This complements — never duplicates — the length-based effect
+  // above (which owns new messages and load-more prepends).
+  useEffect(() => {
+    if (run.status !== "active") return;
+    if (nearBottomRef.current || stickAfterSendRef.current) {
+      stickAfterSendRef.current = false;
+      scrollToBottom();
+    }
+  }, [run.status, run.assistantMessageID, liveCount]);
+
   const [agents, setAgents] = useState<AgentOption[]>([]);
   const [models, setModels] = useState<ModelOption[]>([]);
   const [currentAgent, setCurrentAgent] = useState<string | null>(null);
@@ -351,6 +370,10 @@ export default function SessionDetail() {
   const showInitialSpinner = loading && total === 0;
   const showEmpty = !loading && error === null && total === 0;
   const showList = !showInitialSpinner && (total > 0 || error !== null);
+  // The "Denkt…" row shows only while a turn is active and no assistant text
+  // has arrived yet (`assistantMessageID` is set the moment a content snapshot
+  // lands). Once parts stream in, the assistant message itself renders instead.
+  const showWorking = run.status === "active" && run.assistantMessageID === null;
   const serverName = server?.name ?? "";
   const remaining = total - visible.length;
   const { offline } = reachability(error);
@@ -1027,6 +1050,7 @@ export default function SessionDetail() {
                 </button>
               )}
               <ChatMessageList messages={visible} />
+              <SessionRunIndicators run={run} showWorking={showWorking} />
             </>
           )}
           {showJumpToNewest && (

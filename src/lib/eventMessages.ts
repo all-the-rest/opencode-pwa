@@ -33,9 +33,19 @@ function readStringField(record: Record<string, unknown>, keys: string[]): strin
   return null;
 }
 
+/** The `session.message.content.updated` event type (streaming assistant turns). */
+export const CONTENT_UPDATED_EVENT = "session.message.content.updated";
+
 export function readEventType(event: unknown): string | null {
   if (event === null || typeof event !== "object") return null;
   return readStringField(event as Record<string, unknown>, ["type"]);
+}
+
+/** Top-level `created` timestamp of an event (ms), or null when absent. */
+function readEventCreated(event: unknown): number | null {
+  if (event === null || typeof event !== "object") return null;
+  const created: unknown = (event as Record<string, unknown>)["created"];
+  return typeof created === "number" && Number.isFinite(created) ? created : null;
 }
 
 /** Full (unsliced) session id of an event, or null when absent. */
@@ -83,8 +93,15 @@ function readMessageCandidate(event: unknown): Record<string, unknown> | null {
  * Pull a session message out of a raw event. Returns null for non-message
  * events (status, compaction, permission, streaming deltas) and for malformed
  * payloads without session or message id.
+ *
+ * `session.message.content.updated` is deliberately excluded here: its `data`
+ * carries `messageID` (so the generic path would treat it as a message) but no
+ * `type`, which used to mis-parse it into an "Unbekannter Inhalt" note that then
+ * got persisted as if final. It is handled by `extractContentUpdateMessage`
+ * instead and never falls through to the note builder.
  */
 export function extractMessageFromEvent(event: unknown, now: number = Date.now()): EventMessage | null {
+  if (readEventType(event) === CONTENT_UPDATED_EVENT) return null;
   const sessionID = readEventSessionID(event);
   if (sessionID === null) return null;
   const candidate = readMessageCandidate(event);
@@ -94,6 +111,57 @@ export function extractMessageFromEvent(event: unknown, now: number = Date.now()
   // tool parts render exactly like fetched messages — never as JSON dumps.
   const parsed = parseSessionMessages([candidate], now)[0];
   if (parsed === undefined) return null;
+  return {
+    sessionID,
+    messageID: parsed.id,
+    role: parsed.role,
+    text: parsed.text,
+    created: parsed.created,
+    noteKind: parsed.noteKind,
+    noteDetail: parsed.noteDetail,
+    parts: parsed.parts,
+    agent: parsed.agent,
+    model: parsed.model,
+    durationMs: parsed.durationMs,
+  };
+}
+
+/**
+ * Extract an assistant message snapshot from a `session.message.content.updated`
+ * event so live streaming renders through the same V2 parser as fetched
+ * messages. Shape (verified in the installed client):
+ *   `data: { sessionID, messageID, content: SessionMessageAssistantContentEncoded[] }`
+ * where `content` is the same `text`/`reasoning`/`tool` union an assistant
+ * message carries. Returns null for non-content-update events, missing ids, or
+ * an empty `content` array (the working indicator covers the "no parts yet"
+ * gap, so an empty snapshot must not create a bogus message).
+ *
+ * The message is keyed by `data.messageID`; the caller merges it into the cache
+ * so repeated snapshots for the same id simply grow the assistant text.
+ */
+export function extractContentUpdateMessage(
+  event: unknown,
+  now: number = Date.now(),
+): EventMessage | null {
+  if (readEventType(event) !== CONTENT_UPDATED_EVENT) return null;
+  if (event === null || typeof event !== "object") return null;
+  const data: unknown = (event as Record<string, unknown>)["data"];
+  if (data === null || typeof data !== "object") return null;
+  const dataRecord = data as Record<string, unknown>;
+  const sessionID = readStringField(dataRecord, ["sessionID", "sessionId"]);
+  const messageID = readStringField(dataRecord, ["messageID", "messageId"]);
+  if (sessionID === null || messageID === null) return null;
+  const content: unknown = dataRecord["content"];
+  if (!Array.isArray(content) || content.length === 0) return null;
+  // Reuse the assistant-message builder: it maps `content[]` through the exact
+  // same part parser as `message.list`, so text/reasoning/tool parts live-render
+  // identically. `created` falls back to the event's own timestamp.
+  const synthetic = { type: "assistant", id: messageID, content, time: { created: readEventCreated(event) ?? now } };
+  const parsed = parseSessionMessages([synthetic], now)[0];
+  if (parsed === undefined || parsed.role !== "assistant") return null;
+  // A snapshot whose only parts degrade to `unknown` carries no real content —
+  // skip it so the working indicator keeps covering the gap.
+  if (parsed.parts.length === 1 && parsed.parts[0]?.kind === "unknown") return null;
   return {
     sessionID,
     messageID: parsed.id,

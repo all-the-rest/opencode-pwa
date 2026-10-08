@@ -378,6 +378,7 @@ msgstr "Ausblenden"
 msgid "Ausführen"
 msgstr "Ausführen"
 
+#: src/components/SessionRunIndicators.tsx
 #: src/hooks/useEventNotifications.ts
 msgid "Ausführung fehlgeschlagen"
 msgstr "Ausführung fehlgeschlagen"
@@ -391,6 +392,7 @@ msgstr "Ausführung fertig"
 msgid "Ausführung unterbrechen"
 msgstr "Ausführung unterbrechen"
 
+#: src/components/SessionRunIndicators.tsx
 #: src/hooks/useEventNotifications.ts
 msgid "Ausführung unterbrochen"
 msgstr "Ausführung unterbrochen"
@@ -612,6 +614,10 @@ msgstr "Denken anzeigen"
 #: src/pages/SessionDetail.tsx
 msgid "Denken:"
 msgstr "Denken:"
+
+#: src/components/SessionRunIndicators.tsx
+msgid "Denkt…"
+msgstr "Denkt…"
 
 #: src/pages/SessionDetail.tsx
 msgid "Der Kontext wird zusammengefasst, um Platz zu schaffen. Fortfahren?"
@@ -1440,6 +1446,10 @@ msgstr "Nachrichten konnten nicht geladen werden (offline?): {error}"
 msgid "Nachrichten werden geladen …"
 msgstr "Nachrichten werden geladen …"
 
+#: src/components/SessionRunIndicators.tsx
+msgid "Nächster Versuch in {seconds} s"
+msgstr "Nächster Versuch in {seconds} s"
+
 #: src/pages/Settings.tsx
 msgid "Name"
 msgstr "Name"
@@ -1480,6 +1490,10 @@ msgstr "Neuer Session-Titel"
 #: src/pages/ServerDetail.tsx
 msgid "Neuer Shell-Befehl"
 msgstr "Neuer Shell-Befehl"
+
+#: src/components/SessionRunIndicators.tsx
+msgid "Neuer Versuch"
+msgstr "Neuer Versuch"
 
 #: src/pages/Settings.tsx
 msgid "Neues Passwort (Basic Auth)"
@@ -2361,6 +2375,10 @@ msgstr "Verfügbare Shells"
 #: src/pages/Dashboard.tsx
 msgid "Version"
 msgstr "Version"
+
+#: src/components/SessionRunIndicators.tsx
+msgid "Versuch {attempt}"
+msgstr "Versuch {attempt}"
 
 #: src/pages/SessionDetail.tsx
 msgid "Verwerfen"

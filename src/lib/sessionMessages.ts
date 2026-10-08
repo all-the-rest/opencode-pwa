@@ -47,6 +47,28 @@ export type ChatNoteKind =
 
 export type ChatToolStatus = "streaming" | "running" | "completed" | "error" | "unknown";
 
+/** Tool statuses that represent a settled outcome (not an in-flight state). */
+const FINAL_TOOL_STATUSES: readonly ChatToolStatus[] = ["completed", "error"];
+
+/**
+ * Neutralize in-flight tool parts before they are persisted as final.
+ *
+ * A live `content.updated` snapshot (or a mid-run `message.list`) can carry a
+ * tool in `streaming`/`running`. Caching that verbatim would resurrect a stale
+ * "Läuft" spinner after a reload, as if the call were still running. Downgrading
+ * every non-final status to the neutral `unknown` keeps the call visible (icon +
+ * label + arguments) but drops the shimmer and the "Läuft"/streaming badge —
+ * the honest state for "we do not know the outcome after a reload".
+ * `input`/`metadata` stay so the card remains informative.
+ */
+export function downgradePartialToolStatus(parts: ChatPart[]): ChatPart[] {
+  return parts.map((part) =>
+    part.kind === "tool" && !FINAL_TOOL_STATUSES.includes(part.status)
+      ? { ...part, status: "unknown", detail: null }
+      : part,
+  );
+}
+
 export interface ChatTextPart {
   kind: "text";
   text: string;

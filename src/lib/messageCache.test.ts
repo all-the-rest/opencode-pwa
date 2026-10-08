@@ -219,3 +219,72 @@ describe("putMessages / readMessages", () => {
     expect(await readMessages(SERVER, SESSION)).toEqual([]);
   });
 });
+
+describe("in-flight tool downgrade on write", () => {
+  it("downgrades running/streaming tool parts so a reload never shows 'Läuft'", async () => {
+    await putMessages(SERVER, SESSION, [
+      {
+        id: "a-run",
+        role: "assistant",
+        text: "läuft",
+        created: 10,
+        parts: [
+          { kind: "tool", name: "bash", status: "running", detail: null, input: { command: "ls" }, metadata: null },
+          {
+            kind: "tool",
+            name: "glob",
+            status: "streaming",
+            detail: null,
+            input: {},
+            metadata: null,
+          },
+          { kind: "tool", name: "read", status: "completed", detail: "ok", input: {}, metadata: null },
+          { kind: "tool", name: "write", status: "error", detail: "boom", input: {}, metadata: null },
+        ],
+      },
+    ]);
+
+    const [row] = await readMessages(SERVER, SESSION);
+    const statuses = (row?.parts ?? []).map((part) => (part.kind === "tool" ? part.status : part.kind));
+    // In-flight parts are neutralized to "unknown"; settled outcomes survive.
+    expect(statuses).toEqual(["unknown", "unknown", "completed", "error"]);
+    // The downgraded call stays visible with its arguments, just without outcome.
+    expect(row?.parts[0]).toMatchObject({ kind: "tool", name: "bash", input: { command: "ls" } });
+  });
+
+  it("a reload mid-run does not resurrect a stale running state", async () => {
+    // Live snapshot captured while a tool runs, then persisted + reloaded.
+    await putMessages(SERVER, SESSION, [
+      {
+        id: "mid",
+        role: "assistant",
+        text: "arbeitet",
+        created: 5,
+        parts: [
+          { kind: "tool", name: "edit", status: "running", detail: null, input: {}, metadata: null },
+        ],
+      },
+    ]);
+    const afterReload = await readMessages(SERVER, SESSION);
+    const tool = afterReload[0]?.parts[0];
+    expect(tool?.kind).toBe("tool");
+    expect(tool?.kind === "tool" && tool.status).not.toBe("running");
+    expect(tool?.kind === "tool" && tool.status).not.toBe("streaming");
+  });
+
+  it("keeps final tool statuses untouched through the cache", async () => {
+    await putMessages(SERVER, SESSION, [
+      {
+        id: "done",
+        role: "assistant",
+        text: "fertig",
+        created: 9,
+        parts: [
+          { kind: "tool", name: "read", status: "completed", detail: "ok", input: {}, metadata: null },
+        ],
+      },
+    ]);
+    const [row] = await readMessages(SERVER, SESSION);
+    expect(row?.parts[0]).toMatchObject({ kind: "tool", status: "completed" });
+  });
+});

@@ -12,6 +12,7 @@
  */
 
 import {
+  downgradePartialToolStatus,
   parseSessionMessages,
   type ChatNoteKind,
   type ChatPart,
@@ -253,7 +254,15 @@ export async function putMessages(
 ): Promise<void> {
   if (inputs.length === 0) return;
   const sessionKey = sessionCacheKey(serverID, sessionID);
-  const rows = toCachedMessages(serverID, sessionID, inputs);
+  // Cache-write choke point: never persist an in-flight tool state as final.
+  // Streaming/`running` tool parts are downgraded to the neutral status so a
+  // reload never resurrects a stale "Läuft" spinner. The live, in-memory view
+  // keeps the real status (built via `toCachedMessages` elsewhere) — this only
+  // sanitizes what is written to IndexedDB / the memory store.
+  const sanitized: MessageInput[] = inputs.map((input) =>
+    input.parts === undefined ? input : { ...input, parts: downgradePartialToolStatus(input.parts) },
+  );
+  const rows = toCachedMessages(serverID, sessionID, sanitized);
   const db = await openDatabase();
   if (db === null) {
     for (const row of rows) memoryStore.set(row.key, row);

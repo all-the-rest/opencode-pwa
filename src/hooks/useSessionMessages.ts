@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { subscribeServerEvents } from "../lib/eventHub.ts";
-import { extractMessageFromEvent } from "../lib/eventMessages.ts";
+import { extractContentUpdateMessage, extractMessageFromEvent } from "../lib/eventMessages.ts";
 import {
   extractMessageInputs,
   mergeMessageLists,
@@ -132,6 +132,35 @@ export function useSessionMessages(
     const activeServer: ServerConfig = server;
     const activeSession: string = sessionID;
     return subscribeServerEvents(activeServer, (event: unknown) => {
+      // Live streaming: fold assistant content snapshots (text arriving
+      // incrementally) into the cached message, keyed by the message id. This
+      // replaces the previous mis-parse of `content.updated` into an
+      // "Unbekannter Inhalt" note that then got persisted as if final.
+      const update = extractContentUpdateMessage(event);
+      if (update !== null) {
+        if (update.sessionID !== activeSession) return;
+        const updateInput = {
+          id: update.messageID,
+          role: update.role,
+          text: update.text,
+          created: update.created,
+          noteKind: update.noteKind,
+          noteDetail: update.noteDetail,
+          parts: update.parts,
+          agent: update.agent,
+          model: update.model,
+          durationMs: update.durationMs,
+        };
+        setAll((prev) =>
+          mergeMessageLists(prev, toCachedMessages(activeServer.id, activeSession, [updateInput])),
+        );
+        setLiveCount((count) => count + 1);
+        setSource("live");
+        // `putMessages` downgrades in-flight tool parts before writing, so a
+        // snapshot captured mid-run never persists a stale "Läuft".
+        void putMessages(activeServer.id, activeSession, [updateInput]);
+        return;
+      }
       const message = extractMessageFromEvent(event);
       if (message === null || message.sessionID !== activeSession) return;
       const input = {

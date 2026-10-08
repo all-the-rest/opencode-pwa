@@ -54,3 +54,32 @@ details > summary .tool-chevron {
 details[open] > summary .tool-chevron {
   transform: rotate(90deg);
 }
+
+/* --- Live run indicators (working / retry / divider / error) --- */
+
+/* A gentle three-dot pulse for the "Denkt…" working row, kept separate from the
+   text shimmer so it never re-renders the message list. */
+@keyframes run-dot-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+}
+
+.run-dot {
+  animation: run-dot-pulse 1.2s ease-in-out infinite;
+}
+
+.run-dot-2 {
+  animation-delay: 0.15s;
+}
+
+.run-dot-3 {
+  animation-delay: 0.3s;
+}

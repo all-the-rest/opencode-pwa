@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { extractMessageFromEvent, readEventSessionID, readEventType } from "./eventMessages.ts";
+import {
+  extractContentUpdateMessage,
+  extractMessageFromEvent,
+  readEventSessionID,
+  readEventType,
+} from "./eventMessages.ts";
 
 describe("readEventType / readEventSessionID", () => {
   it("reads type and session id from data envelopes", () => {
@@ -94,6 +99,86 @@ describe("extractMessageFromEvent", () => {
     expect(extractMessageFromEvent({ type: "message.created", data: {} })).toBeNull();
     expect(
       extractMessageFromEvent({ type: "message.created", data: { sessionID: "s" } }),
+    ).toBeNull();
+  });
+
+  it("never mis-parses content.updated into a note (returns null here)", () => {
+    // Regression: `content.updated` carries `messageID`, which used to lure the
+    // generic extractor into a bogus "Unbekannter Inhalt" note that was then
+    // persisted as final. It must be handled exclusively via
+    // extractContentUpdateMessage, never here.
+    const event = {
+      type: "session.message.content.updated",
+      created: 500,
+      data: {
+        sessionID: "s",
+        messageID: "a-1",
+        content: [{ type: "text", text: "Hallo" }],
+      },
+    };
+    expect(extractMessageFromEvent(event)).toBeNull();
+  });
+});
+
+describe("extractContentUpdateMessage", () => {
+  it("maps data.content through the assistant builder, keyed by messageID", () => {
+    const event = {
+      type: "session.message.content.updated",
+      created: 777,
+      data: {
+        sessionID: "session-9",
+        messageID: "asst-1",
+        content: [
+          { type: "text", text: "Erste " },
+          { type: "reasoning", text: "nachgedacht" },
+          { type: "tool", id: "t1", name: "read", state: { status: "running", input: { filePath: "/a.ts" } } },
+        ],
+      },
+    };
+    expect(extractContentUpdateMessage(event)).toMatchObject({
+      sessionID: "session-9",
+      messageID: "asst-1",
+      role: "assistant",
+      created: 777,
+      parts: [
+        { kind: "text", text: "Erste " },
+        { kind: "reasoning", text: "nachgedacht" },
+        { kind: "tool", name: "read", status: "running" },
+      ],
+    });
+  });
+
+  it("grows the same assistant message across repeated snapshots", () => {
+    const first = extractContentUpdateMessage({
+      type: "session.message.content.updated",
+      created: 10,
+      data: { sessionID: "s", messageID: "a", content: [{ type: "text", text: "Hallo" }] },
+    });
+    const second = extractContentUpdateMessage({
+      type: "session.message.content.updated",
+      created: 20,
+      data: { sessionID: "s", messageID: "a", content: [{ type: "text", text: "Hallo Welt" }] },
+    });
+    expect(first?.messageID).toBe("a");
+    expect(second?.messageID).toBe("a");
+    expect(first?.text).toBe("Hallo");
+    expect(second?.text).toBe("Hallo Welt");
+  });
+
+  it("returns null for non-content-update events, missing ids and empty content", () => {
+    expect(extractContentUpdateMessage({ type: "message.updated", data: { sessionID: "s" } })).toBeNull();
+    expect(extractContentUpdateMessage(null)).toBeNull();
+    expect(
+      extractContentUpdateMessage({
+        type: "session.message.content.updated",
+        data: { messageID: "a", content: [{ type: "text", text: "x" }] },
+      }),
+    ).toBeNull();
+    expect(
+      extractContentUpdateMessage({
+        type: "session.message.content.updated",
+        data: { sessionID: "s", messageID: "a", content: [] },
+      }),
     ).toBeNull();
   });
 });
