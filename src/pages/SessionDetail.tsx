@@ -13,6 +13,7 @@ import {
   commitSessionRevert,
   compactSession,
   exportSession,
+  extractSessionRename,
   extractSessionRows,
   forkSession,
   getSessionDiff,
@@ -27,6 +28,7 @@ import {
   listSessionInbox,
   listSessions,
   readSessionTerminal,
+  renameSession,
   updateSessionInbox,
   modelOptionValue,
   parseFormAnswerText,
@@ -36,6 +38,7 @@ import {
   replySessionForm,
   runSessionCommand,
   sendPrompt,
+  sessionTitle,
   stageSessionRevert,
   switchSessionAgent,
   switchSessionModel,
@@ -55,8 +58,9 @@ import {
   type TokenUsage,
 } from "../lib/opencode.ts";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
+import { subscribeServerEvents } from "../lib/eventHub.ts";
 import { useServers } from "../state/servers.tsx";
-import { useLayoutMode } from "../state/layoutMode.tsx";
+import { useToast } from "../state/toast.tsx";
 import { useSessionTabs } from "../state/sessionTabs.tsx";
 
 function countLabel(total: number, source: SessionMessageSource): string {
@@ -71,6 +75,7 @@ export default function SessionDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { servers, selectedServer } = useServers();
+  const { notify } = useToast();
   const { ensureTab, retitleTab, tabs } = useSessionTabs();
   const serverId = searchParams.get("server") ?? selectedServer?.id ?? null;
   const server = servers.find((s) => s.id === serverId) ?? selectedServer;
@@ -104,6 +109,19 @@ export default function SessionDetail() {
     };
   }, [server, id, retitleTab]);
 
+  // Live-sync: `session.renamed` events retitle the open tab immediately
+  // (not just on mount via the session list).
+  useEffect(() => {
+    if (server === null || server === undefined || id === undefined) return;
+    const activeServer: ServerConfig = server;
+    const activeSession: string = id;
+    return subscribeServerEvents(activeServer, (event: unknown) => {
+      const renamed = extractSessionRename(event);
+      if (renamed === null || renamed.sessionID !== activeSession) return;
+      retitleTab(activeServer.id, activeSession, sessionTitle(renamed.title, activeSession));
+    });
+  }, [server, id, retitleTab]);
+
   const {
     visible,
     total,
@@ -120,6 +138,9 @@ export default function SessionDetail() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  const [renameText, setRenameText] = useState("");
+  const [renameBusy, setRenameBusy] = useState(false);
   const [attachments, setAttachments] = useState<string[]>([]);
   const [attachmentInput, setAttachmentInput] = useState("");
   const [confirm, setConfirm] = useState<"interrupt" | "delete" | "fork" | "compact" | "revert-commit" | null>(null);
@@ -143,19 +164,25 @@ export default function SessionDetail() {
   const [commandBusy, setCommandBusy] = useState(false);
   const [commandError, setCommandError] = useState<string | null>(null);
   const [commandNotice, setCommandNotice] = useState<string | null>(null);
-  // Secondary panels below the chat start collapsed (chat-first layout).
-  const [statsOpen, setStatsOpen] = useState(false);
-  const [revertOpen, setRevertOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
-  const [commandOpen, setCommandOpen] = useState(false);
+  // Secondary panels live one tap away behind a single "Mehr…" disclosure
+  // (chat + composer dominate the view); exactly one tab shows at a time.
+  type MoreTab =
+    | "stats"
+    | "diff"
+    | "revert"
+    | "share"
+    | "command"
+    | "inbox"
+    | "forms"
+    | "terminal";
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [moreTab, setMoreTab] = useState<MoreTab>("stats");
   // Parity batch 3: session inbox (queued entries) and pending forms.
-  const [inboxOpen, setInboxOpen] = useState(false);
   const [inboxRows, setInboxRows] = useState<SessionInboxRow[] | null>(null);
   const [inboxLoading, setInboxLoading] = useState(false);
   const [inboxError, setInboxError] = useState<string | null>(null);
   const [cancellingInbox, setCancellingInbox] = useState<string | null>(null);
   const [updatingInbox, setUpdatingInbox] = useState<string | null>(null);
-  const [formsOpen, setFormsOpen] = useState(false);
   const [formRows, setFormRows] = useState<SessionFormRow[] | null>(null);
   const [formsLoading, setFormsLoading] = useState(false);
   const [formsError, setFormsError] = useState<string | null>(null);
@@ -163,7 +190,6 @@ export default function SessionDetail() {
   const [formAnswerText, setFormAnswerText] = useState("");
   const [formBusy, setFormBusy] = useState(false);
   // Parity batch 4: read-only session terminal (no emulator, no input).
-  const [terminalOpen, setTerminalOpen] = useState(false);
   const [terminalScreen, setTerminalScreen] = useState<SessionTerminalScreen | null>(null);
   const [terminalLoaded, setTerminalLoaded] = useState(false);
   const [terminalLoading, setTerminalLoading] = useState(false);
@@ -171,7 +197,6 @@ export default function SessionDetail() {
   const [sessionTokens, setSessionTokens] = useState<TokenUsage | null>(null);
   const [sessionCost, setSessionCost] = useState<number | null>(null);
   const [globalStats, setGlobalStats] = useState<SessionStatsSummary | null>(null);
-  const [diffOpen, setDiffOpen] = useState(false);
   const [diffRows, setDiffRows] = useState<SessionDiffRow[] | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
   const [diffError, setDiffError] = useState<string | null>(null);
@@ -241,10 +266,8 @@ export default function SessionDetail() {
     preserveOffsetRef.current = null;
     nearBottomRef.current = true;
     setShowJumpToNewest(false);
-    setStatsOpen(false);
-    setRevertOpen(false);
-    setShareOpen(false);
-    setCommandOpen(false);
+    setMoreOpen(false);
+    setMoreTab("stats");
     setStagedRevert(null);
     setRevertMessageID("");
     setRevertError(null);
@@ -252,19 +275,18 @@ export default function SessionDetail() {
     setExportText(null);
     setShareError(null);
     setImportText("");
+    setRenaming(false);
+    setRenameText("");
     setCommandName("");
     setCommandText("");
     setCommandError(null);
     setCommandNotice(null);
-    setInboxOpen(false);
     setInboxRows(null);
     setInboxError(null);
-    setFormsOpen(false);
     setFormRows(null);
     setFormsError(null);
     setSelectedFormID("");
     setFormAnswerText("");
-    setTerminalOpen(false);
     setTerminalScreen(null);
     setTerminalLoaded(false);
     setTerminalError(null);
@@ -374,11 +396,11 @@ export default function SessionDetail() {
   // Lingui-safe hoists for the staged revert (no member access in messages).
   const stagedMessageID = stagedRevert?.messageID ?? "";
   const stagedFileCount = stagedRevert?.fileCount ?? null;
-  const { split } = useLayoutMode();
   // Heading shows the resolved session title once known (the tab state
   // already carries the retitled label); the raw id stays visible below.
+  // `title || id` everywhere — never the bare "Session" placeholder.
   const tabTitle = tabs.find((entry) => entry.serverID === server?.id && entry.sessionID === id)?.title;
-  const headingTitle = tabTitle !== undefined && tabTitle !== "" && tabTitle !== id ? tabTitle : null;
+  const displayTitle = id === undefined ? null : sessionTitle(tabTitle, id);
 
   function addAttachment() {
     const path = attachmentInput.trim().replace(/^\/+/, "");
@@ -457,6 +479,27 @@ export default function SessionDetail() {
     setCurrentModelValue(value);
   }
 
+  async function handleRename() {
+    if (server === null || server === undefined || id === undefined) return;
+    const next = renameText.trim();
+    if (next === "" || renameBusy) return;
+    const activeServer: ServerConfig = server;
+    const activeSession: string = id;
+    const previous = sessionTitle(tabTitle, activeSession);
+    // Optimistic update: the tab and heading switch immediately; a failed
+    // PATCH rolls back and raises a toast (never a blocking dialog).
+    retitleTab(activeServer.id, activeSession, sessionTitle(next, activeSession));
+    setRenaming(false);
+    setRenameBusy(true);
+    const result = await renameSession(activeServer, activeSession, next);
+    setRenameBusy(false);
+    if (result.error !== null) {
+      retitleTab(activeServer.id, activeSession, previous);
+      const renameError = result.error;
+      notify(t`Umbenennen fehlgeschlagen: ${renameError}`, "error");
+    }
+  }
+
   async function handleConfirm() {
     if (server === null || server === undefined || id === undefined || confirm === null) return;
     const activeServer: ServerConfig = server;
@@ -515,12 +558,7 @@ export default function SessionDetail() {
     setConfirm(null);
   }
 
-  async function toggleDiff() {
-    if (diffOpen) {
-      setDiffOpen(false);
-      return;
-    }
-    setDiffOpen(true);
+  async function ensureDiffLoaded() {
     if (diffRows !== null || diffLoading) return;
     if (server === null || server === undefined || id === undefined) return;
     setDiffLoading(true);
@@ -650,13 +688,13 @@ export default function SessionDetail() {
     setInboxRows(result.data);
   }
 
-  function toggleInbox() {
-    if (inboxOpen) {
-      setInboxOpen(false);
-      return;
-    }
-    setInboxOpen(true);
-    if (inboxRows === null && !inboxLoading) void loadInbox();
+  function selectMoreTab(tab: MoreTab) {
+    setMoreTab(tab);
+    // Lazy-load the tab's data on first selection (previously on toggle).
+    if (tab === "diff") void ensureDiffLoaded();
+    if (tab === "inbox" && inboxRows === null && !inboxLoading) void loadInbox();
+    if (tab === "forms" && formRows === null && !formsLoading) void loadForms();
+    if (tab === "terminal" && !terminalLoaded && !terminalLoading) void loadTerminal();
   }
 
   async function handleUpdateInbox(inboxID: string, delivery: SessionInboxDelivery) {
@@ -706,15 +744,6 @@ export default function SessionDetail() {
       if (result.data?.some((row) => row.id === current) === true) return current;
       return result.data?.[0]?.id ?? "";
     });
-  }
-
-  function toggleForms() {
-    if (formsOpen) {
-      setFormsOpen(false);
-      return;
-    }
-    setFormsOpen(true);
-    if (formRows === null && !formsLoading) void loadForms();
   }
 
   async function handleReplyForm() {
@@ -773,23 +802,26 @@ export default function SessionDetail() {
     setTerminalLoaded(true);
   }
 
-  function toggleTerminal() {
-    if (terminalOpen) {
-      setTerminalOpen(false);
-      return;
-    }
-    setTerminalOpen(true);
-    if (!terminalLoaded && !terminalLoading) void loadTerminal();
-  }
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-2xl font-bold flex-1">
-          {headingTitle === null ? <Trans>Session</Trans> : headingTitle}
+        <h1 className="text-2xl font-bold flex-1 min-w-48 break-all">
+          {displayTitle === null ? <Trans>Session</Trans> : displayTitle}
         </h1>
         {server !== null && server !== undefined && id !== undefined && (
           <>
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              title={t`Session umbenennen`}
+              aria-label={t`Session umbenennen`}
+              onClick={() => {
+                setRenameText(displayTitle ?? id);
+                setRenaming((open) => !open);
+              }}
+            >
+              <Icon name="edit" /> <Trans>Umbenennen</Trans>
+            </button>
             <button
               type="button"
               className="btn btn-sm btn-ghost"
@@ -844,6 +876,44 @@ export default function SessionDetail() {
         )}
       </div>
       <p className="text-sm opacity-70 font-mono break-all">{id}</p>
+      {renaming && server !== null && server !== undefined && id !== undefined && (
+        <form
+          className="flex gap-2"
+          data-testid="session-rename-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleRename();
+          }}
+        >
+          <input
+            className="input input-bordered input-sm flex-1"
+            value={renameText}
+            onChange={(e) => setRenameText(e.target.value)}
+            aria-label={t`Neuer Session-Titel`}
+            placeholder={t`Titel eingeben …`}
+            disabled={renameBusy}
+            data-testid="session-rename-input"
+          />
+          <button
+            type="submit"
+            className="btn btn-sm btn-primary"
+            disabled={renameBusy || renameText.trim() === ""}
+            aria-label={t`Titel speichern`}
+            data-testid="session-rename-save"
+          >
+            <Trans>Speichern</Trans>
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            disabled={renameBusy}
+            aria-label={t`Umbenennen abbrechen`}
+            onClick={() => setRenaming(false)}
+          >
+            <Trans>Abbrechen</Trans>
+          </button>
+        </form>
+      )}
       {server === null || server === undefined ? (
         <div className="alert alert-info">
           <span>
@@ -983,7 +1053,7 @@ export default function SessionDetail() {
           {showJumpToNewest && (
             <button
               type="button"
-              className="btn btn-primary btn-sm fixed bottom-24 right-4 z-10 shadow-lg"
+              className="btn btn-primary btn-sm fixed bottom-44 left-1/2 z-10 -translate-x-1/2 shadow-lg"
               onClick={scrollToBottom}
               aria-label={t`Zu neuesten springen`}
               data-testid="jump-to-newest"
@@ -994,106 +1064,206 @@ export default function SessionDetail() {
           {/* Chat-first: attachments + sticky composer directly below the
               conversation; the secondary panels follow as a collapsed
               accordion and never push the composer down. */}
-          {attachments.length > 0 && (
-            <ul className="flex flex-wrap gap-1" data-testid="prompt-attachments" aria-label={t`Angehängte Dateien`}>
-              {attachments.map((path) => (
-                <li
-                  key={path}
-                  data-testid={`prompt-attachment-${path}`}
-                  className="badge badge-primary gap-1 py-3"
-                >
-                  <Icon name="file" />
-                  <span className="font-mono max-w-48 truncate" title={path}>
-                    {path}
-                  </span>
+          {/* Chat-first: single rounded composer below the conversation (attach
+              row + message row + round send button); the secondary panels
+              follow as a collapsed accordion and never push it down. */}
+          <div
+            className="sticky bottom-4 z-10 rounded-2xl border border-base-300 bg-base-100 p-2 shadow-sm"
+            data-testid="session-composer"
+          >
+            {attachments.length > 0 && (
+              <ul
+                className="flex flex-wrap gap-1 pb-2"
+                data-testid="prompt-attachments"
+                aria-label={t`Angehängte Dateien`}
+              >
+                {attachments.map((path) => (
+                  <li
+                    key={path}
+                    data-testid={`prompt-attachment-${path}`}
+                    className="badge badge-primary gap-1 py-3"
+                  >
+                    <Icon name="file" />
+                    <span className="font-mono max-w-48 truncate" title={path}>
+                      {path}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-xs btn-ghost"
+                      aria-label={t`Anhang ${path} entfernen`}
+                      onClick={() => removeAttachment(path)}
+                    >
+                      <Icon name="close" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <form
+              className="flex items-center gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                addAttachment();
+              }}
+            >
+              <input
+                className="input input-bordered input-sm flex-1 font-mono"
+                placeholder={t`Dateipfad anhängen, z. B. src/app.ts`}
+                value={attachmentInput}
+                onChange={(e) => setAttachmentInput(e.target.value)}
+                aria-label={t`Datei an den Prompt anhängen`}
+                disabled={sending}
+                data-testid="prompt-attachment-input"
+              />
+              <button
+                type="submit"
+                className="btn btn-sm btn-ghost shrink-0"
+                disabled={sending || attachmentInput.trim() === ""}
+                aria-label={t`Datei anhängen`}
+                title={t`Datei anhängen`}
+              >
+                <Icon name="plus" /> <Trans>Anhängen</Trans>
+              </button>
+            </form>
+            <div className="divider my-1" aria-hidden="true" />
+            <form
+              className="flex items-center gap-2"
+              onSubmit={(e) => void handleSend(e)}
+            >
+              <input
+                className="input input-ghost flex-1 focus:bg-transparent"
+                placeholder={t`Beliebige Frage stellen, / für Befehle, @ für Kontext…`}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                aria-label={t`Nachricht schreiben`}
+                disabled={sending}
+              />
+              <button
+                className="btn btn-circle btn-primary shrink-0"
+                type="submit"
+                disabled={sending || draft.trim() === ""}
+                aria-label={t`Nachricht senden`}
+                title={t`Nachricht senden`}
+              >
+                <Icon name="send" />
+              </button>
+            </form>
+          </div>
+          {/* Secondary panels behind one "Mehr…" disclosure: chat + composer
+              dominate, everything else is one tap away (one tab at a time). */}
+          <div data-testid="session-panels">
+            <section className="card bg-base-200 shadow" data-testid="session-more">
+              <div className="card-body py-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="card-title text-base flex-1">
+                    <Trans>Mehr…</Trans>
+                  </h2>
                   <button
                     type="button"
-                    className="btn btn-xs btn-ghost"
-                    aria-label={t`Anhang ${path} entfernen`}
-                    onClick={() => removeAttachment(path)}
+                    className="btn btn-sm btn-ghost"
+                    aria-expanded={moreOpen}
+                    aria-label={moreOpen ? t`Werkzeuge ausblenden` : t`Mehr anzeigen`}
+                    data-testid="session-more-toggle"
+                    onClick={() => setMoreOpen((open) => !open)}
                   >
-                    <Icon name="close" />
+                    {moreOpen ? <Trans>Ausblenden</Trans> : <Trans>Anzeigen</Trans>}
                   </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <form
-            className="flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              addAttachment();
-            }}
-          >
-            <input
-              className="input input-bordered input-sm flex-1 font-mono"
-              placeholder={t`Dateipfad anhängen, z. B. src/app.ts`}
-              value={attachmentInput}
-              onChange={(e) => setAttachmentInput(e.target.value)}
-              aria-label={t`Datei an den Prompt anhängen`}
-              disabled={sending}
-              data-testid="prompt-attachment-input"
-            />
-            <button
-              type="submit"
-              className="btn btn-sm btn-ghost"
-              disabled={sending || attachmentInput.trim() === ""}
-              aria-label={t`Datei anhängen`}
-            >
-              <Icon name="plus" /> <Trans>Anhängen</Trans>
-            </button>
-          </form>
-          <form
-            className="flex gap-2 sticky bottom-4 bg-base-100 py-2 z-10"
-            data-testid="session-composer"
-            onSubmit={(e) => void handleSend(e)}
-          >
-            <input
-              className="input input-bordered flex-1"
-              placeholder={t`Nachricht schreiben`}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              aria-label={t`Nachricht schreiben`}
-              disabled={sending}
-            />
-            <button
-              className="btn btn-primary"
-              type="submit"
-              disabled={sending || draft.trim() === ""}
-              aria-label={t`Nachricht senden`}
-            >
-              <Icon name="send" /> {sending ? <Trans>Sendet …</Trans> : <Trans>Senden</Trans>}
-            </button>
-          </form>
-          {/* Secondary panels: stacked on narrow screens, tiled 2–3 across
-              on wide screens in split mode. The conversation above (messages
-              + composer) always keeps the full width. */}
-          <div
-            className={
-              split
-                ? "grid gap-4 lg:grid-cols-2 lg:items-start xl:grid-cols-3"
-                : "flex flex-col gap-4"
-            }
-            data-testid="session-panels"
-          >
-          <section className="card bg-base-200 shadow" data-testid="session-stats">
-            <div className="card-body py-3">
-              <div className="flex items-center gap-2">
-                <h2 className="card-title text-base flex-1">
-                  <Trans>Verbrauch dieser Session</Trans>
-                </h2>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  aria-expanded={statsOpen}
-                  aria-label={statsOpen ? t`Verbrauch ausblenden` : t`Verbrauch anzeigen`}
-                  onClick={() => setStatsOpen((open) => !open)}
-                >
-                  {statsOpen ? <Trans>Ausblenden</Trans> : <Trans>Anzeigen</Trans>}
-                </button>
-              </div>
-              {statsOpen && (
-                <>
+                </div>
+                {moreOpen && (
+                  <>
+                    <div
+                      className="tabs tabs-boxed w-fit max-w-full overflow-x-auto"
+                      role="tablist"
+                      aria-label={t`Werkzeuge`}
+                    >
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={moreTab === "stats"}
+                        data-testid="session-more-tab-stats"
+                        className={moreTab === "stats" ? "tab tab-active" : "tab"}
+                        onClick={() => selectMoreTab("stats")}
+                      >
+                        <Trans>Verbrauch</Trans>
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={moreTab === "diff"}
+                        data-testid="session-more-tab-diff"
+                        className={moreTab === "diff" ? "tab tab-active" : "tab"}
+                        disabled={!canDiff}
+                        onClick={() => selectMoreTab("diff")}
+                      >
+                        <Trans>Änderungen</Trans>
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={moreTab === "revert"}
+                        data-testid="session-more-tab-revert"
+                        className={moreTab === "revert" ? "tab tab-active" : "tab"}
+                        onClick={() => selectMoreTab("revert")}
+                      >
+                        <Trans>Revert</Trans>
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={moreTab === "share"}
+                        data-testid="session-more-tab-share"
+                        className={moreTab === "share" ? "tab tab-active" : "tab"}
+                        onClick={() => selectMoreTab("share")}
+                      >
+                        <Trans>Teilen</Trans>
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={moreTab === "command"}
+                        data-testid="session-more-tab-command"
+                        className={moreTab === "command" ? "tab tab-active" : "tab"}
+                        onClick={() => selectMoreTab("command")}
+                      >
+                        <Trans>Befehl</Trans>
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={moreTab === "inbox"}
+                        data-testid="session-more-tab-inbox"
+                        className={moreTab === "inbox" ? "tab tab-active" : "tab"}
+                        disabled={!canInbox}
+                        onClick={() => selectMoreTab("inbox")}
+                      >
+                        <Trans>Eingangsbox</Trans>
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={moreTab === "forms"}
+                        data-testid="session-more-tab-forms"
+                        className={moreTab === "forms" ? "tab tab-active" : "tab"}
+                        disabled={!canFormList}
+                        onClick={() => selectMoreTab("forms")}
+                      >
+                        <Trans>Formulare</Trans>
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={moreTab === "terminal"}
+                        data-testid="session-more-tab-terminal"
+                        className={moreTab === "terminal" ? "tab tab-active" : "tab"}
+                        disabled={!canTerminal}
+                        onClick={() => selectMoreTab("terminal")}
+                      >
+                        <Trans>Terminal</Trans>
+                      </button>
+                    </div>
+                    <div role="tabpanel" data-testid={`session-more-panel-${moreTab}`}>
+                      {moreTab === "stats" && (
+                        <section aria-label={t`Verbrauch dieser Session`} data-testid="session-stats">
               {sessionTokens === null && sessionCost === null ? (
                 <p className="opacity-70 text-sm">
                   <Trans>Noch keine Verbrauchsdaten vorhanden.</Trans>
@@ -1154,29 +1324,10 @@ export default function SessionDetail() {
                   )}
                 </p>
               )}
-                </>
-              )}
-            </div>
-          </section>
-          <section className="card bg-base-200 shadow" data-testid="session-diff-section">
-            <div className="card-body py-3">
-              <div className="flex items-center gap-2">
-                <h2 className="card-title text-base flex-1">
-                  <Trans>Dateiänderungen</Trans>
-                </h2>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  disabled={!canDiff}
-                  aria-expanded={diffOpen}
-                  aria-label={diffOpen ? t`Diffs ausblenden` : t`Diffs anzeigen`}
-                  onClick={() => void toggleDiff()}
-                >
-                  {diffOpen ? <Trans>Ausblenden</Trans> : <Trans>Diffs anzeigen</Trans>}
-                </button>
-              </div>
-              {diffOpen && (
-                <>
+                        </section>
+                      )}
+                      {moreTab === "diff" && (
+                        <section aria-label={t`Dateiänderungen`} data-testid="session-diff-section">
                   {diffLoading && (
                     <span className="loading loading-spinner loading-sm" aria-label={t`Lädt`} />
                   )}
@@ -1213,28 +1364,13 @@ export default function SessionDetail() {
                       ))}
                     </ul>
                   )}
-                </>
-              )}
-            </div>
-          </section>
-          <section className="card bg-base-200 shadow" data-testid="session-revert-section">
-            <div className="card-body py-3">
-              <div className="flex items-center gap-2">
-                <h2 className="card-title text-base flex-1">
-                  <Trans>Zurücksetzen (Revert)</Trans>
-                </h2>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  aria-expanded={revertOpen}
-                  aria-label={revertOpen ? t`Revert ausblenden` : t`Revert anzeigen`}
-                  onClick={() => setRevertOpen((open) => !open)}
-                >
-                  {revertOpen ? <Trans>Ausblenden</Trans> : <Trans>Anzeigen</Trans>}
-                </button>
-              </div>
-              {revertOpen && (
-                <>
+                        </section>
+                      )}
+                      {moreTab === "revert" && (
+                        <section
+                          aria-label={t`Zurücksetzen (Revert)`}
+                          data-testid="session-revert-section"
+                        >
               <p className="text-xs opacity-70">
                 <Trans>
                   Erst staging starten (ab einer Nachricht), dann übernehmen oder verwerfen. Das
@@ -1321,28 +1457,13 @@ export default function SessionDetail() {
                   </button>
                 </div>
               )}
-                </>
-              )}
-            </div>
-          </section>
-          <section className="card bg-base-200 shadow" data-testid="session-share-section">
-            <div className="card-body py-3">
-              <div className="flex items-center gap-2">
-                <h2 className="card-title text-base flex-1">
-                  <Trans>Teilen (Export / Import)</Trans>
-                </h2>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  aria-expanded={shareOpen}
-                  aria-label={shareOpen ? t`Teilen ausblenden` : t`Teilen anzeigen`}
-                  onClick={() => setShareOpen((open) => !open)}
-                >
-                  {shareOpen ? <Trans>Ausblenden</Trans> : <Trans>Anzeigen</Trans>}
-                </button>
-              </div>
-              {shareOpen && (
-                <>
+                        </section>
+                      )}
+                      {moreTab === "share" && (
+                        <section
+                          aria-label={t`Teilen (Export / Import)`}
+                          data-testid="session-share-section"
+                        >
               <p className="text-xs opacity-70">
                 <Trans>
                   Export als JSON teilen, Import als neue Session übernehmen.
@@ -1417,28 +1538,13 @@ export default function SessionDetail() {
               >
                 <Trans>Importieren</Trans>
               </button>
-                </>
-              )}
-            </div>
-          </section>
-          <section className="card bg-base-200 shadow" data-testid="session-command-section">
-            <div className="card-body py-3">
-              <div className="flex items-center gap-2">
-                <h2 className="card-title text-base flex-1">
-                  <Trans>Befehl ausführen</Trans>
-                </h2>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  aria-expanded={commandOpen}
-                  aria-label={commandOpen ? t`Befehle ausblenden` : t`Befehle anzeigen`}
-                  onClick={() => setCommandOpen((open) => !open)}
-                >
-                  {commandOpen ? <Trans>Ausblenden</Trans> : <Trans>Anzeigen</Trans>}
-                </button>
-              </div>
-              {commandOpen && (
-                <>
+                        </section>
+                      )}
+                      {moreTab === "command" && (
+                        <section
+                          aria-label={t`Befehl ausführen`}
+                          data-testid="session-command-section"
+                        >
               {commandError !== null && (
                 <div className="alert alert-error">
                   <span>{commandError}</span>
@@ -1487,36 +1593,17 @@ export default function SessionDetail() {
                   <Trans>Ausführen</Trans>
                 </button>
               </div>
-                </>
-              )}
-            </div>
-          </section>
-          <section className="card bg-base-200 shadow" data-testid="session-inbox-section">
-            <div className="card-body py-3">
-              <div className="flex items-center gap-2">
-                <h2 className="card-title text-base flex-1">
-                  <Trans>Eingangsbox</Trans>
-                </h2>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  disabled={!canInbox}
-                  aria-expanded={inboxOpen}
-                  aria-label={inboxOpen ? t`Eingangsbox ausblenden` : t`Eingangsbox anzeigen`}
-                  onClick={toggleInbox}
-                >
-                  {inboxOpen ? <Trans>Ausblenden</Trans> : <Trans>Anzeigen</Trans>}
-                </button>
-              </div>
-              <p className="text-xs opacity-70">
-                <Trans>
-                  Einträge in der Warteschlange dieser Session. Beantwortet wird über Formulare
-                  und Berechtigungen – hier kann die Zustellung umgestellt (sofort oder warten)
-                  oder abgebrochen werden.
-                </Trans>
-              </p>
-              {inboxOpen && (
-                <>
+                        </section>
+                      )}
+                      {moreTab === "inbox" && (
+                        <section aria-label={t`Eingangsbox`} data-testid="session-inbox-section">
+                          <p className="text-xs opacity-70">
+                            <Trans>
+                              Einträge in der Warteschlange dieser Session. Beantwortet wird über
+                              Formulare und Berechtigungen – hier kann die Zustellung umgestellt
+                              (sofort oder warten) oder abgebrochen werden.
+                            </Trans>
+                          </p>
                   {inboxLoading && (
                     <span className="loading loading-spinner loading-sm" aria-label={t`Lädt`} />
                   )}
@@ -1582,35 +1669,16 @@ export default function SessionDetail() {
                       })}
                     </ul>
                   )}
-                </>
-              )}
-            </div>
-          </section>
-          <section className="card bg-base-200 shadow" data-testid="session-forms-section">
-            <div className="card-body py-3">
-              <div className="flex items-center gap-2">
-                <h2 className="card-title text-base flex-1">
-                  <Trans>Offene Formulare</Trans>
-                </h2>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  disabled={!canFormList}
-                  aria-expanded={formsOpen}
-                  aria-label={formsOpen ? t`Formulare ausblenden` : t`Formulare anzeigen`}
-                  onClick={toggleForms}
-                >
-                  {formsOpen ? <Trans>Ausblenden</Trans> : <Trans>Anzeigen</Trans>}
-                </button>
-              </div>
-              <p className="text-xs opacity-70">
-                <Trans>
-                  Fragen des Servers an dich. Die Antwort ist ein JSON-Objekt mit einem Eintrag
-                  pro Feld (Text, Zahl, Ja/Nein oder Textliste).
-                </Trans>
-              </p>
-              {formsOpen && (
-                <>
+                        </section>
+                      )}
+                      {moreTab === "forms" && (
+                        <section aria-label={t`Offene Formulare`} data-testid="session-forms-section">
+                          <p className="text-xs opacity-70">
+                            <Trans>
+                              Fragen des Servers an dich. Die Antwort ist ein JSON-Objekt mit einem
+                              Eintrag pro Feld (Text, Zahl, Ja/Nein oder Textliste).
+                            </Trans>
+                          </p>
                   {formsLoading && (
                     <span className="loading loading-spinner loading-sm" aria-label={t`Lädt`} />
                   )}
@@ -1685,47 +1753,30 @@ export default function SessionDetail() {
                       </div>
                     </div>
                   )}
-                </>
-              )}
-            </div>
-          </section>
-          <section className="card bg-base-200 shadow" data-testid="session-terminal-section">
-            <div className="card-body py-3">
-              <div className="flex items-center gap-2">
-                <h2 className="card-title text-base flex-1">
-                  <Trans>Terminal</Trans>
-                </h2>
-                {terminalOpen && terminalLoaded && (
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-ghost"
-                    disabled={!canTerminal || terminalLoading}
-                    aria-label={t`Terminal-Ausgabe aktualisieren`}
-                    data-testid="session-terminal-refresh"
-                    onClick={() => void loadTerminal()}
-                  >
-                    <Trans>Aktualisieren</Trans>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost"
-                  disabled={!canTerminal}
-                  aria-expanded={terminalOpen}
-                  aria-label={terminalOpen ? t`Terminal ausblenden` : t`Terminal anzeigen`}
-                  onClick={toggleTerminal}
-                >
-                  {terminalOpen ? <Trans>Ausblenden</Trans> : <Trans>Anzeigen</Trans>}
-                </button>
-              </div>
-              <p className="text-xs opacity-70">
-                <Trans>
-                  Nur lesend: Bildschirminhalt des Session-Terminals als Text. Ohne Emulator,
-                  ohne Eingabe.
-                </Trans>
-              </p>
-              {terminalOpen && (
-                <>
+                        </section>
+                      )}
+                      {moreTab === "terminal" && (
+                        <section aria-label={t`Terminal`} data-testid="session-terminal-section">
+                          {terminalLoaded && (
+                            <div className="flex justify-end">
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-ghost"
+                                disabled={!canTerminal || terminalLoading}
+                                aria-label={t`Terminal-Ausgabe aktualisieren`}
+                                data-testid="session-terminal-refresh"
+                                onClick={() => void loadTerminal()}
+                              >
+                                <Trans>Aktualisieren</Trans>
+                              </button>
+                            </div>
+                          )}
+                          <p className="text-xs opacity-70">
+                            <Trans>
+                              Nur lesend: Bildschirminhalt des Session-Terminals als Text. Ohne
+                              Emulator, ohne Eingabe.
+                            </Trans>
+                          </p>
                   {terminalLoading && (
                     <span className="loading loading-spinner loading-sm" aria-label={t`Lädt`} />
                   )}
@@ -1754,10 +1805,13 @@ export default function SessionDetail() {
                       </pre>
                     </>
                   )}
-                </>
-              )}
-            </div>
-          </section>
+                        </section>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </section>
           </div>
         </>
       )}

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import CopyButton from "./CopyButton.tsx";
 
 /**
  * Minimal Markdown renderer without extra dependencies (keeps the bundle
@@ -116,10 +117,18 @@ export default function Markdown({ text }: { text: string }) {
       {blocks.map((block, blockIndex) => {
         const key = `md-${blockIndex}`;
         if (block.kind === "code") {
+          const code = block.lines.join("\n");
           return (
-            <pre key={key} className="text-xs bg-base-300 rounded p-2 overflow-auto my-1">
-              <code>{block.lines.join("\n")}</code>
-            </pre>
+            <div key={key} className="relative my-1" data-testid={`markdown-code-${blockIndex}`}>
+              <CopyButton
+                text={code}
+                testid={`markdown-copy-${blockIndex}`}
+                className="absolute right-1 top-1 z-10 bg-base-300/80"
+              />
+              <pre className="text-xs bg-base-300 rounded p-2 pr-10 overflow-auto my-0 max-h-72">
+                <code>{code}</code>
+              </pre>
+            </div>
           );
         }
         if (block.kind === "heading") {

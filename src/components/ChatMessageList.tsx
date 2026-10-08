@@ -1,4 +1,5 @@
 import { Trans } from "@lingui/react/macro";
+import CopyButton from "./CopyButton.tsx";
 import Icon from "./Icon.tsx";
 import Markdown from "./Markdown.tsx";
 import { formatChatTime, type ChatNoteKind, type ChatPart } from "../lib/sessionMessages.ts";
@@ -99,26 +100,54 @@ function PartView({
           <ToolStatusBadge status={part.status} />
         </summary>
         {part.detail !== null && (
-          <pre className="text-xs whitespace-pre-wrap break-words mt-1 max-h-48 overflow-auto">
-            {part.detail}
-          </pre>
+          <div className="relative mt-1">
+            <CopyButton
+              text={part.detail}
+              testid={`message-tool-copy-${messageID}-${partIndex}`}
+              className="absolute right-1 top-1 z-10"
+            />
+            <pre className="text-xs whitespace-pre-wrap break-words max-h-48 overflow-auto pr-10">
+              {part.detail}
+            </pre>
+          </div>
         )}
       </details>
     );
   }
   if (part.kind === "files") {
+    const VISIBLE_FILES = 5;
+    const head = part.files.slice(0, VISIBLE_FILES);
+    const tail = part.files.slice(VISIBLE_FILES);
+    const hiddenCount = tail.length;
     return (
-      <ul
-        className="flex flex-col gap-1 mt-1 text-sm"
+      <div
+        className="mt-1 text-sm max-h-40 overflow-auto"
         data-testid={`message-files-${messageID}-${partIndex}`}
       >
-        {part.files.map((file) => (
-          <li key={file} className="flex items-center gap-1 opacity-80">
-            <Icon name="file" />
-            <span className="font-mono break-all">{file}</span>
-          </li>
-        ))}
-      </ul>
+        <ul className="flex flex-col gap-1">
+          {head.map((file) => (
+            <li key={file} className="flex items-center gap-1 opacity-80">
+              <Icon name="file" />
+              <span className="font-mono break-all">{file}</span>
+            </li>
+          ))}
+        </ul>
+        {tail.length > 0 && (
+          <details className="mt-1">
+            <summary className="cursor-pointer text-xs opacity-70">
+              <Trans>{hiddenCount} weitere anzeigen</Trans>
+            </summary>
+            <ul className="flex flex-col gap-1 mt-1">
+              {tail.map((file) => (
+                <li key={file} className="flex items-center gap-1 opacity-80">
+                  <Icon name="file" />
+                  <span className="font-mono break-all">{file}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </div>
     );
   }
   return (
@@ -147,6 +176,14 @@ export default function ChatMessageList({ messages }: { messages: CachedMessage[
               ? [{ kind: "text", text: message.text } as const]
               : [{ kind: "unknown" } as const];
         if (isNote(message)) {
+          // Known status notes (idle, contentless compaction, …) render as a
+          // bare centered status line: stray `unknown` parts (e.g. from legacy
+          // cache rows) are dropped. Only truly foreign types (`unknown` kind)
+          // keep the "unknown content" fallback.
+          const noteParts =
+            message.noteKind !== null && message.noteKind !== "unknown"
+              ? parts.filter((part) => part.kind !== "unknown")
+              : parts;
           return (
             <li key={message.messageID} data-testid="message-item" data-role="note">
               <div
@@ -161,7 +198,7 @@ export default function ChatMessageList({ messages }: { messages: CachedMessage[
                     />
                   </strong>
                 </p>
-                {parts.map((part, partIndex) =>
+                {noteParts.map((part, partIndex) =>
                   part.kind === "text" ? (
                     <div
                       key={partIndex}
@@ -179,8 +216,8 @@ export default function ChatMessageList({ messages }: { messages: CachedMessage[
                   ),
                 )}
                 {time !== "" && (
-                  <p className="mt-1">
-                    <time dateTime={new Date(message.created).toISOString()}>{time}</time>
+                  <p className="mt-1 text-[11px] opacity-60">
+                    <time dateTime={new Date(message.created).toISOString()} className="tabular-nums">{time}</time>
                   </p>
                 )}
               </div>
@@ -188,6 +225,11 @@ export default function ChatMessageList({ messages }: { messages: CachedMessage[
           );
         }
         const own = message.role === "user";
+        const copyText = parts
+          .filter((part): part is Extract<ChatPart, { kind: "text" }> => part.kind === "text")
+          .map((part) => part.text)
+          .join("\n\n");
+        const showCopy = !own && copyText !== "";
         return (
           <li
             key={message.messageID}
@@ -195,22 +237,29 @@ export default function ChatMessageList({ messages }: { messages: CachedMessage[
             data-role={message.role}
             className={own ? "chat chat-end" : "chat chat-start"}
           >
-            <div className="chat-header text-xs opacity-70 mb-1">
+            <div className="chat-header text-[11px] opacity-60 mb-1">
               {own ? <Trans>Du</Trans> : <Trans>Assistent</Trans>}
               {time !== "" && (
                 <>
                   {" · "}
-                  <time dateTime={new Date(message.created).toISOString()}>{time}</time>
+                  <time dateTime={new Date(message.created).toISOString()} className="tabular-nums">{time}</time>
                 </>
               )}
             </div>
             <div
               className={
                 own
-                  ? "chat-bubble chat-bubble-primary break-words"
-                  : "chat-bubble chat-bubble-neutral break-words"
+                  ? "chat-bubble chat-bubble-primary break-words relative"
+                  : `chat-bubble chat-bubble-neutral break-words relative${showCopy ? " pr-8" : ""}`
               }
             >
+              {showCopy && (
+                <CopyButton
+                  text={copyText}
+                  testid={`message-copy-${message.messageID}`}
+                  className="absolute right-1 top-1 z-10"
+                />
+              )}
               {parts.map((part, partIndex) => (
                 <PartView
                   key={partIndex}

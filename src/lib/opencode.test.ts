@@ -17,6 +17,7 @@ import {
   extractSessionDiff,
   extractSessionInfo,
   extractSessionPage,
+  extractSessionRename,
   extractSessionRows,
   extractSessionStats,
   extractShellOutput,
@@ -34,8 +35,10 @@ import {
   MAX_FILE_PREVIEW_CHARS,
   modelOptionValue,
   parseModelOptionValue,
+  renameSession,
   sessionAgentKey,
   sessionProjectKey,
+  sessionTitle,
   toPromptFileUri,
   UNASSIGNED_PROJECT_KEY,
   type ServerConfig,
@@ -931,5 +934,94 @@ describe("parity batch 2 direct-fetch fallbacks", () => {
         headers: expect.objectContaining({ accept: "application/json" }),
       }),
     );
+  });
+});
+
+describe("sessionTitle", () => {
+  it("keeps real titles and falls back to the id when empty", () => {
+    expect(sessionTitle("Alpha bauen", "ses-1")).toBe("Alpha bauen");
+    expect(sessionTitle(null, "ses-1")).toBe("ses-1");
+    expect(sessionTitle("   ", "ses-1")).toBe("ses-1");
+  });
+
+  it("strips generated placeholders", () => {
+    expect(sessionTitle("New session - 2026-10-08T12:00:00.000Z", "ses-1")).toBe("ses-1");
+    expect(sessionTitle("New session", "ses-1")).toBe("ses-1");
+    expect(sessionTitle("Child session - abc123", "ses-1")).toBe("ses-1");
+    expect(sessionTitle("Newest session notes", "ses-1")).toBe("Newest session notes");
+  });
+});
+
+describe("extractSessionRows title hygiene", () => {
+  it("labels default titles with the session id", () => {
+    const rows = extractSessionRows({
+      data: [
+        { id: "s1", title: "New session - 2026-10-08T12:00:00.000Z" },
+        { id: "s2", title: "Echter Titel" },
+        { id: "s3" },
+      ],
+    });
+    expect(rows.map((row) => row.label)).toEqual(["s1", "Echter Titel", "s3"]);
+  });
+});
+
+describe("extractSessionRename", () => {
+  it("reads session.renamed events", () => {
+    expect(
+      extractSessionRename({
+        type: "session.renamed",
+        data: { sessionID: "ses-1", title: "Neuer Titel" },
+      }),
+    ).toEqual({ sessionID: "ses-1", title: "Neuer Titel" });
+  });
+
+  it("rejects other types and malformed payloads", () => {
+    expect(extractSessionRename({ type: "session.idle", data: {} })).toBeNull();
+    expect(extractSessionRename({ type: "session.renamed", data: { sessionID: "" } })).toBeNull();
+    expect(extractSessionRename({ type: "session.renamed" })).toBeNull();
+    expect(extractSessionRename(null)).toBeNull();
+  });
+});
+
+describe("renameSession", () => {
+  const renameServer: ServerConfig = {
+    id: "s1",
+    name: "Lokal",
+    baseUrl: "http://x.local/",
+    username: "",
+  };
+
+  function renameResponse(status = 204): Response {
+    return { ok: status >= 200 && status < 300, status, json: async () => ({}) } as unknown as Response;
+  }
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("renames via PATCH /api/session/{id} when the client is unavailable", async () => {
+    // The mocked client only implements `agent.list` — `session.update` is
+    // undefined, so the client call throws and the fetch path runs.
+    fetchMock.mockResolvedValue(renameResponse());
+    const result = await renameSession(renameServer, "ses-1", "Neuer Titel");
+    expect(result.error).toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://x.local/api/session/ses-1",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ title: "Neuer Titel" }),
+      }),
+    );
+  });
+
+  it("surfaces the fetch status when renaming fails", async () => {
+    fetchMock.mockResolvedValue(renameResponse(500));
+    const result = await renameSession(renameServer, "ses-1", "Neuer Titel");
+    expect(result.error).toContain("500");
   });
 });

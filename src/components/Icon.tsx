@@ -20,7 +20,10 @@ export type AppIconName =
   | "compact"
   | "file"
   | "columns"
-  | "tool";
+  | "tool"
+  | "copy"
+  | "check"
+  | "edit";
 
 const ICONS: Record<AppIconName, string> = {
   menu: "mdi:menu",
@@ -43,6 +46,9 @@ const ICONS: Record<AppIconName, string> = {
   file: "mdi:file-outline",
   columns: "mdi:view-column",
   tool: "mdi:wrench-outline",
+  copy: "mdi:content-copy",
+  check: "mdi:check",
+  edit: "mdi:pencil-outline",
 };
 
 interface IconProps {

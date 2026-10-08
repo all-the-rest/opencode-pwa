@@ -181,7 +181,7 @@ describe("notes (system, idle, compaction and friends)", () => {
   it("carries compaction status and summary, idle outcome", () => {
     const running = single({ type: "compaction", id: "c1", status: "running" });
     expect(running).toMatchObject({ role: "note", noteKind: "compaction", noteDetail: "running" });
-    expect(running?.parts).toEqual([{ kind: "unknown" }]);
+    expect(running?.parts).toEqual([]);
 
     const done = single({ type: "compaction", id: "c2", status: "completed", summary: "Kurz" });
     expect(done?.text).toBe("Kurz");
@@ -256,5 +256,162 @@ describe("formatChatTime", () => {
     expect(formatted).toMatch(/08\.10\./);
     expect(formatted).toMatch(/12:30/);
     expect(formatChatTime(Number.NaN)).toBe("");
+  });
+});
+
+describe("parseSessionMessages V2 union coverage", () => {
+  const at = (created: number) => ({ created });
+
+  function single(entry: unknown) {
+    const messages = parseSessionMessages({ data: [entry] });
+    expect(messages).toHaveLength(1);
+    return messages[0];
+  }
+
+  it("maps user text plus file attachments", () => {
+    const message = single({
+      type: "user",
+      id: "u1",
+      text: "Hallo",
+      files: [{ uri: "file:///src/app.ts", name: "app.ts" }],
+      time: at(1000),
+    });
+    expect(message?.role).toBe("user");
+    expect(message?.parts.some((part) => part.kind === "text")).toBe(true);
+    expect(message?.parts.some((part) => part.kind === "files")).toBe(true);
+    expect(message?.parts.some((part) => part.kind === "unknown")).toBe(false);
+  });
+
+  it("maps assistant text, reasoning and tool content", () => {
+    const message = single({
+      type: "assistant",
+      id: "a1",
+      content: [
+        { type: "text", text: "Antwort" },
+        { type: "reasoning", text: "Überlegung" },
+        { type: "tool", id: "t1", name: "read", state: { status: "completed" } },
+        { type: "file", uri: "file:///src/x.ts", name: "x.ts" },
+      ],
+      time: at(2000),
+    });
+    expect(message?.role).toBe("assistant");
+    const kinds = message?.parts.map((part) => part.kind) ?? [];
+    expect(kinds).toContain("text");
+    expect(kinds).toContain("reasoning");
+    expect(kinds).toContain("tool");
+    expect(kinds).toContain("files");
+    expect(kinds).not.toContain("unknown");
+  });
+
+  it("maps system and synthetic notes with their text", () => {
+    for (const type of ["system", "synthetic"] as const) {
+      const message = single({ type, id: `${type}-1`, text: "Hinweis", time: at(3000) });
+      expect(message?.role).toBe("note");
+      expect(message?.noteKind).toBe(type);
+      expect(message?.parts).toHaveLength(1);
+      expect(message?.parts[0]?.kind).toBe("text");
+    }
+  });
+
+  it("maps skill notes with name and text", () => {
+    const message = single({
+      type: "skill",
+      id: "s1",
+      name: "commit",
+      text: "Skill geladen",
+      time: at(3000),
+    });
+    expect(message?.noteKind).toBe("skill");
+    expect(message?.parts.some((part) => part.kind === "unknown")).toBe(false);
+  });
+
+  it("maps shell notes with command summary and output", () => {
+    const message = single({
+      type: "shell",
+      id: "sh1",
+      command: "pnpm test",
+      status: "done",
+      output: { output: "ok\n" },
+      time: at(3000),
+    });
+    expect(message?.noteKind).toBe("shell");
+    expect(message?.parts.some((part) => part.kind === "text")).toBe(true);
+    expect(message?.parts.some((part) => part.kind === "unknown")).toBe(false);
+  });
+
+  it("maps compaction with and without content to zero unknown parts", () => {
+    const full = single({
+      type: "compaction",
+      id: "c1",
+      status: "completed",
+      summary: "Kurzfassung",
+      time: at(4000),
+    });
+    expect(full?.noteKind).toBe("compaction");
+    expect(full?.noteDetail).toBe("completed");
+    expect(full?.parts.some((part) => part.kind === "unknown")).toBe(false);
+
+    const bare = single({ type: "compaction", id: "c2", status: "running", time: at(4000) });
+    expect(bare?.noteKind).toBe("compaction");
+    expect(bare?.parts).toHaveLength(0);
+  });
+
+  it("maps every idle outcome to a bare status note without unknown parts", () => {
+    for (const outcome of ["succeeded", "failed", "interrupted"]) {
+      const message = single({ type: "idle", id: `i-${outcome}`, outcome, time: at(5000) });
+      expect(message?.role).toBe("note");
+      expect(message?.noteKind).toBe("idle");
+      expect(message?.noteDetail).toBe(outcome);
+      expect(message?.parts).toHaveLength(0);
+      expect(message?.parts.some((part) => part.kind === "unknown")).toBe(false);
+    }
+  });
+
+  it("maps agent, model and location selections", () => {
+    const agent = single({ type: "agent-selected", id: "g1", agent: "coder", time: at(1000) });
+    expect(agent?.noteKind).toBe("agent");
+    expect(agent?.parts.some((part) => part.kind === "unknown")).toBe(false);
+
+    const model = single({
+      type: "model-selected",
+      id: "g2",
+      model: { id: "sonnet", providerID: "anthropic" },
+      time: at(1000),
+    });
+    expect(model?.noteKind).toBe("model");
+    expect(model?.parts.some((part) => part.kind === "unknown")).toBe(false);
+
+    const location = single({
+      type: "location-switched",
+      id: "g3",
+      location: { directory: "/tmp/repo" },
+      time: at(1000),
+    });
+    expect(location?.noteKind).toBe("location");
+    expect(location?.parts.some((part) => part.kind === "unknown")).toBe(false);
+  });
+
+  it("keeps the unknown fallback for truly foreign types only", () => {
+    const foreign = single({
+      type: "future-thing",
+      id: "f1",
+      payload: { deep: [1] },
+      time: at(6000),
+    });
+    expect(foreign?.role).toBe("note");
+    expect(foreign?.noteKind).toBe("unknown");
+    expect(foreign?.parts.some((part) => part.kind === "unknown")).toBe(true);
+  });
+
+  it("keeps parsing legacy role/text rows and info/parts envelopes", () => {
+    const legacy = single({ id: "l1", role: "user", text: "Alt" });
+    expect(legacy?.role).toBe("user");
+
+    const wrapped = single({
+      info: { type: "assistant", id: "w1" },
+      parts: [{ type: "text", text: "Eingehüllt" }],
+    });
+    expect(wrapped?.role).toBe("assistant");
+    expect(wrapped?.parts.some((part) => part.kind === "unknown")).toBe(false);
   });
 });

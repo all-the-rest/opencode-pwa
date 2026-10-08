@@ -369,6 +369,42 @@ export interface SessionRow {
   agent: string | null;
 }
 
+/**
+ * Display title of a session (mirrors the upstream web UI's `sessionTitle`):
+ * generated placeholders (`New session - <ISO timestamp>`,
+ * `Child session - …`) are stripped and empty titles fall back to the session
+ * id — the label is never blank and never a raw placeholder.
+ */
+const GENERATED_TITLE_PATTERNS: readonly RegExp[] = [
+  /^new session(?:\s+-\s+.*)?$/i,
+  /^child session(?:\s+-\s+.*)?$/i,
+];
+
+export function sessionTitle(title: string | null | undefined, fallbackID: string): string {
+  const trimmed = (title ?? "").trim();
+  if (trimmed === "") return fallbackID;
+  if (GENERATED_TITLE_PATTERNS.some((pattern) => pattern.test(trimmed))) return fallbackID;
+  return trimmed;
+}
+
+/**
+ * A `session.renamed` V2 event carrying `{ sessionID, title }`, null for
+ * anything else. Used to retitle open tabs live (not just on mount).
+ */
+export function extractSessionRename(event: unknown): { sessionID: string; title: string } | null {
+  if (event === null || typeof event !== "object") return null;
+  const record = event as Record<string, unknown>;
+  if (record["type"] !== "session.renamed") return null;
+  const data: unknown = record["data"];
+  if (data === null || typeof data !== "object") return null;
+  const dataRecord = data as Record<string, unknown>;
+  const sessionID: unknown = dataRecord["sessionID"];
+  const title: unknown = dataRecord["title"];
+  if (typeof sessionID !== "string" || sessionID === "") return null;
+  if (typeof title !== "string" || title === "") return null;
+  return { sessionID, title };
+}
+
 /** Raw agent of a session entry (`agent` / `agentID` / `agentId`), null when absent. */
 export function sessionAgentKey(entry: unknown): string | null {
   if (entry === null || typeof entry !== "object") return null;
@@ -383,8 +419,7 @@ export function extractSessionRows(value: unknown): SessionRow[] {
     if (entry !== null && typeof entry === "object") {
       const record = entry as Record<string, unknown>;
       const id = readString(record, ["id"]) ?? `eintrag-${index}`;
-      const label =
-        readString(record, ["title", "name", "command"]) ?? id;
+      const label = sessionTitle(readString(record, ["title", "name", "command"]), id);
       return {
         id,
         label,
@@ -603,6 +638,81 @@ export function getSessionInfo(server: ServerConfig, sessionID: string) {
     const info = extractSessionInfo(await fetchSessionInfoRaw(server, sessionID));
     if (info === null) throw new Error(t`Unerwartete Session-Antwort vom Server.`);
     return info;
+  });
+}
+
+/**
+ * IDs of sessions with a live execution (`{ [sessionID]: { type: "running" } }`).
+ * Accepts the raw map, a `{ data }` envelope or a plain string array so
+ * defensive mocks keep working; anything else yields no IDs.
+ */
+export function extractActiveSessionIDs(value: unknown): string[] {
+  let source: Record<string, unknown> | null = null;
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === "string" && entry !== "");
+  }
+  if (value !== null && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const data: unknown = record["data"];
+    if (data !== null && typeof data === "object" && !Array.isArray(data)) {
+      source = data as Record<string, unknown>;
+    } else {
+      source = record;
+    }
+  }
+  if (source === null) return [];
+  return Object.keys(source).filter(
+    (key) => key !== "" && source[key] !== null && source[key] !== undefined,
+  );
+}
+
+async function fetchActiveSessionIDsRaw(server: ServerConfig): Promise<unknown> {
+  try {
+    // Verified against the installed package: `session.active()` exists and
+    // resolves `{ [sessionID]: SessionActive }` (GET /api/session/active).
+    return await (await makeClient(server)).session.active();
+  } catch {
+    const baseUrl = server.baseUrl.replace(/\/$/, "");
+    const response = await fetch(`${baseUrl}/api/session/active`, {
+      headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) },
+    });
+    if (!response.ok) {
+      throw new Error(`GET /api/session/active failed with status ${response.status}`);
+    }
+    return response.json();
+  }
+}
+
+/** GET /api/session/active — IDs of sessions with a live execution. */
+export function listActiveSessionIDs(server: ServerConfig) {
+  return guarded(async () => extractActiveSessionIDs(await fetchActiveSessionIDsRaw(server)));
+}
+
+/** PATCH /api/session/{sessionID} — rename the session. Verified against the
+ * installed client (`session.update`, 204, `{ title }` body); direct-fetch
+ * fallback uses the same method, path and body. */
+export function renameSession(server: ServerConfig, sessionID: string, title: string) {
+  return guarded(async () => {
+    try {
+      await (await makeClient(server)).session.update({ sessionID, title });
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}`,
+        {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json",
+            ...(await fetchAuthHeaders(server)),
+          },
+          body: JSON.stringify({ title }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(`PATCH /api/session/${sessionID} failed with status ${response.status}`);
+      }
+    }
   });
 }
 

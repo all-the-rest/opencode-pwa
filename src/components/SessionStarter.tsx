@@ -128,9 +128,16 @@ export default function SessionStarter() {
           <ServerErrorBanner error={error} serverId={selectedServer?.id} testId="session-starter-offline" />
         )}
         {!loading && error === null && selectedServer !== null && visible.length === 0 && (
-          <p className="opacity-70 text-sm">
-            <Trans>Keine Sessions auf diesem Server. Öffne die Serverdetails, um zu beginnen.</Trans>
-          </p>
+          <div className="flex flex-col gap-2" data-testid="session-starter-empty">
+            <p className="opacity-70 text-sm">
+              <Trans>Keine Sessions auf diesem Server.</Trans>
+            </p>
+            <div className="card-actions">
+              <Link className="btn btn-primary btn-sm" to={`/servers/${selectedServer.id}`}>
+                <Trans>Serverdetails öffnen</Trans>
+              </Link>
+            </div>
+          </div>
         )}
         {visible.length > 0 && (
           <ul className="menu gap-1">

@@ -305,8 +305,9 @@ test(
     await mockApi(page, log);
     await page.goto(`/sessions/ses-1?server=${server.id}`);
 
+    await page.getByTestId("session-more-toggle").click();
+    await page.getByTestId("session-more-tab-revert").click();
     await expect(page.getByTestId("session-revert-section")).toBeVisible();
-    await page.getByRole("button", { name: "Revert anzeigen" }).click();
     await page.getByTestId("revert-message-select").selectOption("m2");
     await page.getByRole("button", { name: "Revert-Staging starten" }).click();
 
@@ -336,8 +337,9 @@ test(
     await mockApi(page, log);
     await page.goto(`/sessions/ses-1?server=${server.id}`);
 
+    await page.getByTestId("session-more-toggle").click();
+    await page.getByTestId("session-more-tab-command").click();
     await expect(page.getByTestId("session-command-section")).toBeVisible();
-    await page.getByRole("button", { name: "Befehle anzeigen" }).click();
     await page.getByTestId("session-command-select").selectOption("test");
     await page.getByTestId("session-command-text").fill("schnell");
     await page.getByTestId("session-command-run").click();
@@ -394,8 +396,9 @@ test(
     await mockApi(page, log);
     await page.goto(`/sessions/ses-1?server=${server.id}`);
 
+    await page.getByTestId("session-more-toggle").click();
+    await page.getByTestId("session-more-tab-inbox").click();
     await expect(page.getByTestId("session-inbox-section")).toBeVisible();
-    await page.getByRole("button", { name: "Eingangsbox anzeigen" }).click();
 
     await expect(page.getByTestId("session-inbox-in-1")).toContainText("Bitte weitermachen");
     await expect(page.getByTestId("session-inbox-delivery-in-2")).toContainText("Warteschlange");
@@ -423,8 +426,9 @@ test(
     await mockApi(page, log);
     await page.goto(`/sessions/ses-1?server=${server.id}`);
 
+    await page.getByTestId("session-more-toggle").click();
+    await page.getByTestId("session-more-tab-forms").click();
     await expect(page.getByTestId("session-forms-section")).toBeVisible();
-    await page.getByRole("button", { name: "Formulare anzeigen" }).click();
 
     await expect(page.getByTestId("session-form-f-1")).toContainText("Freigabe?");
     await page.getByTestId("session-form-select").selectOption("f-1");

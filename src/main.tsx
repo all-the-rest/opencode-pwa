@@ -9,6 +9,7 @@ import { I18nProvider } from "./logic/I18nProvider.tsx";
 import { ServerProvider } from "./state/servers.tsx";
 import { SessionTabsProvider } from "./state/sessionTabs.tsx";
 import { LayoutModeProvider } from "./state/layoutMode.tsx";
+import { ToastProvider } from "./state/toast.tsx";
 
 registerSW({ immediate: true });
 
@@ -23,7 +24,9 @@ createRoot(rootElement).render(
       <LayoutModeProvider>
         <ServerProvider>
           <SessionTabsProvider>
-            <App />
+            <ToastProvider>
+              <App />
+            </ToastProvider>
           </SessionTabsProvider>
         </ServerProvider>
       </LayoutModeProvider>

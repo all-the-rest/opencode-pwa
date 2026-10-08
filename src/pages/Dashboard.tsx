@@ -221,9 +221,14 @@ export default function Dashboard() {
       )}
 
       <section data-testid="subagent-activity">
-        <h2 className="text-lg font-semibold mb-2">
-          <Trans>Subagenten-Aktivität</Trans>
-        </h2>
+        <div className="flex items-center gap-2 mb-2">
+          <h2 className="text-lg font-semibold flex-1">
+            <Trans>Subagenten-Aktivität</Trans>
+          </h2>
+          <Link className="btn btn-sm btn-ghost" to="/agents" data-testid="agents-overview-link">
+            <Trans>Alle laufenden Agenten</Trans>
+          </Link>
+        </div>
         {selectedServer === null ? (
           <p className="opacity-70">
             <Trans>Noch kein Server ausgewählt.</Trans>

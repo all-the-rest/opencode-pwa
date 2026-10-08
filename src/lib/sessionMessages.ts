@@ -327,7 +327,16 @@ function noteMessage(
   body: string | null,
   noteDetail: string | null = null,
 ): ChatMessage {
-  const parts: ChatPart[] = body !== null && body !== "" ? [{ kind: "text", text: excerpt(body) }] : [{ kind: "unknown" }];
+  // Status notes without a body (idle outcomes, contentless compactions)
+  // are bare status lines: they carry zero parts and must never degrade to
+  // an `unknown` part — the "unknown content" fallback is reserved for
+  // truly foreign message types (`noteKind: "unknown"`).
+  const parts: ChatPart[] =
+    body !== null && body !== ""
+      ? [{ kind: "text", text: excerpt(body) }]
+      : noteKind === "unknown"
+        ? [{ kind: "unknown" }]
+        : [];
   return {
     id,
     role: "note",

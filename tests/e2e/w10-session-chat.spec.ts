@@ -369,7 +369,7 @@ test(
 );
 
 test(
-  "composer sits above the collapsed panels accordion",
+  "composer sits above the single More disclosure with tabbed panels",
   { tag: ["@feature", "@feature:session-chat-panels"] },
   async ({ page }) => {
     await seedServer(page);
@@ -386,31 +386,33 @@ test(
     });
     expect(order).toBe("composer-first");
 
-    // All secondary panels start collapsed …
+    // All secondary panels hide behind one "Mehr…" disclosure …
+    await expect(page.getByTestId("session-more-toggle")).toBeVisible();
     await expect(page.getByTestId("session-stats-input")).toHaveCount(0);
     await expect(page.getByTestId("revert-message-select")).toHaveCount(0);
-    await expect(page.getByTestId("session-command-select")).toHaveCount(0);
-
-    // … and expand/collapse on demand, keeping their functionality.
-    await page.getByRole("button", { name: "Verbrauch anzeigen" }).click();
-    await expect(page.getByTestId("session-stats-input")).toBeVisible();
-    await page.getByRole("button", { name: "Verbrauch ausblenden" }).click();
-    await expect(page.getByTestId("session-stats-input")).toHaveCount(0);
-
-    await page.getByRole("button", { name: "Revert anzeigen" }).click();
-    await expect(page.getByTestId("revert-message-select")).toBeVisible();
-    await page.getByRole("button", { name: "Revert ausblenden" }).click();
-    await expect(page.getByTestId("revert-message-select")).toHaveCount(0);
-
-    await page.getByRole("button", { name: "Teilen anzeigen" }).click();
-    await expect(page.getByTestId("session-export-button")).toBeVisible();
-    await page.getByRole("button", { name: "Teilen ausblenden" }).click();
     await expect(page.getByTestId("session-export-button")).toHaveCount(0);
-
-    await page.getByRole("button", { name: "Eingangsbox anzeigen" }).click();
-    await expect(page.getByTestId("session-inbox-list")).toBeVisible();
-    await page.getByRole("button", { name: "Eingangsbox ausblenden" }).click();
+    await expect(page.getByTestId("session-command-select")).toHaveCount(0);
     await expect(page.getByTestId("session-inbox-list")).toHaveCount(0);
+
+    // … and open one tab at a time, keeping their functionality.
+    await page.getByTestId("session-more-toggle").click();
+    await page.getByTestId("session-more-tab-stats").click();
+    await expect(page.getByTestId("session-stats-input")).toBeVisible();
+
+    await page.getByTestId("session-more-tab-revert").click();
+    await expect(page.getByTestId("revert-message-select")).toBeVisible();
+    await expect(page.getByTestId("session-stats-input")).toHaveCount(0);
+
+    await page.getByTestId("session-more-tab-share").click();
+    await expect(page.getByTestId("session-export-button")).toBeVisible();
+
+    await page.getByTestId("session-more-tab-inbox").click();
+    await expect(page.getByTestId("session-inbox-list")).toBeVisible();
+
+    // Closing "Mehr…" hides every panel again.
+    await page.getByTestId("session-more-toggle").click();
+    await expect(page.getByTestId("session-inbox-list")).toHaveCount(0);
+    await expect(page.getByTestId("session-stats-input")).toHaveCount(0);
   },
 );
 
@@ -500,7 +502,8 @@ test(
     await mockApi(page, log);
     await page.goto(`/sessions/ses-1?server=${server.id}`);
 
-    await page.getByRole("button", { name: "Revert anzeigen" }).click();
+    await page.getByTestId("session-more-toggle").click();
+    await page.getByTestId("session-more-tab-revert").click();
     await page.getByTestId("revert-message-select").selectOption("m2");
     await page.getByRole("button", { name: "Revert-Staging starten" }).click();
     await expect.poll(() => log.revertStages, { timeout: 10_000 }).toContainEqual("ses-1");
@@ -526,7 +529,8 @@ test(
     await mockApi(page, log);
     await page.goto(`/sessions/ses-1?server=${server.id}`);
 
-    await page.getByRole("button", { name: "Formulare anzeigen" }).click();
+    await page.getByTestId("session-more-toggle").click();
+    await page.getByTestId("session-more-tab-forms").click();
     await expect(page.getByTestId("session-form-f-1")).toContainText("Freigabe?");
     await page.getByTestId("session-form-select").selectOption("f-1");
     await page.getByTestId("session-form-answer").fill('{"ok": true}');
@@ -536,10 +540,8 @@ test(
       answer: { ok: true },
     });
     await expect(page.getByTestId("session-form-f-1")).toHaveCount(0);
-    await page.getByRole("button", { name: "Formulare ausblenden" }).click();
+    await page.getByTestId("session-more-tab-inbox").click();
     await expect(page.getByTestId("session-forms-list")).toHaveCount(0);
-
-    await page.getByRole("button", { name: "Eingangsbox anzeigen" }).click();
     await expect(page.getByTestId("session-inbox-in-1")).toContainText("Nachfrage");
     await page.getByTestId("session-inbox-steer-in-1").click();
     await expect.poll(() => log.inboxUpdates, { timeout: 10_000 }).toContainEqual({
@@ -550,7 +552,7 @@ test(
     await page.getByRole("button", { name: "Eintrag in-1 abbrechen" }).click();
     await expect.poll(() => log.inboxCancels, { timeout: 10_000 }).toContainEqual("in-1");
     await expect(page.getByTestId("session-inbox-in-1")).toHaveCount(0);
-    await page.getByRole("button", { name: "Eingangsbox ausblenden" }).click();
+    await page.getByTestId("session-more-toggle").click();
     await expect(page.getByTestId("session-inbox-list")).toHaveCount(0);
   },
 );

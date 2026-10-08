@@ -133,7 +133,7 @@ test(
 );
 
 test(
-  "session heading shows title and panels tile in split mode (mocked)",
+  "session panels hide behind one More disclosure, no tiling (mocked)",
   { tag: ["@feature", "@feature:split-view"] },
   async ({ page }) => {
     await page.setViewportSize({ width: 1400, height: 900 });
@@ -143,18 +143,27 @@ test(
 
     // The heading resolves the real session title (not the raw id).
     await expect(page.getByRole("heading", { name: "Alpha bauen" })).toBeVisible();
-    // Single mode: secondary panels stack (flex, no grid).
-    expect(await gridColumns(page, "session-panels")).toBe(0);
+    // Chat-first: only the single "Mehr…" disclosure shows — no panel wall,
+    // no tiling, in either layout mode.
+    await expect(page.getByTestId("session-more-toggle")).toBeVisible();
+    await expect(page.getByTestId("session-more-tab-stats")).toHaveCount(0);
 
     await page.getByTestId("layout-mode-toggle").click();
-    expect(await gridColumns(page, "session-panels")).toBe(3);
-    // The conversation keeps full width above the tiled panels.
+    await expect(page.getByTestId("session-more-tab-stats")).toHaveCount(0);
+    // The conversation keeps full width above the disclosure.
     await expect(page.getByTestId("message-list")).toBeVisible();
+
+    // One tap opens the tabbed tools; one tab shows at a time.
+    await page.getByTestId("session-more-toggle").click();
+    await expect(page.getByTestId("session-more-tab-stats")).toBeVisible();
+    await page.getByTestId("session-more-tab-revert").click();
+    await expect(page.getByTestId("session-more-panel-revert")).toBeVisible();
+    await expect(page.getByTestId("session-more-panel-stats")).toHaveCount(0);
 
     // Mobile stays single-column even with split mode active.
     await page.setViewportSize({ width: 390, height: 844 });
-    expect(await gridColumns(page, "session-panels")).toBe(1);
     await expect(page.getByTestId("message-list")).toBeVisible();
+    await expect(page.getByTestId("session-more-toggle")).toBeVisible();
   },
 );
 

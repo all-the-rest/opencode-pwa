@@ -11,6 +11,15 @@ msgstr ""
 msgid "{ \"feld\": \"wert\" }"
 msgstr "{ \"feld\": \"wert\" }"
 
+#. placeholder {0}: tail.length
+#: src/components/ChatMessageList.tsx
+#~ msgid "{0} weitere anzeigen"
+#~ msgstr "{0} weitere anzeigen"
+
+#: src/pages/Agents.tsx
+msgid "{agentLabel} · {modelLabel}"
+msgstr "{agentLabel} · {modelLabel}"
+
 #: src/pages/SessionDetail.tsx
 msgid "{base} (aus Zwischenspeicher)"
 msgstr "{base} (aus Zwischenspeicher)"
@@ -26,6 +35,10 @@ msgstr "{base} (offline aus Zwischenspeicher)"
 #: src/components/IntegrationsCard.tsx
 msgid "{connectionCount} Verbindungen"
 msgstr "{connectionCount} Verbindungen"
+
+#: src/components/ChatMessageList.tsx
+msgid "{hiddenCount} weitere anzeigen"
+msgstr "{hiddenCount} weitere anzeigen"
 
 #: src/pages/SessionDetail.tsx
 msgid "{liveCount} neue"
@@ -98,10 +111,15 @@ msgstr "Agent: {agentName}"
 msgid "Agent/Modell konnte nicht gewechselt werden: {pickerError}"
 msgstr "Agent/Modell konnte nicht gewechselt werden: {pickerError}"
 
+#: src/components/Layout.tsx
 #: src/pages/Dashboard.tsx
 #: src/pages/ServerTools.tsx
 msgid "Agenten"
 msgstr "Agenten"
+
+#: src/lib/activeAgents.ts
+msgid "Aktive Sessions konnten nicht geladen werden."
+msgstr "Aktive Sessions konnten nicht geladen werden."
 
 #. placeholder {0}: selectedServer.name
 #: src/pages/Dashboard.tsx
@@ -132,6 +150,10 @@ msgstr "Aktualisieren"
 #: src/pages/ServerDetail.tsx
 msgid "Alle Agenten"
 msgstr "Alle Agenten"
+
+#: src/pages/Dashboard.tsx
+msgid "Alle laufenden Agenten"
+msgstr "Alle laufenden Agenten"
 
 #: src/pages/ServerDetail.tsx
 msgid "Alle Projekte"
@@ -195,6 +217,10 @@ msgstr "Anbieter-Verbindungen: Schlüssel direkt verbinden, OAuth auf der Anbiet
 msgid "Anbieter: {searchAnswerProvider}"
 msgstr "Anbieter: {searchAnswerProvider}"
 
+#: src/pages/SessionDetail.tsx
+msgid "Änderungen"
+msgstr "Änderungen"
+
 #: src/pages/ServerTools.tsx
 msgid "Anfrage {requestId} ablehnen"
 msgstr "Anfrage {requestId} ablehnen"
@@ -251,6 +277,15 @@ msgstr "Antworten"
 #: src/pages/SessionDetail.tsx
 msgid "Antworten fehlgeschlagen."
 msgstr "Antworten fehlgeschlagen."
+
+#. placeholder {0}: failedServers.join(", ")
+#: src/pages/Agents.tsx
+#~ msgid "Antwortet nicht: {0}"
+#~ msgstr "Antwortet nicht: {0}"
+
+#: src/pages/Agents.tsx
+msgid "Antwortet nicht: {failedNames}"
+msgstr "Antwortet nicht: {failedNames}"
 
 #: src/pages/ServerTools.tsx
 #~ msgid "Anzeige auf {MAX_FILE_PREVIEW_CHARS} Zeichen gekürzt."
@@ -391,16 +426,20 @@ msgid "Befehle"
 msgstr "Befehle"
 
 #: src/pages/SessionDetail.tsx
-msgid "Befehle anzeigen"
-msgstr "Befehle anzeigen"
+#~ msgid "Befehle anzeigen"
+#~ msgstr "Befehle anzeigen"
 
 #: src/pages/SessionDetail.tsx
-msgid "Befehle ausblenden"
-msgstr "Befehle ausblenden"
+#~ msgid "Befehle ausblenden"
+#~ msgstr "Befehle ausblenden"
 
 #: src/pages/SessionDetail.tsx
 msgid "Befehlstext"
 msgstr "Befehlstext"
+
+#: src/pages/SessionDetail.tsx
+msgid "Beliebige Frage stellen, / für Befehle, @ für Kontext…"
+msgstr "Beliebige Frage stellen, / für Befehle, @ für Kontext…"
 
 #: src/pages/Settings.tsx
 msgid "Benachrichtigungen"
@@ -626,12 +665,12 @@ msgid "Dieses Projekt ist auf dem Server unbekannt – eventuell wurde es gelös
 msgstr "Dieses Projekt ist auf dem Server unbekannt – eventuell wurde es gelöscht."
 
 #: src/pages/SessionDetail.tsx
-msgid "Diffs anzeigen"
-msgstr "Diffs anzeigen"
+#~ msgid "Diffs anzeigen"
+#~ msgstr "Diffs anzeigen"
 
 #: src/pages/SessionDetail.tsx
-msgid "Diffs ausblenden"
-msgstr "Diffs ausblenden"
+#~ msgid "Diffs ausblenden"
+#~ msgstr "Diffs ausblenden"
 
 #: src/pages/SessionDetail.tsx
 msgid "Diffs konnten nicht geladen werden: {diffError}"
@@ -670,12 +709,12 @@ msgid "Eingangsbox"
 msgstr "Eingangsbox"
 
 #: src/pages/SessionDetail.tsx
-msgid "Eingangsbox anzeigen"
-msgstr "Eingangsbox anzeigen"
+#~ msgid "Eingangsbox anzeigen"
+#~ msgstr "Eingangsbox anzeigen"
 
 #: src/pages/SessionDetail.tsx
-msgid "Eingangsbox ausblenden"
-msgstr "Eingangsbox ausblenden"
+#~ msgid "Eingangsbox ausblenden"
+#~ msgstr "Eingangsbox ausblenden"
 
 #: src/pages/ServerTools.tsx
 msgid "Einmal erlauben"
@@ -792,12 +831,16 @@ msgid "Formular wählen …"
 msgstr "Formular wählen …"
 
 #: src/pages/SessionDetail.tsx
-msgid "Formulare anzeigen"
-msgstr "Formulare anzeigen"
+msgid "Formulare"
+msgstr "Formulare"
 
 #: src/pages/SessionDetail.tsx
-msgid "Formulare ausblenden"
-msgstr "Formulare ausblenden"
+#~ msgid "Formulare anzeigen"
+#~ msgstr "Formulare anzeigen"
+
+#: src/pages/SessionDetail.tsx
+#~ msgid "Formulare ausblenden"
+#~ msgstr "Formulare ausblenden"
 
 #: src/pages/SessionDetail.tsx
 msgid "Formulare konnten nicht geladen werden."
@@ -980,6 +1023,10 @@ msgstr "Keine Integrationen."
 msgid "Keine Konfiguration."
 msgstr "Keine Konfiguration."
 
+#: src/pages/Agents.tsx
+msgid "Keine laufenden Agenten – keine Session führt gerade aus."
+msgstr "Keine laufenden Agenten – keine Session führt gerade aus."
+
 #: src/pages/Dashboard.tsx
 msgid "Keine laufenden Sessions – keine Subagenten aktiv."
 msgstr "Keine laufenden Sessions – keine Subagenten aktiv."
@@ -1022,8 +1069,12 @@ msgid "Keine PTYs."
 msgstr "Keine PTYs."
 
 #: src/components/SessionStarter.tsx
-msgid "Keine Sessions auf diesem Server. Öffne die Serverdetails, um zu beginnen."
-msgstr "Keine Sessions auf diesem Server. Öffne die Serverdetails, um zu beginnen."
+msgid "Keine Sessions auf diesem Server."
+msgstr "Keine Sessions auf diesem Server."
+
+#: src/components/SessionStarter.tsx
+#~ msgid "Keine Sessions auf diesem Server. Öffne die Serverdetails, um zu beginnen."
+#~ msgstr "Keine Sessions auf diesem Server. Öffne die Serverdetails, um zu beginnen."
 
 #: src/pages/ProjectDetail.tsx
 msgid "Keine Sessions in diesem Projekt."
@@ -1104,6 +1155,14 @@ msgstr "Konfiguration"
 msgid "Kontext der Session zusammenfassen"
 msgstr "Kontext der Session zusammenfassen"
 
+#: src/components/CopyButton.tsx
+msgid "Kopieren"
+msgstr "Kopieren"
+
+#: src/components/CopyButton.tsx
+msgid "Kopiert"
+msgstr "Kopiert"
+
 #: src/pages/SessionDetail.tsx
 msgid "Kosten:"
 msgstr "Kosten:"
@@ -1112,6 +1171,7 @@ msgstr "Kosten:"
 #: src/components/IntegrationsCard.tsx
 #: src/components/SessionStarter.tsx
 #: src/pages/AgentDetail.tsx
+#: src/pages/Agents.tsx
 #: src/pages/Dashboard.tsx
 #: src/pages/ProjectDetail.tsx
 #: src/pages/ServerTools.tsx
@@ -1124,6 +1184,10 @@ msgstr "Lädt"
 #: src/pages/ServerDetail.tsx
 msgid "Lädt …"
 msgstr "Lädt …"
+
+#: src/pages/Agents.tsx
+msgid "Laufende Agenten"
+msgstr "Laufende Agenten"
 
 #: src/pages/SessionDetail.tsx
 msgid "Laufende Ausführung unterbrechen"
@@ -1138,6 +1202,7 @@ msgid "Laufende Shells"
 msgstr "Laufende Shells"
 
 #: src/components/ChatMessageList.tsx
+#: src/pages/Agents.tsx
 msgid "Läuft"
 msgstr "Läuft"
 
@@ -1185,6 +1250,14 @@ msgstr "Löschen"
 #: src/pages/ServerTools.tsx
 msgid "MCP-Server"
 msgstr "MCP-Server"
+
+#: src/pages/SessionDetail.tsx
+msgid "Mehr anzeigen"
+msgstr "Mehr anzeigen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Mehr…"
+msgstr "Mehr…"
 
 #: src/components/Layout.tsx
 msgid "Menü öffnen"
@@ -1293,6 +1366,10 @@ msgstr "Neue Session öffnen"
 #: src/pages/ServerDetail.tsx
 msgid "Neuer Servername"
 msgstr "Neuer Servername"
+
+#: src/pages/SessionDetail.tsx
+msgid "Neuer Session-Titel"
+msgstr "Neuer Session-Titel"
 
 #: src/pages/ServerDetail.tsx
 msgid "Neuer Shell-Befehl"
@@ -1500,12 +1577,16 @@ msgid "PTYs ({ptyCount})"
 msgstr "PTYs ({ptyCount})"
 
 #: src/pages/SessionDetail.tsx
-msgid "Revert anzeigen"
-msgstr "Revert anzeigen"
+msgid "Revert"
+msgstr "Revert"
 
 #: src/pages/SessionDetail.tsx
-msgid "Revert ausblenden"
-msgstr "Revert ausblenden"
+#~ msgid "Revert anzeigen"
+#~ msgstr "Revert anzeigen"
+
+#: src/pages/SessionDetail.tsx
+#~ msgid "Revert ausblenden"
+#~ msgstr "Revert ausblenden"
 
 #: src/pages/SessionDetail.tsx
 msgid "Revert übernehmen"
@@ -1537,16 +1618,16 @@ msgid "Schlüssel speichern"
 msgstr "Schlüssel speichern"
 
 #: src/pages/SessionDetail.tsx
-msgid "Senden"
-msgstr "Senden"
+#~ msgid "Senden"
+#~ msgstr "Senden"
 
 #: src/pages/SessionDetail.tsx
 msgid "Senden fehlgeschlagen: {sendError}"
 msgstr "Senden fehlgeschlagen: {sendError}"
 
 #: src/pages/SessionDetail.tsx
-msgid "Sendet …"
-msgstr "Sendet …"
+#~ msgid "Sendet …"
+#~ msgstr "Sendet …"
 
 #: src/components/Layout.tsx
 msgid "Server"
@@ -1667,6 +1748,10 @@ msgstr "Server: {serverName}"
 msgid "Serverdetails"
 msgstr "Serverdetails"
 
+#: src/components/SessionStarter.tsx
+msgid "Serverdetails öffnen"
+msgstr "Serverdetails öffnen"
+
 #: src/pages/Settings.tsx
 msgid "Serverfarbe {entry}"
 msgstr "Serverfarbe {entry}"
@@ -1685,6 +1770,11 @@ msgstr "Session"
 #~ msgid "Session {0} löschen"
 #~ msgstr "Session {0} löschen"
 
+#. placeholder {0}: row.title
+#: src/pages/Agents.tsx
+#~ msgid "Session {0} öffnen"
+#~ msgstr "Session {0} öffnen"
+
 #. placeholder {0}: s.label
 #: src/pages/ServerDetail.tsx
 #~ msgid "Session {0} unterbrechen"
@@ -1697,6 +1787,10 @@ msgstr "Session {label} löschen"
 #: src/pages/ServerDetail.tsx
 msgid "Session {label} unterbrechen"
 msgstr "Session {label} unterbrechen"
+
+#: src/pages/Agents.tsx
+msgid "Session {rowTitle} öffnen"
+msgstr "Session {rowTitle} öffnen"
 
 #: src/pages/SessionDetail.tsx
 msgid "Session ab dem aktuellen Stand kopieren"
@@ -1750,6 +1844,10 @@ msgstr "Session löschen"
 #: src/components/SessionStarter.tsx
 msgid "Session starten"
 msgstr "Session starten"
+
+#: src/pages/SessionDetail.tsx
+msgid "Session umbenennen"
+msgstr "Session umbenennen"
 
 #: src/hooks/useEventNotifications.ts
 msgid "Session wird kompaktiert{suffix}."
@@ -1833,6 +1931,7 @@ msgid "Sofort"
 msgstr "Sofort"
 
 #: src/pages/ServerDetail.tsx
+#: src/pages/SessionDetail.tsx
 #: src/pages/Settings.tsx
 msgid "Speichern"
 msgstr "Speichern"
@@ -1919,6 +2018,7 @@ msgid "Technische Details"
 msgstr "Technische Details"
 
 #: src/components/ConfigCard.tsx
+#: src/pages/SessionDetail.tsx
 msgid "Teilen"
 msgstr "Teilen"
 
@@ -1927,12 +2027,12 @@ msgid "Teilen (Export / Import)"
 msgstr "Teilen (Export / Import)"
 
 #: src/pages/SessionDetail.tsx
-msgid "Teilen anzeigen"
-msgstr "Teilen anzeigen"
+#~ msgid "Teilen anzeigen"
+#~ msgstr "Teilen anzeigen"
 
 #: src/pages/SessionDetail.tsx
-msgid "Teilen ausblenden"
-msgstr "Teilen ausblenden"
+#~ msgid "Teilen ausblenden"
+#~ msgstr "Teilen ausblenden"
 
 #: src/components/ChatMessageList.tsx
 #: src/pages/SessionDetail.tsx
@@ -1940,12 +2040,12 @@ msgid "Terminal"
 msgstr "Terminal"
 
 #: src/pages/SessionDetail.tsx
-msgid "Terminal anzeigen"
-msgstr "Terminal anzeigen"
+#~ msgid "Terminal anzeigen"
+#~ msgstr "Terminal anzeigen"
 
 #: src/pages/SessionDetail.tsx
-msgid "Terminal ausblenden"
-msgstr "Terminal ausblenden"
+#~ msgid "Terminal ausblenden"
+#~ msgstr "Terminal ausblenden"
 
 #: src/pages/SessionDetail.tsx
 msgid "Terminal-Ausgabe aktualisieren"
@@ -1955,10 +2055,18 @@ msgstr "Terminal-Ausgabe aktualisieren"
 msgid "Teste …"
 msgstr "Teste …"
 
+#: src/pages/SessionDetail.tsx
+msgid "Titel eingeben …"
+msgstr "Titel eingeben …"
+
 #: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Titel oder ID suchen"
 msgstr "Titel oder ID suchen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Titel speichern"
+msgstr "Titel speichern"
 
 #: src/pages/ServerDetail.tsx
 msgid "Token"
@@ -1982,8 +2090,17 @@ msgid "Übersicht"
 msgstr "Übersicht"
 
 #: src/pages/ServerDetail.tsx
+#: src/pages/SessionDetail.tsx
 msgid "Umbenennen"
 msgstr "Umbenennen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Umbenennen abbrechen"
+msgstr "Umbenennen abbrechen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Umbenennen fehlgeschlagen: {renameError}"
+msgstr "Umbenennen fehlgeschlagen: {renameError}"
 
 #: src/pages/ServerDetail.tsx
 msgid "Umbenennen fehlgeschlagen."
@@ -1992,6 +2109,10 @@ msgstr "Umbenennen fehlgeschlagen."
 #: src/components/IntegrationsCard.tsx
 msgid "Umgebung"
 msgstr "Umgebung"
+
+#: src/pages/Agents.tsx
+msgid "Unbekannt"
+msgstr "Unbekannt"
 
 #: src/lib/opencode.ts
 #: src/lib/opencodeCookie.ts
@@ -2077,12 +2198,16 @@ msgid "Verbindung testen"
 msgstr "Verbindung testen"
 
 #: src/pages/SessionDetail.tsx
-msgid "Verbrauch anzeigen"
-msgstr "Verbrauch anzeigen"
+msgid "Verbrauch"
+msgstr "Verbrauch"
 
 #: src/pages/SessionDetail.tsx
-msgid "Verbrauch ausblenden"
-msgstr "Verbrauch ausblenden"
+#~ msgid "Verbrauch anzeigen"
+#~ msgstr "Verbrauch anzeigen"
+
+#: src/pages/SessionDetail.tsx
+#~ msgid "Verbrauch ausblenden"
+#~ msgstr "Verbrauch ausblenden"
 
 #: src/pages/SessionDetail.tsx
 msgid "Verbrauch dieser Session"
@@ -2137,6 +2262,14 @@ msgstr "Weitere Sessions laden"
 msgid "Werkzeug"
 msgstr "Werkzeug"
 
+#: src/pages/SessionDetail.tsx
+msgid "Werkzeuge"
+msgstr "Werkzeuge"
+
+#: src/pages/SessionDetail.tsx
+msgid "Werkzeuge ausblenden"
+msgstr "Werkzeuge ausblenden"
+
 #: src/pages/AgentDetail.tsx
 msgid "Werkzeuge:"
 msgstr "Werkzeuge:"
@@ -2164,6 +2297,10 @@ msgstr "Zeitüberschreitung: Der Server hat nicht innerhalb von 4 Sekunden geant
 #: src/pages/SessionDetail.tsx
 msgid "Zu neuesten springen"
 msgstr "Zu neuesten springen"
+
+#: src/pages/Agents.tsx
+msgid "Zur Übersicht"
+msgstr "Zur Übersicht"
 
 #: src/pages/ServerTools.tsx
 msgid "Zurück"

@@ -250,8 +250,10 @@ test(
     await mockApi(page, freshLog());
     await page.goto(`/sessions/ses-1?server=${server.id}`);
 
+    await expect(page.getByTestId("session-more-toggle")).toBeVisible();
+    await page.getByTestId("session-more-toggle").click();
+    await page.getByTestId("session-more-tab-stats").click();
     await expect(page.getByTestId("session-stats")).toBeVisible();
-    await page.getByRole("button", { name: "Verbrauch anzeigen" }).click();
     await expect(page.getByTestId("session-stats-input")).toContainText("12.345");
     await expect(page.getByTestId("session-stats-output")).toContainText("678");
     await expect(page.getByTestId("session-stats-cost")).toContainText("0,05");
@@ -267,7 +269,8 @@ test(
     await mockApi(page, freshLog());
     await page.goto(`/sessions/ses-1?server=${server.id}`);
 
-    await page.getByRole("button", { name: "Diffs anzeigen" }).click();
+    await page.getByTestId("session-more-toggle").click();
+    await page.getByTestId("session-more-tab-diff").click();
     await expect(page.getByTestId("session-diff-src/app.ts")).toContainText("+12 −3");
     await expect(page.getByTestId("session-diff-src/neu.ts")).toBeVisible();
     await page.getByTestId("session-diff-src/app.ts").locator("summary").click();

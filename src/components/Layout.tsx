@@ -6,6 +6,7 @@ import Icon from "./Icon.tsx";
 import ServerDot from "./ServerDot.tsx";
 import SessionTabBar from "./SessionTabBar.tsx";
 import SidebarProjects from "./SidebarProjects.tsx";
+import Toasts from "./Toasts.tsx";
 import { useEventNotifications } from "../hooks/useEventNotifications.ts";
 import { useLayoutMode } from "../state/layoutMode.tsx";
 import { useServers } from "../state/servers.tsx";
@@ -103,6 +104,7 @@ export default function Layout() {
         <main className="flex-1 p-4">
           <Outlet />
         </main>
+        <Toasts />
         <footer className="footer footer-center p-4 bg-base-200 text-sm opacity-80">
           <aside>
             <p>
@@ -149,6 +151,11 @@ export default function Layout() {
               className={({ isActive }) => navClass(isActive)}
             >
               <Trans>Server-Werkzeuge</Trans>
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/agents" className={({ isActive }) => navClass(isActive)}>
+              <Trans>Agenten</Trans>
             </NavLink>
           </li>
           <li>

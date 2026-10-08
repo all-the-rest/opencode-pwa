@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { sessionTitle } from "../lib/opencode.ts";
 
 const STORAGE_KEY = "opencode-pwa:session-tabs";
 
@@ -27,10 +28,9 @@ function toSessionTab(entry: unknown): SessionTab | null {
   const record = entry as Record<string, unknown>;
   if (typeof record["serverID"] !== "string" || record["serverID"] === "") return null;
   if (typeof record["sessionID"] !== "string" || record["sessionID"] === "") return null;
-  const title = typeof record["title"] === "string" && record["title"] !== ""
-    ? record["title"]
-    : record["sessionID"];
-  return { serverID: record["serverID"], sessionID: record["sessionID"], title };
+  const sessionID: string = record["sessionID"];
+  const rawTitle = typeof record["title"] === "string" ? record["title"] : null;
+  return { serverID: record["serverID"], sessionID, title: sessionTitle(rawTitle, sessionID) };
 }
 
 function loadInitial(): SessionTab[] {
