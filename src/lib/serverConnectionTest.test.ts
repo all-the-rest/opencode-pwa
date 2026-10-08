@@ -80,6 +80,29 @@ describe("testServerConnection", () => {
     );
   });
 
+  it("trims surrounding whitespace from the password before building the Basic header", async () => {
+    const fetchFn: ConnectionTestFetch = vi.fn(() => Promise.resolve(jsonResponse({})));
+    await testServerConnection({ ...input, password: "  secret  " }, fetchFn);
+    expect(fetchFn).toHaveBeenCalledWith(
+      "https://opencode.example.com/api/info",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: `Basic ${btoa("e2e:secret")}`,
+        }),
+      }),
+    );
+  });
+
+  it("treats a whitespace-only password as no credential (no Authorization header)", async () => {
+    const fetchFn = vi.fn<ConnectionTestFetch>(() => Promise.resolve(jsonResponse({})));
+    await testServerConnection(
+      { ...input, username: "  ", password: "   " },
+      fetchFn,
+    );
+    const init = fetchFn.mock.calls[0]?.[1];
+    expect(init?.headers).not.toMatchObject({ Authorization: expect.anything() });
+  });
+
   it("normalizes a typed deep base URL before requesting the origin's /api/info", async () => {
     let requested = "";
     const fetchFn: ConnectionTestFetch = (url) => {

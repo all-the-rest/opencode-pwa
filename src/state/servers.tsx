@@ -28,6 +28,13 @@ export interface ServerInput {
   name: string;
   baseUrl: string;
   username: string;
+  /**
+   * Server token (Basic Auth password). Surrounding whitespace is trimmed at
+   * the persistence boundary — tokens carry no meaningful leading/trailing
+   * spaces, and a pasted password with spaces must not seal a wrong
+   * credential. Whitespace-only counts as blank, which keeps the stored
+   * credential on update.
+   */
   password: string;
   /**
    * Palette color for the server. Optional on input so callers that only
@@ -223,7 +230,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       setSelectedServerId((current) => current ?? server.id);
       return next;
     });
-    const mode = await storeCredential(server.id, input.password);
+    const mode = await storeCredential(server.id, input.password.trim());
     setCredentialStorage(mode);
     return server;
   }, []);
@@ -248,8 +255,11 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     // A blank password keeps the stored credential: the secret never enters
     // the DOM, so "no new password" must not wipe the vault entry. The only
     // way to drop a stored credential is removing the server (removeServer).
-    if (input.password !== "") {
-      const mode = await storeCredential(id, input.password);
+    // Blank is judged after trimming (server tokens carry no meaningful
+    // surrounding whitespace), so a whitespace-only field keeps as well.
+    const password = input.password.trim();
+    if (password !== "") {
+      const mode = await storeCredential(id, password);
       setCredentialStorage(mode);
     }
   }, []);

@@ -120,7 +120,11 @@ export default function Settings() {
         await testServerConnection({
           baseUrl: form.baseUrl,
           username: form.username,
-          password: form.password,
+          // Server tokens carry no meaningful surrounding whitespace: a
+          // pasted password with leading/trailing spaces must test as
+          // trimmed, otherwise the wrong Basic header yields a 401 that
+          // looks like "wrong password".
+          password: form.password.trim(),
         }),
       );
     } catch {
@@ -161,7 +165,11 @@ export default function Settings() {
       name,
       baseUrl,
       username: form.username.trim(),
-      password: form.password,
+      // Trimmed like name/username: server tokens carry no meaningful
+      // surrounding whitespace, and a pasted password with spaces would
+      // otherwise save a wrong Basic credential. Whitespace-only trims to
+      // blank, which keeps the stored credential on edit (vault semantics).
+      password: form.password.trim(),
       color: form.color,
     };
     setSaving(true);

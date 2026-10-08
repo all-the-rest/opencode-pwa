@@ -134,6 +134,11 @@ function readVersion(body: unknown): string | null {
  * `GET {base}/api/info` with the given (unsaved) credentials, mapped to a
  * German result. Never persists anything — callers pass the form values
  * directly. The request is aborted after {@link CONNECTION_TEST_TIMEOUT_MS}.
+ *
+ * Username and password are trimmed before building the Basic header:
+ * server tokens carry no meaningful surrounding whitespace, and a pasted
+ * password with leading/trailing spaces must authenticate as trimmed —
+ * otherwise the wrong header yields a 401 that looks like "wrong password".
  */
 export async function testServerConnection(
   input: ConnectionTestInput,
@@ -150,11 +155,10 @@ export async function testServerConnection(
   }
   const target = `${base}/api/info`;
   const headers: Record<string, string> = { accept: "application/json" };
-  if (input.username.trim() !== "" || input.password !== "") {
-    headers["Authorization"] = basicAuthHeader({
-      username: input.username.trim(),
-      password: input.password,
-    });
+  const username = input.username.trim();
+  const password = input.password.trim();
+  if (username !== "" || password !== "") {
+    headers["Authorization"] = basicAuthHeader({ username, password });
   }
   let response: Response;
   const controller = new AbortController();

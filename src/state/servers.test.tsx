@@ -417,6 +417,68 @@ describe("credential vault", () => {
     });
   });
 
+  it("trims surrounding whitespace from the password on add; whitespace-only update keeps", async () => {
+    setVaultStorageForTests(vaultBackend());
+    function TrimFlow() {
+      const { addServer, updateServer, servers } = useServers();
+      return (
+        <div>
+          <button
+            type="button"
+            onClick={() =>
+              void addServer({
+                name: "Heimserver",
+                baseUrl: "http://heim.local",
+                username: "u",
+                password: "  geheim  ",
+              })
+            }
+          >
+            add
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const first = servers[0];
+              if (first !== undefined) {
+                void updateServer(first.id, {
+                  name: "Heimserver",
+                  baseUrl: "http://heim.local",
+                  username: "u",
+                  password: "   ",
+                });
+              }
+            }}
+          >
+            update-spaces
+          </button>
+        </div>
+      );
+    }
+    await mountProvider(
+      <ServerProvider>
+        <TrimFlow />
+      </ServerProvider>,
+    );
+    await act(async () => {
+      screen.getByRole("button", { name: "add" }).click();
+    });
+    await waitFor(async () => {
+      expect(readStoredServers()).toHaveLength(1);
+    });
+    const id = readStoredServers()[0]?.["id"] as string;
+    // A pasted password with leading/trailing spaces seals the trimmed token.
+    await waitFor(async () => {
+      expect(await readCredential(id)).toBe("geheim");
+    });
+
+    // Whitespace-only trims to blank, which keeps the stored credential.
+    await act(async () => {
+      screen.getByRole("button", { name: "update-spaces" }).click();
+    });
+    expect(await readCredential(id)).toBe("geheim");
+  });
+
   it("migrates a plaintext password on load and wipes it from localStorage", async () => {
     setVaultStorageForTests(vaultBackend());
     localStorage.setItem(
