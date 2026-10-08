@@ -19,6 +19,18 @@ import {
   type UiReviewState,
   type UiReviewViewport,
 } from "./ui-review.config.ts";
+import {
+  ACTIVE_SESSIONS,
+  CHAT_MESSAGES,
+  CHAT_RUNNING_MESSAGES,
+  FILE_ENTRIES,
+  MCP_SERVERS,
+  PERMISSIONS,
+  PROJECTS,
+  RUNNING_SHELLS,
+  SESSION_DIFF_ROWS,
+  SESSION_ROWS,
+} from "./mockFixtures.ts";
 
 const demoServer = {
   id: "e2e-server",
@@ -58,10 +70,22 @@ function payload(data: unknown) {
   return JSON.stringify(data);
 }
 
+function json(routeReq: Route, data: unknown) {
+  return routeReq.fulfill({ status: 200, contentType: "application/json", body: payload(data) });
+}
+
 async function mockApi(page: Page, route: UiReviewRoute, state: UiReviewState) {
   const mock: UiReviewMock = state === "empty" ? emptyMockFor(route.mock) : route.mock;
+  const filled = state !== "empty";
+  const failUrls = route.failUrls ?? [];
   await page.route("**/api/**", async (routeReq: Route) => {
     const url = routeReq.request().url();
+    // The offline capture comes from a failed round-trip (the app derives its
+    // offline state from the last load error, not from `navigator.onLine`).
+    if (failUrls.some((needle) => url.includes(needle))) {
+      await routeReq.abort("internetdisconnected");
+      return;
+    }
     if (url.includes("/api/event")) {
       await routeReq.fulfill({
         status: 200,
@@ -71,67 +95,119 @@ async function mockApi(page: Page, route: UiReviewRoute, state: UiReviewState) {
       return;
     }
     if (mock === "none") {
-      await routeReq.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+      await json(routeReq, {});
       return;
     }
-    if (url.includes("/api/session/") && url.includes("/message")) {
+
+    // --- session scoped -------------------------------------------------
+    if (url.includes("/message")) {
       const messages =
-        mock === "session-empty"
-          ? []
-          : [
-              { id: "msg-1", role: "user", text: "Baue bitte das Feature" },
-              { id: "msg-2", role: "assistant", text: "Verstanden, ich lege los." },
-            ];
-      await routeReq.fulfill({ status: 200, contentType: "application/json", body: payload({ data: messages, cursor: {} }) });
+        mock === "chat-running"
+          ? CHAT_RUNNING_MESSAGES
+          : mock === "session-empty" || mock === "session-diff" || mock === "agents"
+            ? []
+            : CHAT_MESSAGES;
+      await json(routeReq, { data: messages, cursor: {} });
       return;
     }
-    if (url.includes("/api/session") && routeReq.request().method() === "GET") {
-      const hasData = state !== "empty" && (mock === "server" || mock === "dashboard");
-      const sessions = hasData
-        ? [{ id: "ses-1", title: "Alpha bauen", agent: "coder", projectID: "p1" }]
-        : [];
-      await routeReq.fulfill({ status: 200, contentType: "application/json", body: payload({ data: sessions, cursor: { next: null, previous: null } }) });
+    if (url.includes("/diff")) {
+      const rows = mock === "session-diff" && filled ? SESSION_DIFF_ROWS : [];
+      await json(routeReq, { location: {}, data: rows });
       return;
     }
-    if (url.includes("/api/shell") && !url.includes("/output")) {
-      const hasData = state !== "empty" && (mock === "server" || mock === "dashboard");
-      const shells = hasData ? [{ id: "sh-1", command: "sleep 60" }] : [];
-      await routeReq.fulfill({ status: 200, contentType: "application/json", body: payload({ location: {}, data: shells }) });
+    if (url.includes("/api/session/active")) {
+      await json(routeReq, mock === "agents" && filled ? ACTIVE_SESSIONS : {});
       return;
     }
-    if (url.includes("/api/shell/") && url.includes("/output")) {
-      await routeReq.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: payload({ location: {}, data: { output: "hallo ausgabe\n", cursor: 14, size: 14, truncated: false } }),
+    // Single-session GET (`/api/session/<id>`, optional trailing slash): the
+    // agent/model switch calls it, so it must answer a SessionInfo, not a
+    // list — otherwise every capture carries a stale red
+    // "could not switch agent/model" banner.
+    if (/\/api\/session\/[^/?#]+\/?$/.test(url)) {
+      await json(routeReq, {
+        id: "ses-1",
+        title: "ses-1",
+        agent: "build",
+        model: { providerID: "anthropic", id: "claude-sonnet-4" },
+        projectID: "p1",
+        time: { created: Date.now() - 900_000, updated: Date.now() - 60_000 },
       });
       return;
     }
+    if (url.includes("/api/model")) {
+      await json(routeReq, {
+        data: [
+          { id: "anthropic/claude-sonnet-4", modelID: "claude-sonnet-4", providerID: "anthropic", name: "Claude Sonnet 4" },
+          { id: "anthropic/claude-haiku-4", modelID: "claude-haiku-4", providerID: "anthropic", name: "Claude Haiku 4" },
+        ],
+      });
+      return;
+    }
+    if (url.includes("/api/experimental/session/stats")) {
+      await json(routeReq, {
+        data: { prompts: 128, sessions: 7, tools: { totals: { calls: 342 } }, cost: 1.42, tokens: 128_400 },
+      });
+      return;
+    }
+    if (url.includes("/api/session") && routeReq.request().method() === "GET") {
+      const sessions =
+        filled && mock !== "session-empty" && mock !== "none" && mock !== "settings"
+          ? SESSION_ROWS
+          : [];
+      await json(routeReq, { data: sessions, cursor: { next: null, previous: null } });
+      return;
+    }
+
+    // --- server scoped --------------------------------------------------
+    if (url.includes("/api/shell") && !url.includes("/output")) {
+      const shells =
+        filled && (mock === "server" || mock === "dashboard" || mock === "tools") ? RUNNING_SHELLS : [];
+      await json(routeReq, { location: {}, data: shells });
+      return;
+    }
+    if (url.includes("/api/shell/") && url.includes("/output")) {
+      await json(routeReq, { location: {}, data: { output: "hallo ausgabe\n", cursor: 14, size: 14, truncated: false } });
+      return;
+    }
     if (url.includes("/api/pty")) {
-      await routeReq.fulfill({ status: 200, contentType: "application/json", body: payload({ location: {}, data: [] }) });
+      await json(routeReq, { location: {}, data: filled && mock === "tools" ? [] : [] });
       return;
     }
     if (url.includes("/api/project")) {
-      const hasData = state !== "empty" && (mock === "server" || mock === "dashboard");
-      const projects = hasData ? [{ id: "p1", name: "Projekt Eins" }] : [];
-      await routeReq.fulfill({ status: 200, contentType: "application/json", body: payload({ data: projects }) });
+      const projects = filled && mock !== "none" && mock !== "settings" ? PROJECTS : [];
+      await json(routeReq, { data: projects });
       return;
     }
     if (url.includes("/api/agent")) {
-      await routeReq.fulfill({ status: 200, contentType: "application/json", body: payload({ location: {}, data: [{ id: "coder" }] }) });
+      await json(routeReq, { location: {}, data: [{ id: "coder" }, { id: "build" }, { id: "plan" }] });
+      return;
+    }
+    if (url.includes("/api/file")) {
+      await json(routeReq, { location: {}, data: filled && mock === "tools" ? FILE_ENTRIES : [] });
+      return;
+    }
+    if (url.includes("/api/mcp")) {
+      await json(routeReq, { location: {}, data: filled && mock === "tools" ? MCP_SERVERS : [] });
+      return;
+    }
+    if (url.includes("/api/permission")) {
+      await json(routeReq, { location: {}, data: filled && mock === "tools" ? PERMISSIONS : [] });
+      return;
+    }
+    if (url.includes("/api/config")) {
+      await json(routeReq, { location: {}, data: filled && mock === "tools" ? { theme: "dark", model: "anthropic/claude-sonnet-4" } : {} });
       return;
     }
     if (url.includes("/api/info")) {
-      await routeReq.fulfill({ status: 200, contentType: "application/json", body: payload({ version: "9.9.9", pid: 4242 }) });
+      await json(routeReq, { version: "9.9.9", pid: 4242 });
       return;
     }
-    await routeReq.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+    await json(routeReq, {});
   });
 }
 
 function emptyMockFor(mock: UiReviewMock): UiReviewMock {
-  if (mock === "session") return "session-empty";
-  if (mock === "server" || mock === "dashboard") return mock;
+  if (mock === "chat-steps") return "session-empty";
   return mock;
 }
 
@@ -154,6 +230,10 @@ for (const route of routes) {
         await mockApi(page, route, state);
         await page.goto(route.path);
         await settle(page);
+        for (const testid of route.steps ?? []) {
+          await page.getByTestId(testid).first().click();
+          await page.waitForTimeout(250);
+        }
         await page.screenshot({ path: out(state, viewport, `${route.name}.png`), fullPage: true });
         await page.screenshot({ path: out(state, viewport, `${route.name}-sec0.png`), fullPage: false });
       });

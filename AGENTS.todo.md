@@ -21,10 +21,15 @@ Reihenfolge steht, jede Welle wird vor dem commit verifiziert (lint/test/build/e
 `95b5990` Tool-Cards · `8b25413` Live-Turn-Progress · `3a6cf61` Composer — danach:
 
 - [ ] **Welle 4 — Diff gerendert** (statt Roh-Patch im `<pre>`): Zeilen mit Nummern und +/--Spalte,
-      Zähler je Datei, Unified/Split-Toggle, Kontext-Ausklappen, Karten-Leerzustände.
+      Zähler je Datei, Unified/Split-Toggle, Kontext-Ausklappen, Karten-Leerzustände. — **erledigt** (`a4d43c7`)
 - [ ] **Welle 5 — Docks + Listen + Tabs**: Permission-/Frage-/Eingangsbox-/Revert-Dock direkt über dem
       Composer (statt Umweg über Server-Werkzeuge), Skeleton-Zeilen + Suchoverlay in den Listen,
-      Tab-Rename per Doppelklick + Mittelklick schließen.
+      Tab-Rename per Doppelklick + Mittelklick schließen. — **offen** (Agent zweimal am Rate-Limit gescheitert)
+- [ ] **Markdown-Vollständigkeit**: GFM-Tabellen (mit Ausrichtung), nummerierte/verschachtelte/Task-Listen,
+      Durchstreichung — Fund aus dem Screenshot-Review, Tabellen renderten als Rohtext.
+- [ ] **UI-Review-Harness**: Manifest auf alle Zustände erweitert (Multi-Step-Chat, laufender Turn, Diff,
+      Eingangsbox, Formulare, Agenten, Projekt, Server-Werkzeuge, Agent-Detail, Offline) mit echten
+      V2-Fixtures in `tests/screenshots/mockFixtures.ts`.
 - [ ] **Welle 6 — Chat wie ein Messenger + Basic/Experte**: Tages-Trenner („Heute"/„Gestern"),
       Gruppierung aufeinanderfolgender Nachrichten, Bubble-Enden, Kurzaktionen (Kopieren) bei
       Hover/Long-Press — ohne Feature-Degradierung auf Mobile (Desktop zeigt *mehr*, nie weniger);
