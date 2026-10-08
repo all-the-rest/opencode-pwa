@@ -212,3 +212,13 @@ the **server password** (`OPENCODE_PASSWORD`), NOT the login password
 (`AUTH_HASH`). Debug hint: `realm="restricted"` = Caddy rejected,
 `realm="Secure Area"` + `{"_tag":"UnauthorizedError"}` = opencode itself
 rejected (wrong password injected upstream).
+
+## 6. Target state (owner goal): one password for both doors
+
+Currently the login page (`AUTH_USER` + `AUTH_HASH`, bcrypt, cookie) and the
+API gate (`opencode` + `OPENCODE_PASSWORD`, Basic) are two different
+credentials. Goal: the login-page password also works at Caddy. VPS-side
+change (other machine, caddyfile-repo + `./sync.sh`): Caddy `basic_auth`
+checks the client header against `AUTH_USER`/`AUTH_HASH` (bcrypt works
+directly) and keeps swapping upstream to `opencode`/`OPENCODE_PASSWORD`
+via `header_up`. No PWA change needed — it only sends what the user stored.
