@@ -1945,6 +1945,10 @@ msgstr "Unerwartete Token-Antwort vom Server."
 msgid "ungeeignet"
 msgstr "ungeeignet"
 
+#: src/lib/serverConnectionTest.ts
+msgid "Unter dieser URL läuft keine Opencode-API. Bitte die Basis-URL prüfen (Origin oder Reverse-Proxy-Pfad, ohne /api)."
+msgstr "Unter dieser URL läuft keine Opencode-API. Bitte die Basis-URL prüfen (Origin oder Reverse-Proxy-Pfad, ohne /api)."
+
 #: src/pages/ServerDetail.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Unterbrechen"
@@ -2026,6 +2030,10 @@ msgstr "Worktrees"
 #: src/pages/Settings.tsx
 msgid "z. B. Heimserver"
 msgstr "z. B. Heimserver"
+
+#: src/lib/serverConnectionTest.ts
+msgid "Zeitüberschreitung: Der Server hat nicht innerhalb von 15 Sekunden geantwortet. Bitte prüfen, ob der Server erreichbar ist."
+msgstr "Zeitüberschreitung: Der Server hat nicht innerhalb von 15 Sekunden geantwortet. Bitte prüfen, ob der Server erreichbar ist."
 
 #: src/pages/SessionDetail.tsx
 msgid "Zu neuesten springen"

@@ -126,23 +126,120 @@ test(
 );
 
 test(
-  "login page instead of JSON shows the gate hint",
+  "a redirect to the gate login page shows the gate hint",
   { tag: ["@feature", "@feature:settings-connection"] },
   async ({ page }) => {
+    // The real cookie gate answers `302 → /login.html`; the browser follows it,
+    // so the HTML login page arrives with `redirected === true`. Same-origin,
+    // redirected to the dev server's own HTML document to model that exactly.
+    await gotoSettings(page);
+    const origin = new URL(page.url()).origin;
     await page.route("**/api/info", async (route) => {
       await route.fulfill({
-        status: 200,
-        contentType: "text/html; charset=utf-8",
-        body: "<html><body>login</body></html>",
+        status: 302,
+        headers: { location: "/index.html" },
       });
     });
-    await gotoSettings(page);
-    await fillForm(page, "http://conn-test.local");
+    await fillForm(page, origin);
 
     await page.getByRole("button", { name: "Verbindung testen" }).click();
     const result = page.getByTestId("connection-test-result");
     await expect(result).toContainText("einloggen");
     expect(await storedServerCount(page)).toBe(0);
+  },
+);
+
+test(
+  "HTML served directly at /api/info shows the no-API hint, not the gate hint",
+  { tag: ["@feature", "@feature:settings-connection"] },
+  async ({ page }) => {
+    // A foreign origin (no opencode API) answers /api/info with its own page
+    // and no redirect — this must not masquerade as a cookie-gate login page.
+    await page.route("**/api/info", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "text/html; charset=utf-8",
+        body: "<html><body>willkommen</body></html>",
+      });
+    });
+    await gotoSettings(page);
+    await fillForm(page, "http://foreign.local");
+
+    await page.getByRole("button", { name: "Verbindung testen" }).click();
+    const result = page.getByTestId("connection-test-result");
+    await expect(result).toContainText("keine Opencode-API");
+    await expect(result).not.toContainText("einloggen");
+    expect(await storedServerCount(page)).toBe(0);
+  },
+);
+
+test(
+  "a hanging connection test aborts after the timeout with a German message",
+  { tag: ["@feature", "@feature:settings-connection"] },
+  async ({ page }) => {
+    test.setTimeout(45_000);
+    // Same-origin so the fetch cannot be blocked by CORS before it hangs; a
+    // server that never answers must be given up on by the client itself.
+    await gotoSettings(page);
+    const origin = new URL(page.url()).origin;
+    await page.route("**/api/info", async () => {
+      await new Promise<void>(() => {});
+    });
+    await fillForm(page, origin);
+
+    await page.getByRole("button", { name: "Verbindung testen" }).click();
+    const result = page.getByTestId("connection-test-result");
+    await expect(result).toContainText("Zeitüberschreitung", { timeout: 20_000 });
+    await expect(result).toContainText("erreichbar");
+    expect(await storedServerCount(page)).toBe(0);
+  },
+);
+
+test(
+  "pasting a URL with a reverse-proxy subpath keeps the subpath, drops only the deep tail",
+  { tag: ["@feature", "@feature:settings-connection"] },
+  async ({ page }) => {
+    await gotoSettings(page);
+    await baseUrlField(page).focus();
+    await pasteIntoBaseUrl(page, "https://proxy.local/opencode/sessions/abc?x=1");
+    await expect(baseUrlField(page)).toHaveValue("https://proxy.local/opencode");
+  },
+);
+
+test(
+  "saving a typed subpath URL stores origin + subpath and the test requests it",
+  { tag: ["@feature", "@feature:settings-connection"] },
+  async ({ page }) => {
+    const requested: string[] = [];
+    await page.route("**/api/info", async (route) => {
+      requested.push(route.request().url());
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ version: "1.0.0", pid: 1, urls: [], paths: {} }),
+      });
+    });
+    await gotoSettings(page);
+    await fillForm(page, "http://subpath.local/opencode/sessions/abc?tab=1");
+
+    await page.getByRole("button", { name: "Verbindung testen" }).click();
+    const result = page.getByTestId("connection-test-result");
+    await expect(result).toContainText("Verbindung erfolgreich");
+    await expect(page.getByTestId("connection-test-url")).toHaveText(
+      "http://subpath.local/opencode/api/info",
+    );
+    expect(requested).toEqual(["http://subpath.local/opencode/api/info"]);
+
+    await page.getByRole("button", { name: "Hinzufügen" }).click();
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const raw = localStorage.getItem("opencode-pwa:servers");
+          if (raw === null || raw === "") return null;
+          return (JSON.parse(raw) as Array<{ baseUrl: string }>)[0]?.baseUrl ?? null;
+        }),
+      )
+      .toBe("http://subpath.local/opencode");
   },
 );
 
