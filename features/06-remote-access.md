@@ -162,6 +162,9 @@ for option A.
   Caddy provisioning, same class as the existing `__OPENCODE_BASIC__`
   placeholder); brute-force exposure of `/api/*` directly — mitigate with
   Caddy `rate_limit` on the handle if available.
+- As built 2026-10-08 (supersedes the `basicauth` wording): the gate is an
+  exact base64 string match on the **login** credential, not a bcrypt check
+  and not the server password — see the §5 addendum and §6.
 
 ### Recommendation
 
@@ -213,12 +216,56 @@ the **server password** (`OPENCODE_PASSWORD`), NOT the login password
 `realm="Secure Area"` + `{"_tag":"UnauthorizedError"}` = opencode itself
 rejected (wrong password injected upstream).
 
-## 6. Target state (owner goal): one password for both doors
+### Addendum 2026-10-08: the edge gate checks the LOGIN credential (supersedes the rule above)
 
-Currently the login page (`AUTH_USER` + `AUTH_HASH`, bcrypt, cookie) and the
-API gate (`opencode` + `OPENCODE_PASSWORD`, Basic) are two different
-credentials. Goal: the login-page password also works at Caddy. VPS-side
-change (other machine, caddyfile-repo + `./sync.sh`): Caddy `basic_auth`
-checks the client header against `AUTH_USER`/`AUTH_HASH` (bcrypt works
-directly) and keeps swapping upstream to `opencode`/`OPENCODE_PASSWORD`
-via `header_up`. No PWA change needed — it only sends what the user stored.
+The deployed `@api_ok` matcher (gate repo `remote/Caddyfile.fragment`, root
+`AGENTS.md` §4, dated 2026-10-08) no longer gates on the opencode server
+password. It matches the **login credential** exactly —
+`Authorization: Basic base64("<AUTH_USER>:<Login-Passwort>")`, the same
+credential the login page uses — and `header_up` still injects
+`base64("opencode:<OPENCODE_PASSWORD>")` upstream. Edge credential and
+server password are therefore two independent strings that rotate
+independently; the Caddy proxy auth is deliberately not the target
+server's.
+
+PWA consequence (server entry for `remote-code`): username = `AUTH_USER`
+(the login page user), password = the **login password**. Storing
+`opencode` + `OPENCODE_PASSWORD` now 401s on every `/api/*` request.
+
+Debug hints, updated: a wrong credential on `/api/*` yields a plain `401`
+with ACAO and **no** `WWW-Authenticate` header (`@api_denied` — so the
+browser never pops its native password dialog on that path). An
+opencode-side rejection (`{"_tag":"UnauthorizedError"}`) can no longer be
+caused by a wrong stored password in the PWA: the PWA never sees the
+upstream credential.
+
+Measured against the live `https://remote-code.all-the.rest` on 2026-10-08,
+**without any credential** (form of the answer is the evidence):
+
+| Fall | Ergebnis | Beleg für |
+|---|---|---|
+| `OPTIONS /api/info` | 204 + ACAO/ACAC/Methods/Headers/Max-Age | Preflight-Block, `Allow-Headers: Authorization, Content-Type` |
+| `GET /api/info` ohne Basic | 302 → `/login.html` | Cookie-Gate unberührt |
+| `GET /api/info` + falsches Basic | 401 + ACAO, **kein** `WWW-Authenticate` | neuer `@api_denied` (der alte `basicauth`-Block sendete `realm="restricted"`) |
+
+The missing `WWW-Authenticate` is what proves the new gate is deployed
+rather than the 2026-10-07 `basicauth` variant. The positive case (correct
+login credential → 200) cannot be measured from here without the
+credential — it is the remaining step of the manual device test
+(`docs/manual-device-test.md`).
+
+## 6. Target state (owner goal): one password for both doors — ACHIEVED 2026-10-08
+
+Login page (`AUTH_USER` + `AUTH_HASH`, bcrypt, cookie) and API gate now use
+**one** credential: the login-page password also works at Caddy. No PWA
+change was ever needed for this — the PWA only sends whatever the user
+stored in the vault; what changed is which credential Caddy accepts.
+
+Implementation is an **exact base64 string match**, not a bcrypt
+comparison: `@api_ok { path /api/*; header Authorization "Basic
+__EDGE_BASIC__" }` with `__EDGE_BASIC__` = base64(AUTH_USER:login
+password). The value rotates only by hand — a login-password rotation must
+be pulled through **three** places (gate `AGENTS.md` §4): `AUTH_HASH` in
+the sidecar, the `@api_ok` base64 in **both** Caddyfile blocks, and the
+PWA server entry. Symptom of a missed place: `401` on `/api/*` although
+the login-page password is correct ("User-Teil muss `AUTH_USER` sein").

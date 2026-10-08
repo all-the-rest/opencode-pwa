@@ -13,10 +13,14 @@ SPA-Fallback (`404.html` = App-Shell), HTTPS erzwungen.
 2. **CORS:** Der Opencode-Server muss `https://ocweb.all-the.rest` als
    Origin erlauben. Symptom sonst: „Server offline" trotz erreichbarem
    Server (Browser blockt die Antwort).
-3. **Zugangsdaten:** Für `remote-code.all-the.rest` gilt: Username **muss**
-   `opencode` sein (Caddy prüft den Namen — alles andere gibt 401 auf jeden
-   Request), Passwort ist das **Server-Passwort** (`OPENCODE_PASSWORD`),
-   **nicht** das Login-Passwort der Login-Seite (`AUTH_HASH`). Bereitlegen.
+3. **Zugangsdaten:** Für `remote-code.all-the.rest` gilt (seit 2026-10-08,
+   bestätigt im Gate-Repo `AGENTS.md` §4): Username ist der Benutzer der
+   Login-Seite (`AUTH_USER`), Passwort ist das **Login-Passwort**. Genau
+   diese Kennung prüft Caddy am `/api/*`-Gate (`@api_ok`, exakter
+   base64-Vergleich) und tauscht sie intern gegen
+   `opencode`/`OPENCODE_PASSWORD` — die PWA sieht das Server-Passwort nie.
+   **Nicht** `opencode` + Server-Passwort eintragen: das war der Stand vom
+   2026-10-07 und gibt heute 401 auf jeden Request.
 
 ## Ablauf (ca. 15 Minuten)
 

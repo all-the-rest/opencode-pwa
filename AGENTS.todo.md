@@ -11,7 +11,7 @@ für Agenten-Aktivität (dokumentierte Lücke).
 
 ## Offen
 
-- [ ] Remote-Zugriff live nachtesten: `remote-code` in der PWA anlegen (User `opencode` + Server-Passwort), Verbindungstest + Schritte 3–12 aus `docs/manual-device-test.md`. VPS-seitig erledigt (Caddy Basic-Gate + CORS, verifiziert 2026-10-07).
+- [ ] Remote-Zugriff live nachtesten: `remote-code` in der PWA anlegen (User `AUTH_USER` + Login-Passwort — Credential-Regel 2026-10-08, Details in `features/06-remote-access.md` §5-Addendum), Verbindungstest + Schritte 3–12 aus `docs/manual-device-test.md`. VPS-seitig erledigt (Caddy Basic-Gate auf die Login-Kennung + CORS, verifiziert 2026-10-08; davor Server-Passwort, verifiziert 2026-10-07).
 - [ ] Auth-Fehler-Banner mit Direkt-Link zum Bearbeiten der Zugangsdaten (Server-Seite + „Server bearbeiten"-Aktion; Umbenennen/Löschen existiert bereits).
 - [ ] Echter Geräte-Test: PWA-Install + Offline/SW auf realem Handy (nur Config + `dist` verifiziert).
 
