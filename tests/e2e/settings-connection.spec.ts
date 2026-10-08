@@ -145,3 +145,52 @@ test(
     expect(await storedServerCount(page)).toBe(0);
   },
 );
+
+test(
+  "typing a deep URL and saving stores the origin (no paste needed)",
+  { tag: ["@feature", "@feature:settings-connection"] },
+  async ({ page }) => {
+    await gotoSettings(page);
+    // fill() sets the value via onChange, NOT via paste — a typed/autofilled
+    // deep URL must still end in a working entry.
+    await fillForm(page, "http://typed-deep.local/api/info?x=1");
+    await page.getByRole("button", { name: "Hinzufügen" }).click();
+
+    await expect
+      .poll(async () =>
+        page.evaluate(() => {
+          const raw = localStorage.getItem("opencode-pwa:servers");
+          if (raw === null || raw === "") return null;
+          return (JSON.parse(raw) as Array<{ baseUrl: string }>)[0]?.baseUrl ?? null;
+        }),
+      )
+      .toBe("http://typed-deep.local");
+    await expect(page.getByText("http://typed-deep.local", { exact: true })).toBeVisible();
+  },
+);
+
+test(
+  "connection test normalizes a typed deep URL before requesting",
+  { tag: ["@feature", "@feature:settings-connection"] },
+  async ({ page }) => {
+    const requested: string[] = [];
+    await page.route("**/api/info", async (route) => {
+      requested.push(route.request().url());
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ version: "1.0.0", pid: 1, urls: [], paths: {} }),
+      });
+    });
+    await gotoSettings(page);
+    await fillForm(page, "http://typed-deep.local/sessions/abc?tab=1");
+
+    await page.getByRole("button", { name: "Verbindung testen" }).click();
+    const result = page.getByTestId("connection-test-result");
+    await expect(result).toContainText("Verbindung erfolgreich");
+    await expect(page.getByTestId("connection-test-url")).toHaveText(
+      "http://typed-deep.local/api/info",
+    );
+    expect(requested).toEqual(["http://typed-deep.local/api/info"]);
+  },
+);

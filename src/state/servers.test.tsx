@@ -109,6 +109,43 @@ function Editor() {
   );
 }
 
+function DeepUrlFlow() {
+  const { addServer, updateServer, servers } = useServers();
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() =>
+          void addServer({
+            name: "Deep",
+            baseUrl: "https://host.example/api/info?x=1",
+            username: "",
+            password: "",
+          })
+        }
+      >
+        add-deep
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          const first = servers[0];
+          if (first !== undefined) {
+            void updateServer(first.id, {
+              name: "Deep",
+              baseUrl: "https://host.example/sessions/abc",
+              username: "",
+              password: "",
+            });
+          }
+        }}
+      >
+        update-deep
+      </button>
+    </div>
+  );
+}
+
 describe("ServerProvider", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -236,6 +273,27 @@ describe("ServerProvider", () => {
       expect(localStorage.getItem(STORAGE_KEY)).not.toContain("/api");
     });
     expect(localStorage.getItem(STORAGE_KEY)).not.toContain("/sessions/");
+  });
+
+  it("normalizes a typed deep baseUrl on add and update", async () => {
+    await mountProvider(
+      <ServerProvider>
+        <DeepUrlFlow />
+      </ServerProvider>,
+    );
+    await act(async () => {
+      screen.getByRole("button", { name: "add-deep" }).click();
+    });
+    await waitFor(() => {
+      expect(readStoredServers()[0]?.["baseUrl"]).toBe("https://host.example");
+    });
+
+    await act(async () => {
+      screen.getByRole("button", { name: "update-deep" }).click();
+    });
+    await waitFor(() => {
+      expect(readStoredServers()[0]?.["baseUrl"]).toBe("https://host.example");
+    });
   });
 });
 

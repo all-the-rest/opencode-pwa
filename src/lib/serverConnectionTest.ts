@@ -2,6 +2,7 @@ import { t } from "@lingui/core/macro";
 import { isGateLoginContentType } from "./opencodeCookie.ts";
 import { basicAuthHeader } from "./opencode.ts";
 import { authFailureMessage, isAuthFailureMessage } from "./serverAuthError.ts";
+import { normalizeServerBaseUrl } from "./serverBaseUrl.ts";
 
 /**
  * Connection test before save ("Verbindung testen" next to the server
@@ -9,11 +10,14 @@ import { authFailureMessage, isAuthFailureMessage } from "./serverAuthError.ts";
  *
  * Performs `GET {baseUrl}/api/info` with the ENTERED credentials — passed in
  * directly, never read from (or written to) the credential vault, so testing
- * never persists anything. The result is a differentiated German message:
- * success (with version), 401/403 via the shared auth-error mapping
- * (`src/lib/serverAuthError.ts`), 302/HTML login page via the gate detection
- * (`src/lib/opencodeCookie.ts`), network/CORS failure with an
- * Erreichbarkeits-Hinweis mentioning `--cors`.
+ * never persists anything. The base URL is normalized to the server origin
+ * first (same `normalizeServerBaseUrl` the save path uses), so a deep URL that
+ * was typed rather than pasted (session link, `/api` suffix, PWA URL) tests
+ * the URL that will actually be saved instead of a double-`/api` path. The
+ * result is a differentiated German message: success (with version), 401/403
+ * via the shared auth-error mapping (`src/lib/serverAuthError.ts`), 302/HTML
+ * login page via the gate detection (`src/lib/opencodeCookie.ts`),
+ * network/CORS failure with an Erreichbarkeits-Hinweis mentioning `--cors`.
  *
  * Pure module (fetch is injected), unit-testable without rendering.
  */
@@ -38,7 +42,7 @@ export interface ConnectionTestResult {
   /** Server version from `/api/info`, when the response carried one. */
   version: string | null;
   /**
-   * The actually requested URL (`{baseUrl}/api/info`), so path mistakes in
+   * The actually requested URL (`{origin}/api/info`), so path mistakes in
    * the base URL stay visible. `null` when no request was made (invalid URL).
    */
   url: string | null;
@@ -101,15 +105,17 @@ function readVersion(body: unknown): string | null {
 }
 
 /**
- * GET `{baseUrl}/api/info` with the given (unsaved) credentials and map the
- * outcome to a German result. Never persists anything — callers pass the
- * form values directly.
+ * GET `{origin}/api/info` with the given (unsaved) credentials and map the
+ * outcome to a German result. The base URL is normalized to the origin first
+ * (same normalization the save path applies), so testing a typed deep URL
+ * measures the working base URL rather than a doubled path. Never persists
+ * anything — callers pass the form values directly.
  */
 export async function testServerConnection(
   input: ConnectionTestInput,
   fetchFn: ConnectionTestFetch = globalThis.fetch,
 ): Promise<ConnectionTestResult> {
-  const base = input.baseUrl.trim().replace(/\/+$/, "");
+  const base = normalizeServerBaseUrl(input.baseUrl).replace(/\/+$/, "");
   try {
     const url = new URL(base);
     if (url.protocol !== "http:" && url.protocol !== "https:") {

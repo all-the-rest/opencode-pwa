@@ -17,7 +17,7 @@ import {
   type VaultMode,
 } from "../lib/credentialVault.ts";
 import type { ServerConfig } from "../lib/opencode.ts";
-import { normalizeServerBaseUrlOnPaste } from "../lib/serverBaseUrl.ts";
+import { normalizeServerBaseUrl } from "../lib/serverBaseUrl.ts";
 import { defaultServerColor, parseServerColor } from "../lib/serverColor.ts";
 
 const STORAGE_KEY = "opencode-pwa:servers";
@@ -95,7 +95,7 @@ function loadInitial(): InitialLoad {
       // normalized list back, so the migration applies exactly once.
       const migrated: ServerConfig = {
         ...server,
-        baseUrl: normalizeServerBaseUrlOnPaste(server.baseUrl),
+        baseUrl: normalizeServerBaseUrl(server.baseUrl),
       };
       if (entry !== null && typeof entry === "object") {
         const password: unknown = (entry as Record<string, unknown>)["password"];
@@ -153,7 +153,10 @@ function defaultSelectedId(servers: ServerConfig[], current: string | null): str
   if (current !== null && servers.some((s) => s.id === current)) return current;
   const envDefault = import.meta.env["VITE_DEFAULT_SERVER_URL"];
   if (typeof envDefault === "string" && envDefault !== "") {
-    const match = servers.find((s) => s.baseUrl === envDefault);
+    // Compare against the normalized origin: a deep/trailing-slash env default
+    // must still select the (origin-normalized) stored server.
+    const wanted = normalizeServerBaseUrl(envDefault);
+    const match = servers.find((s) => s.baseUrl === wanted);
     if (match) return match.id;
   }
   return servers.length > 0 ? servers[0]?.id ?? null : null;
@@ -206,7 +209,10 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     const server: ServerConfig = {
       id,
       name: input.name,
-      baseUrl: input.baseUrl,
+      // Normalized at the persistence boundary: a typed deep URL (session
+      // link, `/api` suffix, PWA URL) must end in a working entry, not in a
+      // doubled `/api/api/…` path.
+      baseUrl: normalizeServerBaseUrl(input.baseUrl),
       username: input.username,
       // A fresh server always carries an explicit palette color (picked or
       // derived from the new id), so the dot never depends on the fallback.
@@ -230,7 +236,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
           ? {
               id,
               name: input.name,
-              baseUrl: input.baseUrl,
+              baseUrl: normalizeServerBaseUrl(input.baseUrl),
               username: input.username,
               // Omitted color keeps the stored one (rename flow); an explicit
               // palette color replaces it; invalid values are ignored.

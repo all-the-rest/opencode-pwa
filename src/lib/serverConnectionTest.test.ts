@@ -70,6 +70,36 @@ describe("testServerConnection", () => {
     );
   });
 
+  it("normalizes a typed deep base URL before requesting the origin's /api/info", async () => {
+    let requested = "";
+    const fetchFn: ConnectionTestFetch = (url) => {
+      requested = url;
+      return Promise.resolve(jsonResponse({}));
+    };
+    const result = await testServerConnection(
+      { ...input, baseUrl: "https://opencode.example.com/api/info?x=1" },
+      fetchFn,
+    );
+    expect(requested).toBe("https://opencode.example.com/api/info");
+    // The effective (normalized) URL is still shown, so the path is visible.
+    expect(result.url).toBe("https://opencode.example.com/api/info");
+    expect(result.status).toBe("success");
+  });
+
+  it("normalizes a PWA deep URL on another origin to its origin", async () => {
+    let requested = "";
+    const fetchFn: ConnectionTestFetch = (url) => {
+      requested = url;
+      return Promise.resolve(jsonResponse({}));
+    };
+    const result = await testServerConnection(
+      { ...input, baseUrl: "https://ocweb.example.com/servers/srv-1?tab=sessions" },
+      fetchFn,
+    );
+    expect(requested).toBe("https://ocweb.example.com/api/info");
+    expect(result.url).toBe("https://ocweb.example.com/api/info");
+  });
+
   it("maps 401 to the shared credentials message", async () => {
     const fetchFn: ConnectionTestFetch = () =>
       Promise.resolve(

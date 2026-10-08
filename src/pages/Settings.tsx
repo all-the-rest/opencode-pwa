@@ -8,7 +8,7 @@ import {
   type NotificationPermissionState,
 } from "../lib/notify.ts";
 import { SERVER_COLOR_PALETTE, serverColor } from "../lib/serverColor.ts";
-import { normalizeServerBaseUrlOnPaste } from "../lib/serverBaseUrl.ts";
+import { normalizeServerBaseUrl } from "../lib/serverBaseUrl.ts";
 import {
   connectionUnreachableMessage,
   testServerConnection,
@@ -77,14 +77,15 @@ export default function Settings() {
 
   /**
    * Deep-URL paste normalization: a pasted deep URL (session link, /api/…
-   * path, PWA URL) collapses ONCE to the server origin. Manual typing goes
-   * through `onChange` and is untouched.
+   * path, PWA URL) collapses ONCE to the server origin. Manual typing stays
+   * untouched in the field; the save path normalizes it too (handleSubmit +
+   * `servers.tsx`), so a typed deep URL still ends in a working entry.
    */
   function handleBaseUrlPaste(e: React.ClipboardEvent<HTMLInputElement>) {
     const pasted = e.clipboardData.getData("text");
     if (pasted === "") return;
     e.preventDefault();
-    updateForm({ baseUrl: normalizeServerBaseUrlOnPaste(pasted) });
+    updateForm({ baseUrl: normalizeServerBaseUrl(pasted) });
     // The programmatic value reset leaves the caret at position 0 — park it
     // at the end, so typing right after a paste appends instead of prepending.
     const target = e.currentTarget;
@@ -127,7 +128,10 @@ export default function Settings() {
     e.preventDefault();
     if (saving) return;
     const name = form.name.trim();
-    const baseUrl = form.baseUrl.trim().replace(/\/$/, "");
+    // Normalize before validating: a typed deep URL (`…/api`, `…/api/info`,
+    // session link) must save as the working origin, exactly like a paste.
+    // `addServer`/`updateServer` normalize again at the persistence boundary.
+    const baseUrl = normalizeServerBaseUrl(form.baseUrl);
     if (name === "" || baseUrl === "") {
       setFormError(t`Name und Basis-URL sind Pflichtfelder.`);
       return;
