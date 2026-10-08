@@ -205,6 +205,11 @@ export default function ServerDetail() {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  // Once the user paginates, appended pages are local state that a page-1
+  // `reload` would wipe — so the live refresh pauses from here on (reset on
+  // server change). Keeps an appended page 2 stable under the 5s/event-hub
+  // refresh for filters and the "load more" button.
+  const [hasPaged, setHasPaged] = useState(false);
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [shells, setShells] = useState<Row[]>([]);
   const [ptys, setPtys] = useState<Row[]>([]);
@@ -218,8 +223,14 @@ export default function ServerDetail() {
   const projectFilter = searchParams.get("project") ?? "";
   const search = searchParams.get("search") ?? "";
 
+  // `setSearchParams` intentionally stays out of the load effect below:
+  // react-router re-creates its identity on every query change, so listing it
+  // as a dep would re-run the full server load (wiping appended pages) on
+  // every filter/search keystroke. The ref always calls the latest setter.
+  const setSearchParamsRef = useRef(setSearchParams);
+  setSearchParamsRef.current = setSearchParams;
   function updateParam(key: "agent" | "project" | "search", value: string) {
-    setSearchParams(
+    setSearchParamsRef.current(
       (prev) => {
         const next = new URLSearchParams(prev);
         if (value === "") next.delete(key);
@@ -296,7 +307,7 @@ export default function ServerDetail() {
   useEffect(() => {
     if (server === null) return;
     if (prevServerIdRef.current !== null && prevServerIdRef.current !== server.id) {
-      setSearchParams({}, { replace: true });
+      setSearchParamsRef.current({}, { replace: true });
     }
     prevServerIdRef.current = server.id;
     let cancelled = false;
@@ -304,6 +315,7 @@ export default function ServerDetail() {
     setError(null);
     setSessions([]);
     setNextCursor(null);
+    setHasPaged(false);
     setExpandedShell(null);
     setPtyTickets({});
     setRenaming(false);
@@ -346,12 +358,23 @@ export default function ServerDetail() {
     return () => {
       cancelled = true;
     };
-  }, [server, setSearchParams]);
+    // NB: `setSearchParams` is deliberately not a dep — react-router mints a
+    // new setter identity on every query change, and depending on it re-ran
+    // this whole load (resetting sessions + pagination) on every filter or
+    // search keystroke. It is reached via `setSearchParamsRef` instead.
+  }, [server]);
 
   // Live counters + lists: poll every 5s + refresh on event-hub activity.
   // Paused while a shell output panel is open — its 2s tail-poll is the live
-  // view there, and the list refresh would only overlap it.
-  useLiveRefresh(server, reload, LIVE_REFRESH_INTERVAL_MS, expandedShell === null);
+  // view there, and the list refresh would only overlap it. Also paused once
+  // the user paginated (`hasPaged`): `reload` fetches page 1 only and would
+  // wipe the appended pages (e.g. the agent filter target on page 2).
+  useLiveRefresh(
+    server,
+    reload,
+    LIVE_REFRESH_INTERVAL_MS,
+    expandedShell === null && !hasPaged,
+  );
 
   if (server === null) {
     return (
@@ -392,10 +415,15 @@ export default function ServerDetail() {
       setError(result.error ?? t`Sessions konnten nicht nachgeladen werden.`);
       return;
     }
-    const known = new Set(sessions.map((s) => s.id));
     const page = result.data;
-    setSessions((prev) => [...prev, ...page.rows.filter((r) => !known.has(r.id))]);
+    // Race-free: dedupe inside the functional update so two overlapping
+    // `loadMoreSessions` calls (same cursor) cannot append page 2 twice.
+    setSessions((prev) => {
+      const known = new Set(prev.map((s) => s.id));
+      return [...prev, ...page.rows.filter((r) => !known.has(r.id))];
+    });
     setNextCursor(page.cursor.next);
+    setHasPaged(true);
   }
 
   async function confirmKill() {
