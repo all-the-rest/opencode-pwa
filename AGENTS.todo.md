@@ -15,6 +15,28 @@ für Agenten-Aktivität (dokumentierte Lücke).
 - [ ] Auth-Fehler-Banner mit Direkt-Link zum Bearbeiten der Zugangsdaten (Server-Seite + „Server bearbeiten"-Aktion; Umbenennen/Löschen existiert bereits).
 - [ ] Echter Geräte-Test: PWA-Install + Offline/SW auf realem Handy (nur Config + `dist` verifiziert).
 
+## Geplante Wellen (UX-Angleichung an das Opencode-Original)
+
+Reihenfolge steht, jede Welle wird vor dem commit verifiziert (lint/test/build/e2e):
+`95b5990` Tool-Cards · `8b25413` Live-Turn-Progress · `3a6cf61` Composer — danach:
+
+- [ ] **Welle 4 — Diff gerendert** (statt Roh-Patch im `<pre>`): Zeilen mit Nummern und +/--Spalte,
+      Zähler je Datei, Unified/Split-Toggle, Kontext-Ausklappen, Karten-Leerzustände.
+- [ ] **Welle 5 — Docks + Listen + Tabs**: Permission-/Frage-/Eingangsbox-/Revert-Dock direkt über dem
+      Composer (statt Umweg über Server-Werkzeuge), Skeleton-Zeilen + Suchoverlay in den Listen,
+      Tab-Rename per Doppelklick + Mittelklick schließen.
+- [ ] **Welle 6 — Chat wie ein Messenger + Basic/Experte**: Tages-Trenner („Heute"/„Gestern"),
+      Gruppierung aufeinanderfolgender Nachrichten, Bubble-Enden, Kurzaktionen (Kopieren) bei
+      Hover/Long-Press — ohne Feature-Degradierung auf Mobile (Desktop zeigt *mehr*, nie weniger);
+      „Läuft"-Streifen mit **Laufzeit** je Shell und Subagent (`shell.list`, `pty.list`,
+      `GET /api/session/active`), Desktop mit mehr Details; Modus-Umschalter Einfach/Experte
+      ( persistent), Einfach = Chat + Composer + Läuft-Streifen.
+- [ ] **Welle 7 — Projekt-Displayname + Ordner-Baum** (research erledigt): `project.update` existiert
+      (`ProjectUpdateInput.canonical?: { name, icon?: { url, override, color }, commands? }`, Client
+      `client.d.ts:147-149`), das Event `project.updated` (`types.d.ts:2254`) erlaubt Live-Sync —
+      also Projekt-Unbenennung mit Farbe/Icon wie im Original, oder klappt das bei euch nicht?
+
+
 ## Bewusst offen/dokumentiert (kein Handlungsbedarf)
 
 - PTY: Text-Ansicht via `terminal/read` (Entscheidung in `features/05-parity.md`).
