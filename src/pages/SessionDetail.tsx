@@ -75,6 +75,9 @@ export default function SessionDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { servers, selectedServer } = useServers();
+  // Feedback policy: every session action answers with a toast (success or
+  // error) instead of an inline alert box — the same pattern as the rename
+  // rollback above. Destructive *questions* stay in the ConfirmDialog.
   const { notify } = useToast();
   const { ensureTab, retitleTab, tabs } = useSessionTabs();
   const serverId = searchParams.get("server") ?? selectedServer?.id ?? null;
@@ -145,25 +148,18 @@ export default function SessionDetail() {
   const [attachmentInput, setAttachmentInput] = useState("");
   const [confirm, setConfirm] = useState<"interrupt" | "delete" | "fork" | "compact" | "revert-commit" | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
-  const [confirmError, setConfirmError] = useState<string | null>(null);
-  const [actionNotice, setActionNotice] = useState<string | null>(null);
   // Parity batch 3: revert staging, share/export-import, command run.
   const [commands, setCommands] = useState<CommandRow[]>([]);
   const [revertMessageID, setRevertMessageID] = useState("");
   const [stagedRevert, setStagedRevert] = useState<SessionRevertInfo | null>(null);
   const [revertBusy, setRevertBusy] = useState(false);
-  const [revertError, setRevertError] = useState<string | null>(null);
-  const [revertNotice, setRevertNotice] = useState<string | null>(null);
   const [exportText, setExportText] = useState<string | null>(null);
   const [shareBusy, setShareBusy] = useState(false);
-  const [shareError, setShareError] = useState<string | null>(null);
   const [importText, setImportText] = useState("");
   const [importBusy, setImportBusy] = useState(false);
   const [commandName, setCommandName] = useState("");
   const [commandText, setCommandText] = useState("");
   const [commandBusy, setCommandBusy] = useState(false);
-  const [commandError, setCommandError] = useState<string | null>(null);
-  const [commandNotice, setCommandNotice] = useState<string | null>(null);
   // Secondary panels live one tap away behind a single "Mehr…" disclosure
   // (chat + composer dominate the view); exactly one tab shows at a time.
   type MoreTab =
@@ -185,7 +181,6 @@ export default function SessionDetail() {
   const [updatingInbox, setUpdatingInbox] = useState<string | null>(null);
   const [formRows, setFormRows] = useState<SessionFormRow[] | null>(null);
   const [formsLoading, setFormsLoading] = useState(false);
-  const [formsError, setFormsError] = useState<string | null>(null);
   const [selectedFormID, setSelectedFormID] = useState("");
   const [formAnswerText, setFormAnswerText] = useState("");
   const [formBusy, setFormBusy] = useState(false);
@@ -270,21 +265,15 @@ export default function SessionDetail() {
     setMoreTab("stats");
     setStagedRevert(null);
     setRevertMessageID("");
-    setRevertError(null);
-    setRevertNotice(null);
     setExportText(null);
-    setShareError(null);
     setImportText("");
     setRenaming(false);
     setRenameText("");
     setCommandName("");
     setCommandText("");
-    setCommandError(null);
-    setCommandNotice(null);
     setInboxRows(null);
     setInboxError(null);
     setFormRows(null);
-    setFormsError(null);
     setSelectedFormID("");
     setFormAnswerText("");
     setTerminalScreen(null);
@@ -505,40 +494,39 @@ export default function SessionDetail() {
     const activeServer: ServerConfig = server;
     const activeSession: string = id;
     setConfirmBusy(true);
-    setConfirmError(null);
-    setActionNotice(null);
     if (confirm === "fork") {
       const result = await forkSession(activeServer, activeSession);
       setConfirmBusy(false);
+      setConfirm(null);
       if (result.error !== null || result.data === null) {
-        setConfirmError(result.error ?? t`Forken fehlgeschlagen.`);
+        notify(result.error ?? t`Forken fehlgeschlagen.`, "error");
         return;
       }
-      setConfirm(null);
+      notify(t`Session geforkt – die Kopie ist geöffnet.`, "success");
       navigate(`/sessions/${result.data.id}?server=${activeServer.id}`);
       return;
     }
     if (confirm === "compact") {
       const result = await compactSession(activeServer, activeSession);
       setConfirmBusy(false);
+      setConfirm(null);
       if (result.error !== null) {
-        setConfirmError(result.error);
+        notify(result.error, "error");
         return;
       }
-      setConfirm(null);
-      setActionNotice(t`Kompaktierung gestartet – der Kontext wird zusammengefasst.`);
+      notify(t`Kompaktierung gestartet – der Kontext wird zusammengefasst.`, "success");
       return;
     }
     if (confirm === "revert-commit") {
       const result = await commitSessionRevert(activeServer, activeSession);
       setConfirmBusy(false);
+      setConfirm(null);
       if (result.error !== null) {
-        setConfirmError(result.error);
+        notify(result.error, "error");
         return;
       }
-      setConfirm(null);
       setStagedRevert(null);
-      setRevertNotice(t`Revert übernommen – die Session steht auf dem gewählten Stand.`);
+      notify(t`Revert übernommen – die Session steht auf dem gewählten Stand.`, "success");
       return;
     }
     const result =
@@ -546,16 +534,17 @@ export default function SessionDetail() {
         ? await interruptSession(activeServer, activeSession)
         : await removeSession(activeServer, activeSession);
     setConfirmBusy(false);
+    setConfirm(null);
     if (result.error !== null) {
-      setConfirmError(result.error);
+      notify(result.error, "error");
       return;
     }
     if (confirm === "delete") {
-      setConfirm(null);
+      notify(t`Session gelöscht.`, "success");
       navigate(`/servers/${activeServer.id}`);
       return;
     }
-    setConfirm(null);
+    notify(t`Ausführung unterbrochen.`, "success");
   }
 
   async function ensureDiffLoaded() {
@@ -578,12 +567,10 @@ export default function SessionDetail() {
     if (server === null || server === undefined || id === undefined) return;
     if (revertMessageID === "" || revertBusy || !canRevert) return;
     setRevertBusy(true);
-    setRevertError(null);
-    setRevertNotice(null);
     const result = await stageSessionRevert(server, id, revertMessageID);
     setRevertBusy(false);
     if (result.error !== null || result.data === null) {
-      setRevertError(result.error ?? t`Staging fehlgeschlagen.`);
+      notify(result.error ?? t`Staging fehlgeschlagen.`, "error");
       return;
     }
     setStagedRevert(result.data);
@@ -593,15 +580,14 @@ export default function SessionDetail() {
     if (server === null || server === undefined || id === undefined) return;
     if (revertBusy || !canRevert) return;
     setRevertBusy(true);
-    setRevertError(null);
     const result = await clearSessionRevert(server, id);
     setRevertBusy(false);
     if (result.error !== null) {
-      setRevertError(result.error);
+      notify(result.error, "error");
       return;
     }
     setStagedRevert(null);
-    setRevertNotice(t`Staging verworfen – die Session ist unverändert.`);
+    notify(t`Staging verworfen – die Session ist unverändert.`, "success");
   }
 
   // --- Parity batch 3: share via export/import JSON ---
@@ -610,11 +596,10 @@ export default function SessionDetail() {
     if (server === null || server === undefined || id === undefined) return;
     if (shareBusy || !canExport) return;
     setShareBusy(true);
-    setShareError(null);
     const result = await exportSession(server, id);
     setShareBusy(false);
     if (result.error !== null || result.data === null) {
-      setShareError(result.error ?? t`Export fehlgeschlagen.`);
+      notify(result.error ?? t`Export fehlgeschlagen.`, "error");
       return;
     }
     setExportText(JSON.stringify(result.data, null, 2));
@@ -642,17 +627,17 @@ export default function SessionDetail() {
     if (importText.trim() === "" || importBusy || !canImport) return;
     const parsed = parseSessionTransferText(importText);
     if (parsed.payload === null) {
-      setShareError(parsed.error ?? t`Import fehlgeschlagen.`);
+      notify(parsed.error ?? t`Import fehlgeschlagen.`, "error");
       return;
     }
     setImportBusy(true);
-    setShareError(null);
     const result = await importSession(server, parsed.payload);
     setImportBusy(false);
     if (result.error !== null || result.data === null) {
-      setShareError(result.error ?? t`Import fehlgeschlagen.`);
+      notify(result.error ?? t`Import fehlgeschlagen.`, "error");
       return;
     }
+    notify(t`Session importiert – die neue Session ist geöffnet.`, "success");
     navigate(`/sessions/${result.data.id}?server=${server.id}`);
   }
 
@@ -662,15 +647,13 @@ export default function SessionDetail() {
     if (server === null || server === undefined || id === undefined) return;
     if (commandName === "" || commandBusy || !canRunCommand) return;
     setCommandBusy(true);
-    setCommandError(null);
-    setCommandNotice(null);
     const result = await runSessionCommand(server, id, commandName, commandText);
     setCommandBusy(false);
     if (result.error !== null) {
-      setCommandError(result.error);
+      notify(result.error, "error");
       return;
     }
-    setCommandNotice(t`Befehl „${commandName}“ gestartet.`);
+    notify(t`Befehl „${commandName}“ gestartet.`, "success");
   }
 
   // --- Parity batch 3: session inbox (queued entries, cancel only) ---
@@ -732,11 +715,10 @@ export default function SessionDetail() {
   async function loadForms() {
     if (server === null || server === undefined || id === undefined) return;
     setFormsLoading(true);
-    setFormsError(null);
     const result = await listSessionForms(server, id);
     setFormsLoading(false);
     if (result.error !== null || result.data === null) {
-      setFormsError(result.error ?? t`Formulare konnten nicht geladen werden.`);
+      notify(result.error ?? t`Formulare konnten nicht geladen werden.`, "error");
       return;
     }
     setFormRows(result.data);
@@ -751,15 +733,14 @@ export default function SessionDetail() {
     if (selectedFormID === "" || formBusy || !canFormReply) return;
     const parsed = parseFormAnswerText(formAnswerText);
     if (parsed.answer === null) {
-      setFormsError(parsed.error ?? t`Antworten fehlgeschlagen.`);
+      notify(parsed.error ?? t`Antworten fehlgeschlagen.`, "error");
       return;
     }
     setFormBusy(true);
-    setFormsError(null);
     const result = await replySessionForm(server, id, selectedFormID, parsed.answer);
     setFormBusy(false);
     if (result.error !== null) {
-      setFormsError(result.error);
+      notify(result.error, "error");
       return;
     }
     setFormRows((prev) =>
@@ -767,23 +748,24 @@ export default function SessionDetail() {
     );
     setSelectedFormID("");
     setFormAnswerText("");
+    notify(t`Formular beantwortet.`, "success");
   }
 
   async function handleCancelForm() {
     if (server === null || server === undefined || id === undefined) return;
     if (selectedFormID === "" || formBusy || !canFormCancel) return;
     setFormBusy(true);
-    setFormsError(null);
     const result = await cancelSessionForm(server, id, selectedFormID);
     setFormBusy(false);
     if (result.error !== null) {
-      setFormsError(result.error);
+      notify(result.error, "error");
       return;
     }
     setFormRows((prev) =>
       prev === null ? prev : prev.filter((row) => row.id !== selectedFormID),
     );
     setSelectedFormID("");
+    notify(t`Formular abgelehnt.`, "success");
   }
 
   // --- Parity batch 4: read-only session terminal (screen text, no input) ---
@@ -828,10 +810,7 @@ export default function SessionDetail() {
               title={t`Session ab dem aktuellen Stand kopieren`}
               aria-label={t`Session forken`}
               disabled={!canFork}
-              onClick={() => {
-                setConfirmError(null);
-                setConfirm("fork");
-              }}
+              onClick={() => setConfirm("fork")}
             >
               <Icon name="fork" /> <Trans>Forken</Trans>
             </button>
@@ -841,10 +820,7 @@ export default function SessionDetail() {
               title={t`Kontext der Session zusammenfassen`}
               aria-label={t`Session kompaktieren`}
               disabled={!canCompact}
-              onClick={() => {
-                setConfirmError(null);
-                setConfirm("compact");
-              }}
+              onClick={() => setConfirm("compact")}
             >
               <Icon name="compact" /> <Trans>Kompaktieren</Trans>
             </button>
@@ -853,10 +829,7 @@ export default function SessionDetail() {
               className="btn btn-sm btn-ghost"
               title={t`Laufende Ausführung unterbrechen`}
               aria-label={t`Ausführung unterbrechen`}
-              onClick={() => {
-                setConfirmError(null);
-                setConfirm("interrupt");
-              }}
+              onClick={() => setConfirm("interrupt")}
             >
               <Icon name="stop" /> <Trans>Unterbrechen</Trans>
             </button>
@@ -865,10 +838,7 @@ export default function SessionDetail() {
               className="btn btn-sm btn-ghost text-error"
               title={t`Session löschen`}
               aria-label={t`Session löschen`}
-              onClick={() => {
-                setConfirmError(null);
-                setConfirm("delete");
-              }}
+              onClick={() => setConfirm("delete")}
             >
               <Icon name="trash" /> <Trans>Löschen</Trans>
             </button>
@@ -911,6 +881,20 @@ export default function SessionDetail() {
             onClick={() => setRenaming(false)}
           >
             <Trans>Abbrechen</Trans>
+          </button>
+          {/* Blocked on purpose: `session.update` accepts `title: ""` / null /
+              missing (204) but then leaves the stored title untouched — there
+              is no API path back to the generated server default. Verified
+              against a live server; see features/02-api-contract.md. */}
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            disabled
+            aria-label={t`Titel zurücksetzen`}
+            title={t`Nicht möglich: Der Server behält einen gesetzten Titel. Ein leerer Titel wird von PATCH /api/session/<id> übergangen.`}
+            data-testid="session-rename-reset"
+          >
+            <Trans>Titel zurücksetzen</Trans>
           </button>
         </form>
       )}
@@ -979,11 +963,6 @@ export default function SessionDetail() {
               <span>
                 <Trans>Agent/Modell konnte nicht gewechselt werden: {pickerError}</Trans>
               </span>
-            </div>
-          )}
-          {actionNotice !== null && (
-            <div className="alert alert-success">
-              <span>{actionNotice}</span>
             </div>
           )}
           <p className="text-sm opacity-70" data-testid="cache-status">
@@ -1377,16 +1356,6 @@ export default function SessionDetail() {
                   Übernehmen ändert Nachrichten und Dateien unwiderruflich.
                 </Trans>
               </p>
-              {revertError !== null && (
-                <div className="alert alert-error">
-                  <span>{revertError}</span>
-                </div>
-              )}
-              {revertNotice !== null && (
-                <div className="alert alert-success">
-                  <span>{revertNotice}</span>
-                </div>
-              )}
               {stagedRevert === null ? (
                 <form
                   className="flex gap-2"
@@ -1439,10 +1408,7 @@ export default function SessionDetail() {
                     className="btn btn-sm btn-error"
                     disabled={!canRevert || revertBusy}
                     aria-label={t`Revert übernehmen`}
-                    onClick={() => {
-                      setConfirmError(null);
-                      setConfirm("revert-commit");
-                    }}
+                    onClick={() => setConfirm("revert-commit")}
                   >
                     <Trans>Übernehmen</Trans>
                   </button>
@@ -1469,11 +1435,6 @@ export default function SessionDetail() {
                   Export als JSON teilen, Import als neue Session übernehmen.
                 </Trans>
               </p>
-              {shareError !== null && (
-                <div className="alert alert-error">
-                  <span>{shareError}</span>
-                </div>
-              )}
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -1545,16 +1506,6 @@ export default function SessionDetail() {
                           aria-label={t`Befehl ausführen`}
                           data-testid="session-command-section"
                         >
-              {commandError !== null && (
-                <div className="alert alert-error">
-                  <span>{commandError}</span>
-                </div>
-              )}
-              {commandNotice !== null && (
-                <div className="alert alert-success">
-                  <span>{commandNotice}</span>
-                </div>
-              )}
               <div className="flex flex-wrap gap-2">
                 <select
                   className="select select-bordered select-sm flex-1"
@@ -1682,17 +1633,12 @@ export default function SessionDetail() {
                   {formsLoading && (
                     <span className="loading loading-spinner loading-sm" aria-label={t`Lädt`} />
                   )}
-                  {formsError !== null && (
-                    <div className="alert alert-warning">
-                      <span>{formsError}</span>
-                    </div>
-                  )}
-                  {!formsLoading && formsError === null && formRows !== null && formRows.length === 0 && (
+                  {!formsLoading && formRows !== null && formRows.length === 0 && (
                     <p className="opacity-70 text-sm">
                       <Trans>Keine offenen Formulare.</Trans>
                     </p>
                   )}
-                  {!formsLoading && formsError === null && formRows !== null && formRows.length > 0 && (
+                  {!formsLoading && formRows !== null && formRows.length > 0 && (
                     <div className="flex flex-col gap-2" data-testid="session-forms-list">
                       <ul className="menu gap-1">
                         {formRows.map((row) => {
@@ -1851,12 +1797,13 @@ export default function SessionDetail() {
                   : t`Unterbrechen`
         }
         busy={confirmBusy}
-        error={confirmError}
+        // Always null on purpose: the confirm *question* lives here, the
+        // outcome (success or error) is a toast once the dialog closes.
+        error={null}
         onConfirm={() => void handleConfirm()}
         onCancel={() => {
           if (!confirmBusy) {
             setConfirm(null);
-            setConfirmError(null);
           }
         }}
       />

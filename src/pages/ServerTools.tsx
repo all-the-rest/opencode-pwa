@@ -46,6 +46,7 @@ import {
 } from "../lib/opencode.ts";
 import { useServers } from "../state/servers.tsx";
 import { useLayoutMode } from "../state/layoutMode.tsx";
+import { useToast } from "../state/toast.tsx";
 
 /**
  * Read-only parity view for the remaining server tools: file browser, VCS
@@ -123,6 +124,7 @@ export default function ServerTools() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { servers } = useServers();
+  const { notify } = useToast();
   const server = servers.find((s) => s.id === id) ?? null;
   const { split } = useLayoutMode();
 
@@ -152,7 +154,6 @@ export default function ServerTools() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [replying, setReplying] = useState<string | null>(null);
-  const [replyError, setReplyError] = useState<string | null>(null);
 
   const activeServer = server;
 
@@ -197,7 +198,6 @@ export default function ServerTools() {
     setPreview(null);
     setPath("");
     setPathInput("");
-    setReplyError(null);
     void reloadOverview().finally(() => {
       if (!cancelled) setLoading(false);
     });
@@ -345,17 +345,24 @@ export default function ServerTools() {
   ) {
     if (activeServer === null || replying !== null || !canReplyPermission) return;
     setReplying(request.id);
-    setReplyError(null);
     const result = await replyPermission(activeServer, request, decision);
     setReplying(null);
     if (result.error !== null) {
-      setReplyError(result.error);
+      notify(result.error, "error");
       return;
     }
     setOverview((prev) => ({
       ...prev,
       permissions: prev.permissions.filter((item) => item.id !== request.id),
     }));
+    // Lingui-safe hoist: no member access inside the message.
+    const requestID = request.id;
+    notify(
+      decision === "once"
+        ? t`Anfrage „${requestID}“ einmalig erlaubt.`
+        : t`Anfrage „${requestID}“ abgelehnt.`,
+      "success",
+    );
     reloadOverview();
   }
 
@@ -926,11 +933,6 @@ export default function ServerTools() {
                 („Einmal erlauben“) oder abgelehnt.
               </Trans>
             </p>
-            {replyError !== null && (
-              <div className="alert alert-warning">
-                <span>{replyError}</span>
-              </div>
-            )}
             {overview.permissions.length === 0 ? (
               <p className="opacity-70 text-sm">
                 <Trans>Keine offenen Anfragen.</Trans>

@@ -222,6 +222,14 @@ msgid "Änderungen"
 msgstr "Änderungen"
 
 #: src/pages/ServerTools.tsx
+msgid "Anfrage „{requestID}“ abgelehnt."
+msgstr "Anfrage „{requestID}“ abgelehnt."
+
+#: src/pages/ServerTools.tsx
+msgid "Anfrage „{requestID}“ einmalig erlaubt."
+msgstr "Anfrage „{requestID}“ einmalig erlaubt."
+
+#: src/pages/ServerTools.tsx
 msgid "Anfrage {requestId} ablehnen"
 msgstr "Anfrage {requestId} ablehnen"
 
@@ -338,6 +346,10 @@ msgstr "Ausführung unterbrechen"
 #: src/hooks/useEventNotifications.ts
 msgid "Ausführung unterbrochen"
 msgstr "Ausführung unterbrochen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Ausführung unterbrochen."
+msgstr "Ausführung unterbrochen."
 
 #: src/pages/ServerDetail.tsx
 msgid "Ausgabe"
@@ -819,12 +831,20 @@ msgid "Formular"
 msgstr "Formular"
 
 #: src/pages/SessionDetail.tsx
+msgid "Formular abgelehnt."
+msgstr "Formular abgelehnt."
+
+#: src/pages/SessionDetail.tsx
 msgid "Formular ablehnen"
 msgstr "Formular ablehnen"
 
 #: src/pages/SessionDetail.tsx
 msgid "Formular beantworten"
 msgstr "Formular beantworten"
+
+#: src/pages/SessionDetail.tsx
+msgid "Formular beantwortet."
+msgstr "Formular beantwortet."
 
 #: src/pages/SessionDetail.tsx
 msgid "Formular wählen …"
@@ -1075,6 +1095,11 @@ msgstr "Keine Sessions auf diesem Server."
 #: src/components/SessionStarter.tsx
 #~ msgid "Keine Sessions auf diesem Server. Öffne die Serverdetails, um zu beginnen."
 #~ msgstr "Keine Sessions auf diesem Server. Öffne die Serverdetails, um zu beginnen."
+
+#: src/pages/ProjectDetail.tsx
+#: src/pages/ServerDetail.tsx
+msgid "Keine Sessions für diese Suche oder Filter."
+msgstr "Keine Sessions für diese Suche oder Filter."
 
 #: src/pages/ProjectDetail.tsx
 msgid "Keine Sessions in diesem Projekt."
@@ -1394,6 +1419,10 @@ msgstr "Neueste Sessions auf {selectedServerName}"
 #: src/pages/Settings.tsx
 msgid "nicht angefragt"
 msgstr "nicht angefragt"
+
+#: src/pages/SessionDetail.tsx
+msgid "Nicht möglich: Der Server behält einen gesetzten Titel. Ein leerer Titel wird von PATCH /api/session/<id> übergangen."
+msgstr "Nicht möglich: Der Server behält einen gesetzten Titel. Ein leerer Titel wird von PATCH /api/session/<id> übergangen."
 
 #: src/pages/Dashboard.tsx
 msgid "Noch kein Server ausgewählt."
@@ -1816,13 +1845,25 @@ msgstr "Session exportieren"
 msgid "Session forken"
 msgstr "Session forken"
 
+#: src/pages/SessionDetail.tsx
+msgid "Session geforkt – die Kopie ist geöffnet."
+msgstr "Session geforkt – die Kopie ist geöffnet."
+
 #: src/hooks/useEventNotifications.ts
 msgid "Session gelöscht"
 msgstr "Session gelöscht"
 
 #: src/pages/SessionDetail.tsx
+msgid "Session gelöscht."
+msgstr "Session gelöscht."
+
+#: src/pages/SessionDetail.tsx
 msgid "Session importieren"
 msgstr "Session importieren"
+
+#: src/pages/SessionDetail.tsx
+msgid "Session importiert – die neue Session ist geöffnet."
+msgstr "Session importiert – die neue Session ist geöffnet."
 
 #: src/hooks/useEventNotifications.ts
 msgid "Session ist bereit{suffix}."
@@ -1842,6 +1883,8 @@ msgid "Session löschen"
 msgstr "Session löschen"
 
 #: src/components/SessionStarter.tsx
+#: src/pages/ProjectDetail.tsx
+#: src/pages/ServerDetail.tsx
 msgid "Session starten"
 msgstr "Session starten"
 
@@ -2067,6 +2110,10 @@ msgstr "Titel oder ID suchen"
 #: src/pages/SessionDetail.tsx
 msgid "Titel speichern"
 msgstr "Titel speichern"
+
+#: src/pages/SessionDetail.tsx
+msgid "Titel zurücksetzen"
+msgstr "Titel zurücksetzen"
 
 #: src/pages/ServerDetail.tsx
 msgid "Token"

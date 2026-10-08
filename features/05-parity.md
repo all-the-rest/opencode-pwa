@@ -58,6 +58,16 @@ Legend: ✅ in this app · 🚧 partial · ❌ missing (post-MVP unless noted).
   select a form, paste the answer as a JSON object (validated client-side:
   Text/Zahl/Ja-Nein/Textliste pro Feld), reply via `POST .../form/{formID}/reply
   {answer}`, reject via `DELETE .../form/{formID}`.
+- ✅ Feedback policy: every session write answers with a toast
+  (`src/state/toast.tsx`, rendered by `src/components/Toasts.tsx`) instead of an
+  inline alert box — fork, interrupt, delete, compact, revert stage/commit/
+  discard, export/import, command run, form reply/reject and the permission
+  reply on Server-Werkzeuge all raise a success or error toast. The blocking
+  `ConfirmDialog` only *asks*; once the action is confirmed the dialog closes
+  and the outcome becomes a toast, so the same rule applies everywhere. This
+  matters for stacking too: daisyUI's `.modal` sits at `z-index: 999` and the
+  toast stack at `z-50`, so a toast raised while the dialog is still open would
+  be invisible — closing first is what makes the toast readable.
 - ✅ Offline policy covers the new writes: `session-revert`, `session-export`,
   `session-import`, `session-command`, `session-inbox`, `session-inbox-cancel`,
   `session-inbox-update`, `session-form-list`, `session-form-reply`,
@@ -66,7 +76,26 @@ Legend: ✅ in this app · 🚧 partial · ❌ missing (post-MVP unless noted).
 - Covered by `src/lib/parity3.test.ts` (extractors + fallback-fetch paths with
   a throwing client, so every URL/method/body is pinned) and E2E
   `tests/e2e/w8-parity3.spec.ts` (`@feature` for revert flow, command run,
-  websearch, command/skill lists, inbox cancel + delivery, form reply).
+  websearch, command/skill lists, inbox cancel + delivery, form reply),
+  plus `tests/e2e/w14-toast-empty-title.spec.ts` (`@feature` for the fork
+  success toast, the empty-list starter CTA on both pages and the blocked
+  title reset).
+- ✅ Empty session lists on ServerDetail and ProjectDetail carry a starter CTA
+  into the session starter (`/`) instead of a bare "Keine Sessions." note. The
+  note stays for the filtered-empty case (a search or filter that matches
+  nothing) — no CTA there, because the fix is to widen the filter, not to open
+  the starter.
+- ❌ Title reset (back to the generated server default) is **blocked**: there
+  is no API path. Verified against a live Opencode server —
+  `PATCH /api/session/{id}` accepts `title: ""`, `title: null` and a body
+  without `title` (always `204`, `title: 123` is the only rejected shape, `400
+  "Expected string | null"`), but in all three accepted cases the **stored
+  title stays untouched**; a fresh session stays untitled. So a title once set
+  on the server cannot be cleared, and `sessionTitle()` (the client-side
+  fallback to the session id for generated placeholders) is the only way a
+  "default" shows. The rename UI therefore ships "Titel zurücksetzen" as a
+  deliberately disabled button with the reason in its tooltip; the mechanics
+  are recorded in `features/02-api-contract.md`.
 
 ## Shells & Tasks
 

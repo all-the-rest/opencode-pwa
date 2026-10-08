@@ -767,9 +767,26 @@ export default function ServerDetail() {
                 </div>
               </div>
               {sessionGroups.length === 0 ? (
-                <p className="opacity-70 text-sm">
-                  <Trans>Keine Sessions.</Trans>
-                </p>
+                <div className="flex flex-col gap-2" data-testid="server-sessions-empty">
+                  <p className="opacity-70 text-sm">
+                    {sessions.length === 0 ? (
+                      <Trans>Keine Sessions.</Trans>
+                    ) : (
+                      <Trans>Keine Sessions für diese Suche oder Filter.</Trans>
+                    )}
+                  </p>
+                  {sessions.length === 0 && (
+                    <div className="card-actions">
+                      <Link
+                        className="btn btn-primary btn-sm"
+                        to="/"
+                        data-testid="server-sessions-empty-cta"
+                      >
+                        <Trans>Session starten</Trans>
+                      </Link>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="flex flex-col gap-3">
                   {sessionGroups.map((group) => {

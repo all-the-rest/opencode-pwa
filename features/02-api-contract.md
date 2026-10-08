@@ -13,6 +13,7 @@ Client: `@opencode/client` promise entrypoint, `OpenCode.make({ baseUrl, headers
 | Send prompt   | `POST /api/session/:sessionID/prompt` | `session.prompt({ sessionID, text })` | optimistic insert, echo replaces temp entry |
 | Interrupt session | `POST /api/session/:sessionID/interrupt` | `session.interrupt({ sessionID })` | verified in installed client (`method: "POST"`) |
 | Remove session | `DELETE /api/session/:sessionID` | `session.remove({ sessionID })` | verified (`method: "DELETE"`, 204) |
+| Rename session | `PATCH /api/session/:sessionID` | `session.update({ sessionID, title })` | `title` is optional in the client types; see "Session title semantics" below |
 | List messages | `GET /api/session/:sessionID/message` | `message.list({ sessionID })` | read-only MVP |
 | List shells   | `GET /api/shell`  | `shell.list()`         | returns `{ location, data }`   |
 | Shell output  | `GET /api/shell/:id/output` | `shell.output({ id, cursor? })` | returns `{ location, data: { output, cursor, size, truncated } }` |
@@ -30,6 +31,33 @@ Client: `@opencode/client` promise entrypoint, `OpenCode.make({ baseUrl, headers
 | Pending permissions | `GET /api/permission/request` | `permission.request.list()` | rows via `extractPermissionRequests` |
 | Answer permission | `POST /api/session/:sessionID/permission/:requestID/reply` | `permission.reply({ sessionID, requestID, decision })` | `decision: "once"` (allow once) or `"reject"` (deny); `"always"` deliberately unused |
 | Events        | `GET /api/event`  | `event.subscribe()`    | SSE AsyncIterable stream       |
+
+## Session title semantics (`session.update`)
+
+Measured against a live Opencode `serve` instance (PATCH → GET, one session):
+
+| Request body            | Status | Stored title afterwards |
+| ----------------------- | ------ | ----------------------- |
+| `{ "title": "Neu" }`    | 204    | `"Neu"`                 |
+| `{ "title": "" }`       | 204    | unchanged               |
+| `{ "title": null }`     | 204    | unchanged               |
+| `{}` (no `title`)       | 204    | unchanged               |
+| `{ "title": "   " }`    | 204    | `"   "` (verbatim)      |
+| `{ "title": 123 }`      | 400    | `Expected string \| null at ["title"]` |
+
+So the endpoint **never errors on an empty title — it silently drops it**. There
+is no request that clears a title once set, and no endpoint that returns a
+session to its generated default (`New session - <ISO>`), which the server only
+mints at creation time. Consequences for this app:
+
+- `renameSession(server, id, title)` only ever sends a non-empty trimmed title
+  (see `handleRename` in `src/pages/SessionDetail.tsx`).
+- "Titel zurücksetzen" exists in the rename UI but stays disabled, with the
+  reason in its tooltip — a no-op request would only look like it worked.
+- `sessionTitle()` in `src/lib/opencode.ts` is the client-side half of the
+  "default": generated placeholders never surface, they fall back to the id.
+- `title` and `metadata.title` are separate stores; writing one leaves the
+  other alone, and only `title` drives the displayed label.
 
 ## Auth & Credentials
 

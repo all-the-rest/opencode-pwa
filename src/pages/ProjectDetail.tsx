@@ -265,9 +265,26 @@ export default function ProjectDetail() {
           </div>
           {loading && <span className="loading loading-spinner loading-md" aria-label={t`Lädt`} />}
           {!loading && filtered.length === 0 && (
-            <p className="opacity-70 text-sm">
-              <Trans>Keine Sessions in diesem Projekt.</Trans>
-            </p>
+            <div className="flex flex-col gap-2" data-testid="project-sessions-empty">
+              <p className="opacity-70 text-sm">
+                {sessions.length === 0 ? (
+                  <Trans>Keine Sessions in diesem Projekt.</Trans>
+                ) : (
+                  <Trans>Keine Sessions für diese Suche oder Filter.</Trans>
+                )}
+              </p>
+              {sessions.length === 0 && (
+                <div className="card-actions">
+                  <Link
+                    className="btn btn-primary btn-sm"
+                    to="/"
+                    data-testid="project-sessions-empty-cta"
+                  >
+                    <Trans>Session starten</Trans>
+                  </Link>
+                </div>
+              )}
+            </div>
           )}
           {!loading && filtered.length > 0 && (
             <ul className="menu gap-1">
