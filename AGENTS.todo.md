@@ -14,7 +14,6 @@ für Agenten-Aktivität (dokumentierte Lücke).
 - [ ] Remote-Zugriff live nachtesten: `remote-code` in der PWA anlegen (User `opencode` + Server-Passwort), Verbindungstest + Schritte 3–12 aus `docs/manual-device-test.md`. VPS-seitig erledigt (Caddy Basic-Gate + CORS, verifiziert 2026-10-07).
 - [ ] Auth-Fehler-Banner mit Direkt-Link zum Bearbeiten der Zugangsdaten (Server-Seite + „Server bearbeiten"-Aktion; Umbenennen/Löschen existiert bereits).
 - [ ] Echter Geräte-Test: PWA-Install + Offline/SW auf realem Handy (nur Config + `dist` verifiziert).
-- [ ] E2E-Flakes beobachten: `mvp-parity:208` (Paging/Filter unter Last), Paging-Reset bei Reload. Nur mit Last reproduzierbar, volle Läufe grün.
 
 ## Bewusst offen/dokumentiert (kein Handlungsbedarf)
 
