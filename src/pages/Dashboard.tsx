@@ -170,7 +170,7 @@ export default function Dashboard() {
             </h2>
             <p className="text-sm opacity-70">{selectedServer.baseUrl}</p>
             {loading && <span className="loading loading-spinner loading-md" aria-label={t`Lädt`} />}
-            {error !== null && <ServerErrorBanner error={error} testId="dashboard-offline" />}
+            {error !== null && <ServerErrorBanner error={error} serverId={selectedServer.id} testId="dashboard-offline" />}
             {error === null && !loading && (
               <dl className="stats stats-vertical sm:stats-horizontal shadow mt-2">
                 <div className="stat">

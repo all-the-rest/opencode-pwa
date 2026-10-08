@@ -125,7 +125,7 @@ export default function SessionStarter() {
         )}
         {loading && <span className="loading loading-spinner loading-md" aria-label={t`Lädt`} />}
         {error !== null && (
-          <ServerErrorBanner error={error} testId="session-starter-offline" />
+          <ServerErrorBanner error={error} serverId={selectedServer?.id} testId="session-starter-offline" />
         )}
         {!loading && error === null && selectedServer !== null && visible.length === 0 && (
           <p className="opacity-70 text-sm">

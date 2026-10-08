@@ -1,6 +1,7 @@
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   ensurePermission,
   getPermissionStatus,
@@ -43,6 +44,8 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editParam = searchParams.get("edit");
   const [permission, setPermission] = useState<NotificationPermissionState>(() =>
     getPermissionStatus(),
   );
@@ -64,6 +67,14 @@ export default function Settings() {
     setEditingId(null);
     setFormError(null);
     setTestResult(null);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("edit");
+        return next;
+      },
+      { replace: true },
+    );
   }
 
   /**
@@ -185,7 +196,37 @@ export default function Settings() {
     setEditingId(id);
     setFormError(null);
     setTestResult(null);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("edit", id);
+        return next;
+      },
+      { replace: true },
+    );
   }
+
+  /**
+   * Deep link (`/settings?edit=<serverId>`): preselect the server and open
+   * the edit form. Runs when the query or the server list changes, so a
+   * direct navigation before the stored servers load still lands in edit
+   * mode. An unknown id is ignored — the add form stays untouched.
+   */
+  useEffect(() => {
+    if (editParam === null || editParam === "" || editParam === editingId) return;
+    const server = servers.find((s) => s.id === editParam);
+    if (!server) return;
+    setForm({
+      name: server.name,
+      baseUrl: server.baseUrl,
+      username: server.username,
+      password: "",
+      color: serverColor(server),
+    });
+    setEditingId(editParam);
+    setFormError(null);
+    setTestResult(null);
+  }, [editParam, servers, editingId]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -211,12 +252,12 @@ export default function Settings() {
         </div>
       )}
 
-      <section className="card bg-base-200 shadow">
+      <section className="card bg-base-200 shadow" data-testid="server-edit-form">
         <div className="card-body">
           <h2 className="card-title">
             {editingId === null ? <Trans>Server hinzufügen</Trans> : <Trans>Server bearbeiten</Trans>}
           </h2>
-          <form className="flex flex-col gap-2" onSubmit={handleSubmit}>
+          <form className="flex flex-col gap-2" onSubmit={handleSubmit} data-testid="server-form">
             <label className="flex flex-col gap-1">
               <span className="label label-text">
                 <Trans>Name</Trans>

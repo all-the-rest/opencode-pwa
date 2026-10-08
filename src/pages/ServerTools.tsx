@@ -115,8 +115,8 @@ function parentPath(path: string): string | null {
   return cut === -1 ? "" : path.slice(0, cut);
 }
 
-function OfflineAlert({ error }: { error: string }) {
-  return <ServerErrorBanner error={error} testId="tools-offline-alert" />;
+function OfflineAlert({ error, serverId }: { error: string; serverId?: string }) {
+  return <ServerErrorBanner error={error} serverId={serverId} testId="tools-offline-alert" />;
 }
 
 export default function ServerTools() {
@@ -394,7 +394,7 @@ export default function ServerTools() {
         </Link>
       </div>
       <p className="text-sm opacity-70">{server.baseUrl}</p>
-      {error !== null && <OfflineAlert error={error} />}
+      {error !== null && <OfflineAlert error={error} serverId={server.id} />}
       {loading && (
         <ContentSkeleton
           cards={6}

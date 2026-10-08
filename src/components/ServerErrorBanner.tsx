@@ -1,11 +1,14 @@
 import { Trans } from "@lingui/react/macro";
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { isAuthFailure } from "../lib/serverAuthError.ts";
 
 interface ServerErrorBannerProps {
   /** Stringified load error as stored in page state (technical detail). */
   error: string;
   testId?: string;
+  /** Owning server: renders a deep link to its Settings edit form. */
+  serverId?: string;
   /** Extra hint rendered below the message (e.g. the retry note). */
   children?: ReactNode;
 }
@@ -19,9 +22,11 @@ interface ServerErrorBannerProps {
 export default function ServerErrorBanner({
   error,
   testId = "offline-alert",
+  serverId,
   children,
 }: ServerErrorBannerProps) {
   if (isAuthFailure(error)) {
+    const editTarget = serverId !== undefined ? `/settings?edit=${serverId}` : "/settings";
     return (
       <div className="alert alert-warning" data-testid={testId}>
         <span>
@@ -30,6 +35,13 @@ export default function ServerErrorBanner({
             Einstellungen prüfen.
           </Trans>
         </span>
+        <Link
+          className="btn btn-sm btn-primary"
+          to={editTarget}
+          data-testid={`${testId}-edit-link`}
+        >
+          <Trans>Server bearbeiten</Trans>
+        </Link>
         <details className="text-xs" data-testid={`${testId}-details`}>
           <summary>
             <Trans>Technische Details</Trans>

@@ -1490,6 +1490,8 @@ msgstr "Server antwortet mit Fehler-Status {status}."
 msgid "Server antwortet unerwartet (kein JSON). Bitte Basis-URL prüfen."
 msgstr "Server antwortet unerwartet (kein JSON). Bitte Basis-URL prüfen."
 
+#: src/components/ServerErrorBanner.tsx
+#: src/pages/ServerDetail.tsx
 #: src/pages/Settings.tsx
 msgid "Server bearbeiten"
 msgstr "Server bearbeiten"

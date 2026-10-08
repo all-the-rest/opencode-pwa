@@ -208,7 +208,7 @@ export default function ProjectDetail() {
         </div>
       )}
       {error !== null && (
-        <ServerErrorBanner error={error} testId="offline-alert">
+        <ServerErrorBanner error={error} serverId={server?.id} testId="offline-alert">
           <span className="text-xs">
             <Trans>
               Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions sind

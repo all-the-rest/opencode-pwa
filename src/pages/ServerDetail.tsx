@@ -607,6 +607,13 @@ export default function ServerDetail() {
             <Trans>Umbenennen</Trans>
           </button>
         )}
+        <Link
+          className="btn btn-sm btn-ghost"
+          to={`/settings?edit=${server.id}`}
+          data-testid="server-edit-button"
+        >
+          <Trans>Server bearbeiten</Trans>
+        </Link>
         <button
           type="button"
           className="btn btn-sm btn-ghost text-error"
@@ -623,7 +630,7 @@ export default function ServerDetail() {
       )}
       {loading && <ContentSkeleton cards={4} testId="server-detail-skeleton" />}
       {error !== null && (
-        <ServerErrorBanner error={error} testId="offline-alert">
+        <ServerErrorBanner error={error} serverId={server.id} testId="offline-alert">
           <span className="text-xs">
             <Trans>
               Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions und
