@@ -44,6 +44,24 @@ describe("normalizeServerBaseUrl", () => {
     );
   });
 
+  it("strips a singular session deep link to the origin", () => {
+    expect(normalizeServerBaseUrl("https://host.example/session/abc-123")).toBe(
+      "https://host.example",
+    );
+  });
+
+  it("strips a singular session deep link case-insensitively", () => {
+    expect(normalizeServerBaseUrl("https://host.example/Session/abc")).toBe(
+      "https://host.example",
+    );
+  });
+
+  it("strips a singular session deep link but keeps a preceding proxy subpath", () => {
+    expect(normalizeServerBaseUrl("https://host.example/opencode/session/abc")).toBe(
+      "https://host.example/opencode",
+    );
+  });
+
   it("strips a session deep link to the origin", () => {
     expect(normalizeServerBaseUrl("https://host.example/sessions/abc-123")).toBe(
       "https://host.example",
@@ -172,11 +190,30 @@ describe("normalizeServerBaseUrl", () => {
     ).toBe("https://remote.example/opencode");
   });
 
+  it("drops a decoded singular-session tail to the decoded origin", () => {
+    // Decodes to `https://remote.example/session/abc`.
+    expect(
+      normalizeServerBaseUrl(
+        "https://app.example/server/aHR0cHM6Ly9yZW1vdGUuZXhhbXBsZS9zZXNzaW9uL2FiYw==/session/abc",
+      ),
+    ).toBe("https://remote.example");
+  });
+
+  it("drops a decoded singular-session tail but keeps a decoded proxy subpath", () => {
+    // Decodes to `https://remote.example/opencode/session/abc`.
+    expect(
+      normalizeServerBaseUrl(
+        "https://app.example/server/aHR0cHM6Ly9yZW1vdGUuZXhhbXBsZS9vcGVuY29kZS9zZXNzaW9uL2FiYw==/session/abc",
+      ),
+    ).toBe("https://remote.example/opencode");
+  });
+
   it("falls through to the regular rules for garbage in the server slot", () => {
-    // `!!!` is not base64 and the singular `session` is not a reserved
-    // segment, so the input survives untouched instead of being destroyed.
+    // `!!!` is not base64, so the embedded decode fails and the regular
+    // rules apply: the singular `session` tail is still stripped instead of
+    // destroying the surviving prefix.
     expect(normalizeServerBaseUrl("https://app.example/server/!!!/session/abc")).toBe(
-      "https://app.example/server/!!!/session/abc",
+      "https://app.example/server/!!!",
     );
   });
 
@@ -187,19 +224,21 @@ describe("normalizeServerBaseUrl", () => {
   });
 
   it("falls through when the embedded value decodes to non-URL text", () => {
-    // `aGVsbG8=` decodes to `hello` — valid base64, but no server URL.
+    // `aGVsbG8=` decodes to `hello` — valid base64, but no server URL, so the
+    // regular rules apply and the singular `session` tail is stripped.
     expect(
       normalizeServerBaseUrl("https://app.example/server/aGVsbG8=/session/abc"),
-    ).toBe("https://app.example/server/aGVsbG8=/session/abc");
+    ).toBe("https://app.example/server/aGVsbG8=");
   });
 
   it("falls through when the embedded value decodes to a non-http URL", () => {
-    // Decodes to `ftp://host.example/x`.
+    // Decodes to `ftp://host.example/x`: not a server URL, so the regular
+    // rules apply and the singular `session` tail is stripped.
     expect(
       normalizeServerBaseUrl(
         "https://app.example/server/ZnRwOi8vaG9zdC5leGFtcGxlL3g=/session/abc",
       ),
-    ).toBe("https://app.example/server/ZnRwOi8vaG9zdC5leGFtcGxlL3g=/session/abc");
+    ).toBe("https://app.example/server/ZnRwOi8vaG9zdC5leGFtcGxlL3g=");
   });
 
   it("ignores a base64-looking segment when it is not the /server slot", () => {

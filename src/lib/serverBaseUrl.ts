@@ -23,9 +23,10 @@
  *   is not an http(s) URL) falls through to the rules below, never destroying
  *   the input.
  * - A path segment naming the API or one of this app's own routes
- *   (`api`, `sessions`, `servers`, case-insensitive) — and everything after
- *   it — is dropped: it is a deep link, never a proxy prefix. `…/api/info`,
- *   `…/sessions/<id>` and `…/servers/<id>` all collapse to whatever precedes
+ *   (`api`, `session`, `sessions`, `servers`, case-insensitive) — and
+ *   everything after it — is dropped: it is a deep link, never a proxy
+ *   prefix. `…/api/info`, `…/session/<id>`, `…/sessions/<id>` and
+ *   `…/servers/<id>` all collapse to whatever precedes
  *   the reserved segment (the origin when nothing does).
  * - Any other path is kept minus trailing slashes; query and fragment are
  *   always dropped. `https://host/opencode` stays `https://host/opencode`.
@@ -40,7 +41,7 @@
  */
 
 /** Path segments that mark a deep link (opencode API / this app's routes). */
-const RESERVED_SEGMENTS = new Set(["api", "sessions", "servers"]);
+const RESERVED_SEGMENTS = new Set(["api", "session", "sessions", "servers"]);
 
 /** First path segment of this app's own share/deep-link shape. */
 const EMBEDDED_SERVER_SEGMENT = "server";
