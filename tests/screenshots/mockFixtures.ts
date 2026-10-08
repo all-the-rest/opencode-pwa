@@ -380,3 +380,27 @@ export const PERMISSIONS = [
     time: { created: minutes(-1) },
   },
 ];
+
+/** `GET /api/session/{id}/inbox` — queued follow-up entries. */
+export const INBOX_ROWS = [
+  {
+    id: "inbox-1",
+    sessionID: "ses-1",
+    type: "user",
+    payload: { text: "Danach bitte die Tests mitlaufen lassen." },
+    delivery: "steer",
+  },
+  {
+    id: "inbox-2",
+    sessionID: "ses-1",
+    type: "synthetic",
+    payload: { text: "Kontext nach dem Fork zusammenfassen." },
+    delivery: "queue",
+  },
+];
+
+/** `GET /api/session/{id}/form` — pending form requests of the session. */
+export const FORM_ROWS = [
+  { id: "form-1", sessionID: "ses-1", title: "Zustimmung zur Migration" },
+  { id: "form-2", sessionID: "ses-1", title: "Zielverzeichnis bestaetigen" },
+];

@@ -24,6 +24,8 @@ import {
   CHAT_MESSAGES,
   CHAT_RUNNING_MESSAGES,
   FILE_ENTRIES,
+  FORM_ROWS,
+  INBOX_ROWS,
   MCP_SERVERS,
   PERMISSIONS,
   PROJECTS,
@@ -123,6 +125,18 @@ async function mockApi(page: Page, route: UiReviewRoute, state: UiReviewState) {
     // agent/model switch calls it, so it must answer a SessionInfo, not a
     // list — otherwise every capture carries a stale red
     // "could not switch agent/model" banner.
+    if (url.includes("/inbox")) {
+      await json(routeReq, { location: {}, data: filled && mock !== "session-empty" ? INBOX_ROWS : [] });
+      return;
+    }
+    if (url.includes("/form")) {
+      await json(routeReq, { location: {}, data: filled && mock !== "session-empty" ? FORM_ROWS : [] });
+      return;
+    }
+    if (url.includes("/revert")) {
+      await json(routeReq, { location: {}, data: { staged: false } });
+      return;
+    }
     if (/\/api\/session\/[^/?#]+\/?$/.test(url)) {
       await json(routeReq, {
         id: "ses-1",
