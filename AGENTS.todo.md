@@ -15,6 +15,27 @@ für Agenten-Aktivität (dokumentierte Lücke).
 - [ ] Auth-Fehler-Banner mit Direkt-Link zum Bearbeiten der Zugangsdaten (Server-Seite + „Server bearbeiten"-Aktion; Umbenennen/Löschen existiert bereits).
 - [ ] Echter Geräte-Test: PWA-Install + Offline/SW auf realem Handy (nur Config + `dist` verifiziert).
 
+## UI-Review-Befunde (Screenshot-Review, 2026-10-08 — aus allen 44 Captures)
+
+Reihenfolge = Behebungsreihenfolge, „W5/W6/W7" = in welcher Welle sie mitkommen.
+
+| # | Schwere | Fund (Capture) | Behebung | Welle |
+|---|---|---|---|---|
+| 1 | hoch | Picker-Fehler klebt als roter Banner, Agent/Modell-Auswahlen bleiben auf „Keiner/Keines" (`session-diff.png`, `chat-running-sec0.png`) — erster Ladefehler wird nie aufgeräumt | Retry, Banner als Toast, Auswahlen zeigen „Lädt…" | W5 |
+| 2 | hoch | Offline doppelt alarmiert (roter Picker-Banner + gelber Offline-Banner), Composer bleibt bedienbar (`session-offline.png`) | eine Statuszeile, Senden offline sperren | W5 |
+| 3 | hoch | Serverdetail leer: 4 gleich hohe Karten mit ~700 px Leerraum (`empty/desktop/server-detail.png`) | nur Karten mit Inhalt rendern | W5 |
+| 4 | mittel | Doppelter Willkommens-CTA auf dem leeren Dashboard (`empty/mobile/dashboard.png`) | eine Willkommenskarte | W5 |
+| 5 | mittel | Diff-Tab öffnet eingeklappt, gerenderte Hunks nicht sichtbar (`session-diff.png`) | erste Datei aufgeklappt, Diff inline | W5 |
+| 6 | mittel | Agenten-Übersicht: Modellspalte „Unbekannt", **keine Laufzeit** (`agents.png`) | Modell-Lookup, Laufzeit je Zeile („läuft 4:12"), Desktop mit Startzeit/Projekt | W6 |
+| 7 | mittel | Chat wirkt nicht wie Messenger: Assistant ist eine durchgehende dunkle Karte (`chat-steps-sec0.png`) | Text als eigene Bubble, Tools als Karten | W6 |
+| 8 | mittel | Projektseite zeigt weder kanonischen Pfad noch Farbe/Icon (`project-detail.png`) | Kopfzeile mit Pfad + Avatar | W7 |
+| 9 | niedrig | Mobile: Assistant-Metazeile bricht in 3 Zeilen, Dateipfad-Feld auf „Datei" gestutzt, Composer-Zeile gedrängt (`filled/mobile-chat-steps-sec0.png`) | Meta kompakt, Feld mit Tooltip kürzen | W6 |
+| 10 | niedrig | Server-Werkzeuge: 5 Karten mit „Keine …", „Verfügbare Shells: Keine Shells" obwohl Mock welche liefert (`server-tools.png`) | Mock/Shape prüfen (niedrig) | — |
+
+Owner-Vorgaben dafür: Mobile und Desktop ohne Feature-Degradierung im Chat, Desktop zeigt **mehr**
+(besonders bei Subagenten); Laufzeit je Shell und Subagent auf Desktop **und** Mobile; Chat wie ein
+Messenger; Basic/Experte-Modus startet auf **Einfach** (Chat + Composer + Läuft-Streifen), persistiert.
+
 ## Geplante Wellen (UX-Angleichung an das Opencode-Original)
 
 Reihenfolge steht, jede Welle wird vor dem commit verifiziert (lint/test/build/e2e):
