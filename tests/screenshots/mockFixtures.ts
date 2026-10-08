@@ -288,21 +288,13 @@ export const SESSION_DIFF_ROWS = [
   },
 ];
 
-/** `GET /api/session/active` payload — two running agents. */
+/** `GET /api/session/active` payload — two running agents.
+ *  Shape follows the proven E2E mock (w12): a `{ data: { [id]: { type } } }`
+ *  envelope whose values mark the execution state. */
 export const ACTIVE_SESSIONS = {
-  "ses-active-1": {
-    sessionID: "ses-active-1",
-    agent: "build",
-    projectID: "p1",
-    title: "Diff-Ansicht rendern",
-    time: { created: minutes(-24), updated: minutes(-1) },
-  },
-  "ses-active-2": {
-    sessionID: "ses-active-2",
-    agent: "plan",
-    projectID: "p2",
-    title: "Migration planen",
-    time: { created: minutes(-51), updated: minutes(-3) },
+  data: {
+    "ses-1": { type: "running" },
+    "ses-2": { type: "running" },
   },
 };
 
