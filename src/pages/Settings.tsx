@@ -292,15 +292,18 @@ export default function Settings() {
                 aria-label={t`Basis-URL`}
               />
             </label>
-            <div className="alert alert-info" data-testid="cors-hint">
-              <span>
+            <div className="alert alert-info flex-col items-start gap-2 sm:flex-row" data-testid="cors-hint">
+              <span className="min-w-0 flex-1">
                 <Trans>
                   CORS wird benötigt: Ohne CORS-Freigabe des Servers blockiert der Browser
                   alle API-Aufrufe – die Preflight-Anfrage schlägt mit „Failed to fetch“
                   fehl. Auf dem Server starten mit:
                 </Trans>
               </span>
-              <code className="block text-xs break-all mt-1">
+              <code
+                className="block w-full max-w-full overflow-x-auto whitespace-nowrap text-xs sm:min-w-0 sm:flex-1"
+                data-testid="cors-command"
+              >
                 opencode serve --cors {window.location.origin}
               </code>
             </div>
