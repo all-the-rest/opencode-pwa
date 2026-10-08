@@ -25,6 +25,9 @@ export interface MessageInput {
   noteKind?: ChatNoteKind | null;
   noteDetail?: string | null;
   parts?: ChatPart[];
+  agent?: string | null;
+  model?: string | null;
+  durationMs?: number | null;
 }
 
 export interface CachedMessage {
@@ -39,6 +42,9 @@ export interface CachedMessage {
   noteKind: ChatNoteKind | null;
   noteDetail: string | null;
   parts: ChatPart[];
+  agent: string | null;
+  model: string | null;
+  durationMs: number | null;
 }
 
 /** Newest ~200 messages per session are kept, older ones are evicted. */
@@ -72,6 +78,9 @@ export function extractMessageInputs(value: unknown, now: number = Date.now()): 
     noteKind: message.noteKind,
     noteDetail: message.noteDetail,
     parts: message.parts,
+    agent: message.agent,
+    model: message.model,
+    durationMs: message.durationMs,
   }));
 }
 
@@ -94,6 +103,9 @@ export function toCachedMessages(
     noteKind: input.noteKind ?? null,
     noteDetail: input.noteDetail ?? null,
     parts: input.parts ?? [],
+    agent: input.agent ?? null,
+    model: input.model ?? null,
+    durationMs: input.durationMs ?? null,
   }));
 }
 
@@ -107,6 +119,8 @@ function compareNewestFirst(a: CachedMessage, b: CachedMessage): number {
  * `role: "unbekannt"` rows may hold a raw JSON dump as text). Part-less rows
  * get an empty part list (the view falls back to the plain text), and text
  * that is visibly a JSON object dump is dropped so it never renders again.
+ * Rows written before the `agent`/`model`/`durationMs` meta fields existed
+ * get nulls for those.
  */
 export function normalizeCachedRow(row: CachedMessage): CachedMessage {
   const rawParts: unknown = (row as { parts?: unknown }).parts;
@@ -117,14 +131,27 @@ export function normalizeCachedRow(row: CachedMessage): CachedMessage {
   const text = typeof row.text === "string" ? row.text : "";
   const trimmed = text.trim();
   const dumped = parts.length === 0 && trimmed.startsWith("{") && trimmed.endsWith("}");
-  if (Array.isArray(rawParts) && !dumped && row.noteKind !== undefined) return row;
-  return {
+  const normalized: CachedMessage = {
     ...row,
     text: dumped ? "" : text,
     noteKind: row.noteKind ?? null,
     noteDetail: row.noteDetail ?? null,
     parts,
+    agent: row.agent ?? null,
+    model: row.model ?? null,
+    durationMs: row.durationMs ?? null,
   };
+  if (
+    Array.isArray(rawParts) &&
+    !dumped &&
+    row.noteKind !== undefined &&
+    normalized.agent === row.agent &&
+    normalized.model === row.model &&
+    normalized.durationMs === row.durationMs
+  ) {
+    return row;
+  }
+  return normalized;
 }
 
 /** Newest first. */

@@ -20,6 +20,9 @@ export interface EventMessage {
   noteKind: ChatNoteKind | null;
   noteDetail: string | null;
   parts: ChatPart[];
+  agent: string | null;
+  model: string | null;
+  durationMs: number | null;
 }
 
 function readStringField(record: Record<string, unknown>, keys: string[]): string | null {
@@ -100,5 +103,8 @@ export function extractMessageFromEvent(event: unknown, now: number = Date.now()
     noteKind: parsed.noteKind,
     noteDetail: parsed.noteDetail,
     parts: parsed.parts,
+    agent: parsed.agent,
+    model: parsed.model,
+    durationMs: parsed.durationMs,
   };
 }

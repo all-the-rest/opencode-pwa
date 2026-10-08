@@ -23,7 +23,18 @@ export type AppIconName =
   | "tool"
   | "copy"
   | "check"
-  | "edit";
+  | "edit"
+  | "glasses"
+  | "list"
+  | "find-file"
+  | "web"
+  | "task"
+  | "write"
+  | "patch"
+  | "todos"
+  | "question"
+  | "skill"
+  | "chevron";
 
 const ICONS: Record<AppIconName, string> = {
   menu: "mdi:menu",
@@ -49,6 +60,18 @@ const ICONS: Record<AppIconName, string> = {
   copy: "mdi:content-copy",
   check: "mdi:check",
   edit: "mdi:pencil-outline",
+  // Tool-card icons (parity with the original's `getToolInfo`).
+  glasses: "mdi:glasses",
+  list: "mdi:format-list-bulleted",
+  "find-file": "mdi:file-find-outline",
+  web: "mdi:web",
+  task: "mdi:account-supervisor-outline",
+  write: "mdi:file-edit-outline",
+  patch: "mdi:file-document-edit-outline",
+  todos: "mdi:format-list-checks",
+  question: "mdi:help-circle-outline",
+  skill: "mdi:brain",
+  chevron: "mdi:chevron-right",
 };
 
 interface IconProps {

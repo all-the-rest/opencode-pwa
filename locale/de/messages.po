@@ -40,9 +40,29 @@ msgstr "{connectionCount} Verbindungen"
 msgid "{hiddenCount} weitere anzeigen"
 msgstr "{hiddenCount} weitere anzeigen"
 
+#: src/components/ChatMessageList.tsx
+msgid "{lists} Listen"
+msgstr "{lists} Listen"
+
 #: src/pages/SessionDetail.tsx
 msgid "{liveCount} neue"
 msgstr "{liveCount} neue"
+
+#: src/components/ChatMessageList.tsx
+msgid "{minutes}m {seconds}s"
+msgstr "{minutes}m {seconds}s"
+
+#: src/components/ChatMessageList.tsx
+msgid "{reads} Lesevorgänge"
+msgstr "{reads} Lesevorgänge"
+
+#: src/components/ChatMessageList.tsx
+msgid "{searches} Suchen"
+msgstr "{searches} Suchen"
+
+#: src/components/ChatMessageList.tsx
+msgid "{seconds} s"
+msgstr "{seconds} s"
 
 #: src/pages/SessionDetail.tsx
 msgid "{total} Nachrichten"
@@ -60,9 +80,21 @@ msgstr "← Server"
 msgid "+ Neu"
 msgstr "+ Neu"
 
+#: src/components/ChatMessageList.tsx
+msgid "1 Lesevorgang"
+msgstr "1 Lesevorgang"
+
+#: src/components/ChatMessageList.tsx
+msgid "1 Liste"
+msgstr "1 Liste"
+
 #: src/pages/SessionDetail.tsx
 msgid "1 Nachricht"
 msgstr "1 Nachricht"
+
+#: src/components/ChatMessageList.tsx
+msgid "1 Suche"
+msgstr "1 Suche"
 
 #: src/components/IntegrationsCard.tsx
 msgid "1 Verbindung"
@@ -321,6 +353,22 @@ msgstr "API-Schlüssel …"
 msgid "Assistent"
 msgstr "Assistent"
 
+#: src/components/ChatMessageList.tsx
+msgid "Aufgabe"
+msgstr "Aufgabe"
+
+#: src/components/ChatMessageList.tsx
+msgid "Aufgaben"
+msgstr "Aufgaben"
+
+#: src/components/ChatMessageList.tsx
+msgid "Aufgaben lesen"
+msgstr "Aufgaben lesen"
+
+#: src/components/ChatMessageList.tsx
+msgid "Auflisten"
+msgstr "Auflisten"
+
 #: src/pages/ServerDetail.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Ausblenden"
@@ -409,6 +457,7 @@ msgstr "Basis-URL ist ungültig. Bitte mit http:// oder https:// eingeben."
 msgid "Basis-URL muss mit http:// oder https:// beginnen."
 msgstr "Basis-URL muss mit http:// oder https:// beginnen."
 
+#: src/components/ChatMessageList.tsx
 #: src/pages/Settings.tsx
 msgid "Bearbeiten"
 msgstr "Bearbeiten"
@@ -762,6 +811,14 @@ msgstr "Einträge in der Warteschlange dieser Session. Beantwortet wird über Fo
 msgid "Entfernen"
 msgstr "Entfernen"
 
+#: src/components/ChatMessageList.tsx
+msgid "Entfernte Zeilen"
+msgstr "Entfernte Zeilen"
+
+#: src/components/ChatMessageList.tsx
+msgid "Erkundung abgeschlossen"
+msgstr "Erkundung abgeschlossen"
+
 #: src/pages/SessionDetail.tsx
 msgid "Erst staging starten (ab einer Nachricht), dann übernehmen oder verwerfen. Das Übernehmen ändert Nachrichten und Dateien unwiderruflich."
 msgstr "Erst staging starten (ab einer Nachricht), dann übernehmen oder verwerfen. Das Übernehmen ändert Nachrichten und Dateien unwiderruflich."
@@ -809,6 +866,10 @@ msgstr "Farbe"
 #: src/components/ChatMessageList.tsx
 msgid "Fehler"
 msgstr "Fehler"
+
+#: src/components/ChatMessageList.tsx
+msgid "Fehler beim Aufruf von {toolName}"
+msgstr "Fehler beim Aufruf von {toolName}"
 
 #: src/lib/opencode.ts
 msgid "Feld „{key}“ hat einen ungültigen Wert (erlaubt: Text, Zahl, Ja/Nein, Textliste)."
@@ -866,6 +927,10 @@ msgstr "Formulare"
 msgid "Formulare konnten nicht geladen werden."
 msgstr "Formulare konnten nicht geladen werden."
 
+#: src/components/ChatMessageList.tsx
+msgid "Fragen"
+msgstr "Fragen"
+
 #: src/pages/SessionDetail.tsx
 msgid "Fragen des Servers an dich. Die Antwort ist ein JSON-Objekt mit einem Eintrag pro Feld (Text, Zahl, Ja/Nein oder Textliste)."
 msgstr "Fragen des Servers an dich. Die Antwort ist ein JSON-Objekt mit einem Eintrag pro Feld (Text, Zahl, Ja/Nein oder Textliste)."
@@ -919,6 +984,14 @@ msgstr "GitHub-Repository"
 msgid "GitHub-Repository öffnen"
 msgstr "GitHub-Repository öffnen"
 
+#: src/components/ChatMessageList.tsx
+msgid "Glob"
+msgstr "Glob"
+
+#: src/components/ChatMessageList.tsx
+msgid "Grep"
+msgstr "Grep"
+
 #: src/components/Layout.tsx
 msgid "Hauptnavigation"
 msgstr "Hauptnavigation"
@@ -938,6 +1011,10 @@ msgstr "Hinweis: Der Terminal-Bildschirm einer Session steht lesend in der Sessi
 #: src/pages/Settings.tsx
 msgid "Hinzufügen"
 msgstr "Hinzufügen"
+
+#: src/components/ChatMessageList.tsx
+msgid "Hinzugefügte Zeilen"
+msgstr "Hinzugefügte Zeilen"
 
 #: src/pages/SessionDetail.tsx
 msgid "Import fehlgeschlagen."
@@ -1259,6 +1336,10 @@ msgstr "Leerlauf (fehlgeschlagen)"
 msgid "Leerlauf (unterbrochen)"
 msgstr "Leerlauf (unterbrochen)"
 
+#: src/components/ChatMessageList.tsx
+msgid "Lesen"
+msgstr "Lesen"
+
 #: src/pages/ServerDetail.tsx
 msgid "Live"
 msgstr "Live"
@@ -1556,6 +1637,10 @@ msgstr "Passwort (Basic Auth)"
 msgid "Passwort festlegen"
 msgstr "Passwort festlegen"
 
+#: src/components/ChatMessageList.tsx
+msgid "Patch"
+msgstr "Patch"
+
 #: src/pages/ServerTools.tsx
 msgid "Pfad im Projekt"
 msgstr "Pfad im Projekt"
@@ -1645,6 +1730,10 @@ msgstr "Schlüssel gespeichert."
 #: src/components/IntegrationsCard.tsx
 msgid "Schlüssel speichern"
 msgstr "Schlüssel speichern"
+
+#: src/components/ChatMessageList.tsx
+msgid "Schreiben"
+msgstr "Schreiben"
 
 #: src/pages/SessionDetail.tsx
 #~ msgid "Senden"
@@ -1919,6 +2008,7 @@ msgstr "Sessions suchen"
 msgid "Sessions von {agentName} auf dem Server anzeigen"
 msgstr "Sessions von {agentName} auf dem Server anzeigen"
 
+#: src/components/ChatMessageList.tsx
 #: src/components/ConfigCard.tsx
 msgid "Shell"
 msgstr "Shell"
@@ -2292,6 +2382,14 @@ msgstr "Warteschlange"
 msgid "Web PWA for Opencode · <0>GitHub-Repository</0>"
 msgstr "Web PWA for Opencode · <0>GitHub-Repository</0>"
 
+#: src/components/ChatMessageList.tsx
+msgid "Web-Abruf"
+msgstr "Web-Abruf"
+
+#: src/components/ChatMessageList.tsx
+msgid "Web-Suche"
+msgstr "Web-Suche"
+
 #: src/pages/ServerTools.tsx
 msgid "Websuche"
 msgstr "Websuche"
@@ -2306,8 +2404,8 @@ msgid "Weitere Sessions laden"
 msgstr "Weitere Sessions laden"
 
 #: src/components/ChatMessageList.tsx
-msgid "Werkzeug"
-msgstr "Werkzeug"
+#~ msgid "Werkzeug"
+#~ msgstr "Werkzeug"
 
 #: src/pages/SessionDetail.tsx
 msgid "Werkzeuge"
@@ -2324,6 +2422,10 @@ msgstr "Werkzeuge:"
 #: src/pages/Dashboard.tsx
 msgid "Willkommen"
 msgstr "Willkommen"
+
+#: src/components/ChatMessageList.tsx
+msgid "Wird erkundet"
+msgstr "Wird erkundet"
 
 #: src/pages/ServerTools.tsx
 msgid "Worktrees"

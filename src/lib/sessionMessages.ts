@@ -2,22 +2,33 @@
  * Parser for the real Opencode V2 `message.list` shapes.
  *
  * Verified against the installed client
- * (`node_modules/@opencode/client`, `SessionMessagesResponse`):
- * `message.list({ sessionID })` returns `{ data: SessionMessageInfo[],
- * cursor }` where `SessionMessageInfo` is a flat discriminated union on
- * `type` — there is no `{ info, parts }` wrapper. Covered variants:
+ * (`node_modules/@opencode/client`, `SessionMessageInfo`): `message.list({
+ * sessionID })` returns `{ data: SessionMessageInfo[], cursor }` where
+ * `SessionMessageInfo` is a flat discriminated union on `type`. Covered
+ * variants (every member of the union):
  *
+ * - `agent-switched` / `model-switched` / `location-switched` — switch notes
  * - `user` — prompt text plus optional `files[]` attachments
- * - `assistant` — `content[]` of `text` / `reasoning` / `tool`
- * - `system`, `synthetic`, `skill`, `shell` — short status texts
+ * - `synthetic`, `system`, `skill`, `shell` — short status texts
  * - `compaction` (`running` / `completed` / `failed`)
  * - `idle` (`succeeded` / `failed` / `interrupted`)
- * - `agent-selected`, `model-selected`, `location-switched`
+ * - `assistant` — `content[]` of `text` / `reasoning` / `tool`
+ *
+ * The legacy spellings `agent-selected` / `model-selected` are tolerated as
+ * aliases (old mocks / old cache rows) — they map to the same note kinds.
+ * `idle` is part of `SessionMessageInfo` even though it is missing from the
+ * `message.list` type *filter* enum, so it stays parsed as well.
  *
  * Legacy `{ id, role, text }` entries (old mocks / old cache rows) keep
  * parsing, and anything else degrades to a `note`/`unknown` message — never
  * a JSON dump. All user-visible labels stay in the components (Lingui); this
  * module only carries structural kinds plus verbatim server text.
+ *
+ * Tool parts carry `state.input` (`{ [x: string]: JsonValue }`) and
+ * `state.metadata` through to the UI: both drive the tool card (label,
+ * subtitle, argument chips, change badges). Assistant messages carry
+ * `agent`/`model` and, when the turn finished, `time.completed` — the
+ * difference to `time.created` becomes the turn duration.
  */
 
 export type ChatRole = "user" | "assistant" | "note";
@@ -52,6 +63,10 @@ export interface ChatToolPart {
   status: ChatToolStatus;
   /** Short detail: error message, text excerpt or file name; null while running. */
   detail: string | null;
+  /** `state.input` of the tool call (arguments); `{}` while streaming. */
+  input: Record<string, unknown>;
+  /** `state.metadata` of the tool call; absent on streaming/errored states. */
+  metadata: Record<string, unknown> | null;
 }
 
 export interface ChatFilesPart {
@@ -81,6 +96,12 @@ export interface ChatMessage {
   /** Plain-text fallback (revert picker, legacy displays). Never a JSON dump. */
   text: string;
   created: number;
+  /** Agent of this message, or the last one seen in the session. */
+  agent: string | null;
+  /** Model label (`provider/model`) of this message, or the last one seen. */
+  model: string | null;
+  /** Assistant turn duration in ms (`time.completed - time.created`), when sent. */
+  durationMs: number | null;
 }
 
 /** Longest excerpt kept per part; longer server text is cut and flagged. */
@@ -103,6 +124,49 @@ function readTimeCreated(record: Record<string, unknown>): number | null {
   if (!isRecord(time)) return null;
   const created: unknown = time["created"];
   return typeof created === "number" && Number.isFinite(created) ? created : null;
+}
+
+function readTimeCompleted(record: Record<string, unknown>): number | null {
+  const time: unknown = record["time"];
+  if (!isRecord(time)) return null;
+  const completed: unknown = time["completed"];
+  return typeof completed === "number" && Number.isFinite(completed) ? completed : null;
+}
+
+/** `provider/model` label of a `ModelRef` (`{ providerID, modelID }`). */
+function modelLabel(value: unknown): string | null {
+  if (typeof value === "string" && value !== "") return value;
+  if (!isRecord(value)) return null;
+  const providerID = readStringField(value, ["providerID", "providerId"]);
+  const modelID = readStringField(value, ["modelID", "id"]);
+  if (providerID !== null && modelID !== null) return `${providerID}/${modelID}`;
+  return modelID ?? providerID;
+}
+
+interface MessageMeta {
+  agent: string | null;
+  model: string | null;
+  durationMs: number | null;
+}
+
+const NO_META: MessageMeta = { agent: null, model: null, durationMs: null };
+
+/** Agent/model the message itself declares plus its turn duration, if any. */
+function readMessageMeta(entry: Record<string, unknown>): MessageMeta {
+  const created = readTimeCreated(entry);
+  const completed = readTimeCompleted(entry);
+  const durationMs =
+    created !== null && completed !== null && completed >= created ? completed - created : null;
+  return {
+    agent: readStringField(entry, ["agent"]),
+    model: modelLabel(entry["model"]),
+    durationMs,
+  };
+}
+
+/** Fill the session meta every message carries into the chat chrome. */
+function withMeta(base: Omit<ChatMessage, keyof MessageMeta>, entry?: Record<string, unknown>): ChatMessage {
+  return { ...base, ...(entry === undefined ? NO_META : readMessageMeta(entry)) };
 }
 
 function excerpt(text: string, limit: number = MAX_PART_EXCERPT_CHARS): string {
@@ -166,15 +230,48 @@ function toolDetail(state: Record<string, unknown>): string | null {
   return excerpt(snippets.join("\n"), 500);
 }
 
+/**
+ * `state.input` of a tool call. The client sends a record
+ * (`{ [x: string]: JsonValue }`) for every non-streaming state and a partial
+ * JSON *string* while streaming — both are accepted, anything else degrades
+ * to an empty argument set.
+ */
+function toolInput(state: Record<string, unknown>): Record<string, unknown> {
+  const raw: unknown = state["input"];
+  if (isRecord(raw)) return raw;
+  if (typeof raw === "string" && raw.trim() !== "") {
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (isRecord(parsed)) return parsed;
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+function toolMetadata(state: Record<string, unknown>): Record<string, unknown> | null {
+  const raw: unknown = state["metadata"];
+  return isRecord(raw) ? raw : null;
+}
+
 function parseToolPart(entry: Record<string, unknown>): ChatToolPart {
-  const name = readStringField(entry, ["name", "title"]) ?? "tool";
+  // The original SDK reads `part.tool`; the pinned client types say `name`.
+  const name = readStringField(entry, ["name", "tool", "title"]) ?? "tool";
   const state: unknown = entry["state"];
   const status = isRecord(state) ? toToolStatus(state["status"]) : "unknown";
   const detail =
     isRecord(state) && (status === "completed" || status === "error")
       ? toolDetail(state)
       : null;
-  return { kind: "tool", name, status, detail };
+  return {
+    kind: "tool",
+    name,
+    status,
+    detail,
+    input: isRecord(state) ? toolInput(state) : {},
+    metadata: isRecord(state) ? toolMetadata(state) : null,
+  };
 }
 
 /** Map one assistant `content[]` entry to a part; null for unusable entries. */
@@ -216,36 +313,45 @@ function parseInfoPartsEntry(
   }
   if (mapped.length === 0) mapped.push({ kind: "unknown" });
   if (role === "user" || (role === null && type === "user")) {
-    return {
-      id,
-      role: "user",
-      noteKind: null,
-      noteDetail: null,
-      parts: mapped,
-      text: textFallback(mapped),
-      created,
-    };
+    return withMeta(
+      {
+        id,
+        role: "user",
+        noteKind: null,
+        noteDetail: null,
+        parts: mapped,
+        text: textFallback(mapped),
+        created,
+      },
+      info,
+    );
   }
   if (role === "assistant" || (role === null && type === "assistant")) {
-    return {
+    return withMeta(
+      {
+        id,
+        role: "assistant",
+        noteKind: null,
+        noteDetail: null,
+        parts: mapped,
+        text: textFallback(mapped),
+        created,
+      },
+      info,
+    );
+  }
+  return withMeta(
+    {
       id,
-      role: "assistant",
-      noteKind: null,
-      noteDetail: null,
+      role: "note",
+      noteKind: "unknown",
+      noteDetail: type,
       parts: mapped,
       text: textFallback(mapped),
       created,
-    };
-  }
-  return {
-    id,
-    role: "note",
-    noteKind: "unknown",
-    noteDetail: type,
-    parts: mapped,
-    text: textFallback(mapped),
-    created,
-  };
+    },
+    info,
+  );
 }
 
 /** Plain-text fallback of parts for pickers and legacy displays. */
@@ -278,15 +384,18 @@ function userMessage(
   if (files.length > 0) parts.push({ kind: "files", files });
   if (parts.length === 0) parts.push({ kind: "unknown" });
   const fallback = [text, files.join(", ")].filter((s) => s !== "").join("\n");
-  return {
-    id,
-    role: "user",
-    noteKind: null,
-    noteDetail: null,
-    parts,
-    text: excerpt(fallback, 500),
-    created,
-  };
+  return withMeta(
+    {
+      id,
+      role: "user",
+      noteKind: null,
+      noteDetail: null,
+      parts,
+      text: excerpt(fallback, 500),
+      created,
+    },
+    entry,
+  );
 }
 
 function assistantMessage(
@@ -309,15 +418,18 @@ function assistantMessage(
     if (fallback !== null) parts.push({ kind: "text", text: excerpt(fallback) });
   }
   if (parts.length === 0) parts.push({ kind: "unknown" });
-  return {
-    id,
-    role: "assistant",
-    noteKind: null,
-    noteDetail: null,
-    parts,
-    text: textFallback(parts),
-    created,
-  };
+  return withMeta(
+    {
+      id,
+      role: "assistant",
+      noteKind: null,
+      noteDetail: null,
+      parts,
+      text: textFallback(parts),
+      created,
+    },
+    entry,
+  );
 }
 
 function noteMessage(
@@ -326,6 +438,7 @@ function noteMessage(
   noteKind: ChatNoteKind,
   body: string | null,
   noteDetail: string | null = null,
+  entry?: Record<string, unknown>,
 ): ChatMessage {
   // Status notes without a body (idle outcomes, contentless compactions)
   // are bare status lines: they carry zero parts and must never degrade to
@@ -337,15 +450,18 @@ function noteMessage(
       : noteKind === "unknown"
         ? [{ kind: "unknown" }]
         : [];
-  return {
-    id,
-    role: "note",
-    noteKind,
-    noteDetail,
-    parts,
-    text: body === null ? "" : excerpt(body, 500),
-    created,
-  };
+  return withMeta(
+    {
+      id,
+      role: "note",
+      noteKind,
+      noteDetail,
+      parts,
+      text: body === null ? "" : excerpt(body, 500),
+      created,
+    },
+    entry,
+  );
 }
 
 function shellSummary(entry: Record<string, unknown>): { summary: string; output: string | null } {
@@ -377,6 +493,7 @@ function parseEntry(entry: unknown, index: number, total: number, now: number): 
         parts: [{ kind: "text", text: body }],
         text: body,
         created: fallbackCreated,
+        ...NO_META,
       };
     }
     return {
@@ -387,6 +504,7 @@ function parseEntry(entry: unknown, index: number, total: number, now: number): 
       parts: [{ kind: "unknown" }],
       text: "",
       created: fallbackCreated,
+      ...NO_META,
     };
   }
   const id = readStringField(entry, ["id", "messageID", "messageId"]) ?? `nachricht-${index}`;
@@ -409,68 +527,79 @@ function parseEntry(entry: unknown, index: number, total: number, now: number): 
     case "assistant":
       return assistantMessage(entry, id, created);
     case "system":
-      return noteMessage(id, created, "system", readStringField(entry, ["text", "description"]));
+      return noteMessage(
+        id,
+        created,
+        "system",
+        readStringField(entry, ["text", "description"]),
+        null,
+        entry,
+      );
     case "synthetic":
-      return noteMessage(id, created, "synthetic", readStringField(entry, ["text", "description"]));
+      return noteMessage(
+        id,
+        created,
+        "synthetic",
+        readStringField(entry, ["text", "description"]),
+        null,
+        entry,
+      );
     case "skill": {
       const text = readStringField(entry, ["text"]);
       const name = readStringField(entry, ["name", "skill"]);
       const body = [name === null ? null : name, text].filter((s) => s !== null).join(": ");
-      return noteMessage(id, created, "skill", body === "" ? null : body);
+      return noteMessage(id, created, "skill", body === "" ? null : body, null, entry);
     }
     case "shell": {
       const { summary, output } = shellSummary(entry);
       const parts: ChatPart[] = [{ kind: "text", text: excerpt(summary, 500) }];
       if (output !== null) parts.push({ kind: "text", text: excerpt(output) });
-      return {
-        id,
-        role: "note",
-        noteKind: "shell",
-        noteDetail: readStringField(entry, ["status"]),
-        parts,
-        text: excerpt(summary, 500),
-        created,
-      };
+      return withMeta(
+        {
+          id,
+          role: "note",
+          noteKind: "shell",
+          noteDetail: readStringField(entry, ["status"]),
+          parts,
+          text: excerpt(summary, 500),
+          created,
+        },
+        entry,
+      );
     }
     case "compaction": {
       const status = readStringField(entry, ["status"]);
       const summary = readStringField(entry, ["summary", "recent", "text"]);
       const error: unknown = entry["error"];
       const errorText = isRecord(error) ? readStringField(error, ["message"]) : null;
-      return noteMessage(
-        id,
-        created,
-        "compaction",
-        summary ?? errorText,
-        status,
-      );
+      return noteMessage(id, created, "compaction", summary ?? errorText, status, entry);
     }
     case "idle":
-      return noteMessage(id, created, "idle", null, readStringField(entry, ["outcome"]));
+      return noteMessage(id, created, "idle", null, readStringField(entry, ["outcome"]), entry);
+    // Real union discriminators (`SessionMessageAgentSelected` /
+    // `SessionMessageModelSelected` in the pinned client). The legacy
+    // spellings stay tolerated aliases (old mocks / old cache rows).
+    case "agent-switched":
     case "agent-selected":
       return noteMessage(
         id,
         created,
         "agent",
         readStringField(entry, ["agent", "name"]),
+        readStringField(entry, ["previous"]),
+        entry,
       );
-    case "model-selected": {
-      const model: unknown = entry["model"];
-      let label: string | null = null;
-      if (isRecord(model)) {
-        const providerID = readStringField(model, ["providerID", "providerId"]);
-        const modelID = readStringField(model, ["id", "modelID"]);
-        label =
-          providerID !== null && modelID !== null
-            ? `${providerID}/${modelID}`
-            : (modelID ?? providerID);
-      }
-      return noteMessage(id, created, "model", label);
-    }
+    case "model-switched":
+    case "model-selected":
+      return noteMessage(id, created, "model", modelLabel(entry["model"]), null, entry);
     case "location-switched": {
+      // The directory lives under `location` on real payloads; older shapes
+      // carried a flat `projectID`/`subpath` pair, so both are tolerated.
       const location: unknown = entry["location"];
-      const label = isRecord(location) ? readStringField(location, ["directory", "path"]) : null;
-      return noteMessage(id, created, "location", label);
+      const label = isRecord(location)
+        ? readStringField(location, ["directory", "path", "subpath"])
+        : readStringField(entry, ["projectID", "directory", "path"]);
+      return noteMessage(id, created, "location", label, null, entry);
     }
     case null: {
       // Legacy `{ id, role, text }` entries (old mocks / old cache rows).
@@ -478,7 +607,7 @@ function parseEntry(entry: unknown, index: number, total: number, now: number): 
       if (role === "user") return userMessage(entry, id, created);
       if (role === "assistant") return assistantMessage(entry, id, created);
       const text = readStringField(entry, ["text", "content", "body"]);
-      return noteMessage(id, created, "unknown", text, role);
+      return noteMessage(id, created, "unknown", text, role, entry);
     }
     default:
       return noteMessage(
@@ -487,6 +616,7 @@ function parseEntry(entry: unknown, index: number, total: number, now: number): 
         "unknown",
         readStringField(entry, ["text", "description", "content", "body"]),
         type,
+        entry,
       );
   }
 }
@@ -511,6 +641,18 @@ export function parseSessionMessages(value: unknown, now: number = Date.now()): 
     const parsed = parseEntry(entry, index, total, now);
     if (parsed !== null) messages.push(parsed);
   });
+  // Chat chrome shows `agent · model` per message; only some union members
+  // carry it (assistant, switch notes), so every other message inherits the
+  // last one seen in the session — the switch note updates it for the rest
+  // of the conversation.
+  let agent: string | null = null;
+  let model: string | null = null;
+  for (const message of messages) {
+    if (message.agent !== null) agent = message.agent;
+    if (message.model !== null) model = message.model;
+    if (message.agent === null) message.agent = agent;
+    if (message.model === null) message.model = model;
+  }
   return messages;
 }
 

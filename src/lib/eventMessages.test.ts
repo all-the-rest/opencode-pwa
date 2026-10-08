@@ -34,6 +34,9 @@ describe("extractMessageFromEvent", () => {
       noteKind: null,
       noteDetail: null,
       parts: [{ kind: "text", text: "Hallo Welt" }],
+      agent: null,
+      model: null,
+      durationMs: null,
     });
   });
 

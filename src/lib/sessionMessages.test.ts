@@ -77,7 +77,11 @@ describe("assistant messages", () => {
           type: "tool",
           id: "t1",
           name: "read",
-          state: { status: "completed", content: [{ type: "text", text: "Dateiinhalt" }] },
+          state: {
+            status: "completed",
+            input: { filePath: "/src/app.ts" },
+            content: [{ type: "text", text: "Dateiinhalt" }],
+          },
         },
       ],
     });
@@ -85,9 +89,97 @@ describe("assistant messages", () => {
     expect(message?.parts).toEqual([
       { kind: "text", text: "Antwort" },
       { kind: "reasoning", text: "Überlegung" },
-      { kind: "tool", name: "read", status: "completed", detail: "Dateiinhalt" },
+      {
+        kind: "tool",
+        name: "read",
+        status: "completed",
+        detail: "Dateiinhalt",
+        input: { filePath: "/src/app.ts" },
+        metadata: null,
+      },
     ]);
     expect(message?.text).toBe("Antwort");
+  });
+
+  it("carries state.input and state.metadata of a tool call", () => {
+    const message = single({
+      type: "assistant",
+      id: "a6",
+      content: [
+        {
+          type: "tool",
+          id: "t",
+          name: "grep",
+          state: {
+            status: "running",
+            input: { pattern: "TODO", path: "/src" },
+            metadata: { provider: "anthropic", sessionId: "ses-1" },
+          },
+        },
+      ],
+    });
+    expect(message?.parts).toEqual([
+      {
+        kind: "tool",
+        name: "grep",
+        status: "running",
+        detail: null,
+        input: { pattern: "TODO", path: "/src" },
+        metadata: { provider: "anthropic", sessionId: "ses-1" },
+      },
+    ]);
+  });
+
+  it("parses the streaming state's JSON string input and has no metadata", () => {
+    const message = single({
+      type: "assistant",
+      id: "a7",
+      content: [
+        {
+          type: "tool",
+          id: "t",
+          name: "bash",
+          state: { status: "streaming", input: '{"command":"pnpm test"}' },
+        },
+      ],
+    });
+    expect(message?.parts).toEqual([
+      {
+        kind: "tool",
+        name: "bash",
+        status: "streaming",
+        detail: null,
+        input: { command: "pnpm test" },
+        metadata: null,
+      },
+    ]);
+  });
+
+  it("accepts the original SDK's tool key alongside name", () => {
+    const message = single({
+      type: "assistant",
+      id: "a8",
+      content: [{ type: "tool", id: "t", tool: "edit", state: { status: "completed" } }],
+    });
+    expect(message?.parts[0]).toMatchObject({ kind: "tool", name: "edit" });
+  });
+
+  it("reads the turn duration from time.created/time.completed", () => {
+    const message = single({
+      type: "assistant",
+      id: "a9",
+      time: { created: 1000, completed: 4500 },
+      content: [{ type: "text", text: "Fertig" }],
+    });
+    expect(message?.durationMs).toBe(3500);
+
+    const stillRunning = single({
+      type: "assistant",
+      id: "a10",
+      time: { created: 1000 },
+      content: [{ type: "text", text: "Läuft" }],
+    });
+    expect(stillRunning?.durationMs).toBeNull();
   });
 
   it("maps running tools without detail and error tools with message", () => {
@@ -96,7 +188,9 @@ describe("assistant messages", () => {
       id: "a2",
       content: [{ type: "tool", id: "t", name: "bash", state: { status: "running" } }],
     });
-    expect(running?.parts).toEqual([{ kind: "tool", name: "bash", status: "running", detail: null }]);
+    expect(running?.parts).toEqual([
+      { kind: "tool", name: "bash", status: "running", detail: null, input: {}, metadata: null },
+    ]);
     expect(running?.text).toBe("bash");
 
     const failed = single({
@@ -107,12 +201,19 @@ describe("assistant messages", () => {
           type: "tool",
           id: "t",
           name: "bash",
-          state: { status: "error", error: { type: "x", message: "Boom" } },
+          state: { status: "error", input: { command: "ls" }, error: { type: "x", message: "Boom" } },
         },
       ],
     });
     expect(failed?.parts).toEqual([
-      { kind: "tool", name: "bash", status: "error", detail: "Boom" },
+      {
+        kind: "tool",
+        name: "bash",
+        status: "error",
+        detail: "Boom",
+        input: { command: "ls" },
+        metadata: null,
+      },
     ]);
   });
 
@@ -133,7 +234,7 @@ describe("assistant messages", () => {
       ],
     });
     expect(fileTool?.parts).toEqual([
-      { kind: "tool", name: "read", status: "completed", detail: "a.png" },
+      { kind: "tool", name: "read", status: "completed", detail: "a.png", input: {}, metadata: null },
     ]);
 
     const empty = single({ type: "assistant", id: "a5", content: [] });
@@ -190,17 +291,51 @@ describe("notes (system, idle, compaction and friends)", () => {
     expect(idle).toMatchObject({ role: "note", noteKind: "idle", noteDetail: "succeeded" });
   });
 
-  it("summarizes agent, model and location switches", () => {
+  it("maps the real agent-switched discriminator to a note", () => {
+    const message = single({
+      type: "agent-switched",
+      id: "g1",
+      agent: "coder",
+      previous: "ask",
+      time: { created: 900 },
+    });
+    expect(message).toMatchObject({
+      role: "note",
+      noteKind: "agent",
+      text: "coder",
+      noteDetail: "ask",
+    });
+    expect(message?.parts.some((part) => part.kind === "unknown")).toBe(false);
+  });
+
+  it("maps the real model-switched discriminator to a note", () => {
+    const message = single({
+      type: "model-switched",
+      id: "g2",
+      model: { id: "sonnet", providerID: "anthropic" },
+      time: { created: 900 },
+    });
+    expect(message).toMatchObject({ role: "note", noteKind: "model", text: "anthropic/sonnet" });
+    expect(message?.parts.some((part) => part.kind === "unknown")).toBe(false);
+  });
+
+  it("tolerates the legacy agent-selected / model-selected spellings", () => {
+    expect(single({ type: "agent-selected", id: "g", agent: "coder" })?.noteKind).toBe("agent");
+    expect(single({ type: "agent-selected", id: "g", agent: "coder" })?.text).toBe("coder");
     expect(
-      single({ type: "agent-selected", id: "g", agent: "coder" })?.text,
-    ).toBe("coder");
+      single({ type: "model-selected", id: "m", model: { id: "sonnet", providerID: "anthropic" } })
+        ?.noteKind,
+    ).toBe("model");
     expect(
-      single({
-        type: "model-selected",
-        id: "m",
-        model: { id: "sonnet", providerID: "anthropic" },
-      })?.text,
+      single({ type: "model-selected", id: "m", model: { id: "sonnet", providerID: "anthropic" } })
+        ?.text,
     ).toBe("anthropic/sonnet");
+  });
+
+  it("maps location-switched to a note", () => {
+    expect(
+      single({ type: "location-switched", id: "l", location: { directory: "/repo" } })?.noteKind,
+    ).toBe("location");
     expect(
       single({ type: "location-switched", id: "l", location: { directory: "/repo" } })?.text,
     ).toBe("/repo");
@@ -218,6 +353,13 @@ describe("unknown and malformed entries", () => {
     expect(message?.noteKind).toBe("unknown");
     expect(message?.parts).toEqual([{ kind: "unknown" }]);
     expect(message?.text).toBe("");
+  });
+
+  it("treats the legacy spellings as known, never as unknown", () => {
+    for (const type of ["agent-selected", "model-selected"]) {
+      const message = single({ type, id: "legacy", agent: "coder" });
+      expect(message?.noteKind).not.toBe("unknown");
+    }
   });
 
   it("tolerates { info, parts } envelopes without guessing types", () => {
@@ -247,6 +389,71 @@ describe("unknown and malformed entries", () => {
     const rows = parseSessionMessages({ data: [{}, { type: "user" }] }, NOW);
     expect(rows[0]?.id).toBe("nachricht-0");
     expect(rows[1]?.id).toBe("nachricht-1");
+  });
+});
+
+describe("chat chrome meta (agent · model · duration)", () => {
+  it("carries the agent and model of a message that declares them", () => {
+    const message = single({
+      type: "assistant",
+      id: "a1",
+      agent: "coder",
+      model: { id: "sonnet", providerID: "anthropic" },
+      time: { created: 1000, completed: 1200 },
+      content: [{ type: "text", text: "Hallo" }],
+    });
+    expect(message).toMatchObject({
+      agent: "coder",
+      model: "anthropic/sonnet",
+      durationMs: 200,
+    });
+  });
+
+  it("lets later messages inherit the agent/model seen before them", () => {
+    const rows = parseSessionMessages(
+      {
+        data: [
+          {
+            type: "assistant",
+            id: "a1",
+            agent: "coder",
+            model: { id: "sonnet", providerID: "anthropic" },
+            content: [{ type: "text", text: "Antwort" }],
+          },
+          { type: "user", id: "u1", text: "Und jetzt?" },
+          { type: "agent-switched", id: "n1", agent: "review" },
+          { type: "user", id: "u2", text: "Bitte prüfen" },
+          {
+            type: "model-switched",
+            id: "n2",
+            model: { id: "haiku", providerID: "anthropic" },
+          },
+          { type: "user", id: "u3", text: "Danke" },
+        ],
+      },
+      NOW,
+    );
+    expect(rows.map((row) => row.agent)).toEqual([
+      "coder",
+      "coder",
+      "review",
+      "review",
+      "review",
+      "review",
+    ]);
+    expect(rows.map((row) => row.model)).toEqual([
+      "anthropic/sonnet",
+      "anthropic/sonnet",
+      "anthropic/sonnet",
+      "anthropic/sonnet",
+      "anthropic/haiku",
+      "anthropic/haiku",
+    ]);
+  });
+
+  it("leaves agent/model null when the session never sent them", () => {
+    const message = single({ type: "user", id: "u1", text: "Hallo" });
+    expect(message).toMatchObject({ agent: null, model: null, durationMs: null });
   });
 });
 
@@ -289,7 +496,12 @@ describe("parseSessionMessages V2 union coverage", () => {
       content: [
         { type: "text", text: "Antwort" },
         { type: "reasoning", text: "Überlegung" },
-        { type: "tool", id: "t1", name: "read", state: { status: "completed" } },
+        {
+          type: "tool",
+          id: "t1",
+          name: "read",
+          state: { status: "completed", input: { filePath: "/src/x.ts" } },
+        },
         { type: "file", uri: "file:///src/x.ts", name: "x.ts" },
       ],
       time: at(2000),
@@ -367,13 +579,13 @@ describe("parseSessionMessages V2 union coverage", () => {
     }
   });
 
-  it("maps agent, model and location selections", () => {
-    const agent = single({ type: "agent-selected", id: "g1", agent: "coder", time: at(1000) });
+  it("maps agent, model and location switches", () => {
+    const agent = single({ type: "agent-switched", id: "g1", agent: "coder", time: at(1000) });
     expect(agent?.noteKind).toBe("agent");
     expect(agent?.parts.some((part) => part.kind === "unknown")).toBe(false);
 
     const model = single({
-      type: "model-selected",
+      type: "model-switched",
       id: "g2",
       model: { id: "sonnet", providerID: "anthropic" },
       time: at(1000),
@@ -389,6 +601,42 @@ describe("parseSessionMessages V2 union coverage", () => {
     });
     expect(location?.noteKind).toBe("location");
     expect(location?.parts.some((part) => part.kind === "unknown")).toBe(false);
+  });
+
+  it("covers every member of the real union with its own rendering", () => {
+    const union: Array<{ type: string; entry: Record<string, unknown>; noteKind?: string }> = [
+      { type: "user", entry: { text: "Frage" } },
+      {
+        type: "assistant",
+        entry: { agent: "coder", content: [{ type: "text", text: "Antwort" }] },
+      },
+      { type: "system", entry: { text: "System" }, noteKind: "system" },
+      { type: "synthetic", entry: { text: "Synthese" }, noteKind: "synthetic" },
+      { type: "skill", entry: { name: "review", text: "Skill" }, noteKind: "skill" },
+      { type: "shell", entry: { command: "ls", status: "exited" }, noteKind: "shell" },
+      { type: "agent-switched", entry: { agent: "coder" }, noteKind: "agent" },
+      {
+        type: "model-switched",
+        entry: { model: { id: "sonnet", providerID: "anthropic" } },
+        noteKind: "model",
+      },
+      {
+        type: "location-switched",
+        entry: { location: { directory: "/repo" } },
+        noteKind: "location",
+      },
+      { type: "compaction", entry: { status: "completed", summary: "Kurz" }, noteKind: "compaction" },
+    ];
+    for (const member of union) {
+      const message = single({ type: member.type, id: member.type, ...member.entry });
+      expect(message?.parts.some((part) => part.kind === "unknown")).toBe(false);
+      if (member.noteKind !== undefined) {
+        expect(message?.role).toBe("note");
+        expect(message?.noteKind).toBe(member.noteKind);
+      } else {
+        expect(message?.role).toBe(member.type);
+      }
+    }
   });
 
   it("keeps the unknown fallback for truly foreign types only", () => {

@@ -58,6 +58,35 @@ Legend: ✅ in this app · 🚧 partial · ❌ missing (post-MVP unless noted).
   select a form, paste the answer as a JSON object (validated client-side:
   Text/Zahl/Ja-Nein/Textliste pro Feld), reply via `POST .../form/{formID}/reply
   {answer}`, reject via `DELETE .../form/{formID}`.
+- ✅ Chat-first message rendering (SOLL, Welle 1 „korrektes Rendern +
+  Tool-Cards"): `message.list` is parsed from the **real** V2 union
+  (`src/lib/sessionMessages.ts`, verified against the installed
+  `@opencode/client`): `agent-switched`, `model-switched`,
+  `location-switched`, `user`, `synthetic`, `system`, `skill`, `shell`,
+  `assistant`, `compaction` (+ `idle`, which is part of `SessionMessageInfo`
+  but not of the `message.list` type-filter enum). The legacy spellings
+  `agent-selected`/`model-selected` stay tolerated aliases; the
+  "unbekannter Inhalt" fallback is reserved for genuinely foreign types.
+  Tool parts carry `state.input` and `state.metadata` through to the UI
+  (`src/lib/toolInfo.ts`: name → icon + German label + subtitle extractor,
+  argument chips, +/- change badges, context-group and hidden-tool sets).
+  Tool cards in `src/components/ChatMessageList.tsx`: icon + label +
+  subtitle row, `key=value` argument chips (truncated), status
+  (streaming/running/completed/error), dedicated **error variant**
+  (red styling + expandable error detail), +/- badges for edit/write,
+  title shimmer while running, subtle expand/collapse transition.
+  Consecutive read/glob/grep/list calls collapse into ONE expandable
+  summary row ("1 Lesevorgang · 2 Suchen · 1 Liste"); `todowrite` stays
+  hidden (as in the original's `HIDDEN_TOOLS`). Errored context tools keep
+  their own error card instead of vanishing into the group.
+  Chat chrome: `agent · model · time` above messages (the session meta is
+  inherited from assistant messages and switch notes) and the turn duration
+  (`time.completed - time.created`) on finished assistant messages.
+  Reference: `anomalyco/opencode@dev`,
+  `packages/session-ui/src/components/message-part.tsx` (`getToolInfo`,
+  `CONTEXT_GROUP_TOOLS`, `HIDDEN_TOOLS`) and `v2/components/basic-tool-v2.tsx`.
+  Gates: `src/lib/toolInfo.test.ts` + `src/lib/sessionMessages.test.ts` +
+  `tests/e2e/w15-tool-cards.spec.ts` (`@feature`).
 - ✅ Feedback policy: every session write answers with a toast
   (`src/state/toast.tsx`, rendered by `src/components/Toasts.tsx`) instead of an
   inline alert box — fork, interrupt, delete, compact, revert stage/commit/

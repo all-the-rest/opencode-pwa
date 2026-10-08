@@ -317,10 +317,11 @@ test(
       "href",
       "https://a.example/x",
     );
-    // Tool calls render as collapsible cards with name + status, no raw dump.
-    await expect(page.getByTestId("message-tool-m2-2")).toContainText("read");
-    await expect(page.getByTestId("message-tool-m2-2")).toContainText("Fertig");
-    await expect(page.getByTestId("message-tool-m2-3")).toContainText("bash");
+    // Tool calls render as cards with the German label + status; consecutive
+    // read/glob/grep/list calls collapse into one context summary row.
+    await expect(page.getByTestId("message-tool-group-m2-2")).toContainText("Lesevorgang");
+    await expect(page.getByTestId("message-tool-group-m2-2")).toContainText("Fertig");
+    await expect(page.getByTestId("message-tool-m2-3")).toContainText("Shell");
     await expect(page.getByTestId("message-tool-m2-3")).toContainText("Läuft");
     // Reasoning stays collapsed until opened.
     await expect(page.getByTestId("message-reasoning-m2-0")).toContainText("Denken anzeigen");
@@ -359,9 +360,13 @@ test(
     await mockApi(page, freshLog());
     await page.goto(`/sessions/ses-1?server=${server.id}`);
 
-    await expect(page.getByTestId("message-tool-m2-2")).toBeVisible();
-    await page.getByTestId("message-tool-m2-2").locator("summary").click();
-    await expect(page.getByTestId("message-tool-m2-2")).toContainText("Dateiinhalt");
+    // The collapsed context row expands to the individual read call …
+    await expect(page.getByTestId("message-tool-group-m2-2")).toBeVisible();
+    await page.getByTestId("message-tool-group-m2-2").locator("summary").click();
+    await expect(page.getByTestId("message-tool-m2-2")).toContainText("Lesen");
+    // … and the tool card itself keeps its output behind a disclosure.
+    await page.getByTestId("message-tool-m2-3").locator("summary").click();
+    await expect(page.getByTestId("message-tool-m2-3")).toContainText("Shell");
 
     await page.getByTestId("message-reasoning-m2-0").locator("summary").click();
     await expect(page.getByText("Ich überlege kurz")).toBeVisible();

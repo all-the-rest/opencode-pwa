@@ -44,6 +44,9 @@ describe("extractMessageInputs", () => {
         noteKind: null,
         noteDetail: null,
         parts: [{ kind: "text", text: "Hallo" }],
+        agent: null,
+        model: null,
+        durationMs: null,
       },
     ]);
     expect(extractMessageInputs([{ id: "b" }], 500)[0]).toMatchObject({ id: "b" });
@@ -91,6 +94,52 @@ describe("extractMessageInputs", () => {
     const rows = await readMessages(SERVER, SESSION);
     expect(rows.find((m) => m.messageID === "dump")).toMatchObject({ text: "", parts: [] });
     expect(rows.find((m) => m.messageID === "echt")).toMatchObject({ text: "Echter Text" });
+  });
+
+  it("round-trips tool input/metadata and the chat meta through the cache", async () => {
+    await putMessages(SERVER, SESSION, [
+      {
+        id: "tool-msg",
+        role: "assistant",
+        text: "Lesen",
+        created: 10,
+        noteKind: null,
+        noteDetail: null,
+        agent: "coder",
+        model: "anthropic/sonnet",
+        durationMs: 1200,
+        parts: [
+          {
+            kind: "tool",
+            name: "read",
+            status: "completed",
+            detail: "Dateiinhalt",
+            input: { filePath: "/src/app.ts" },
+            metadata: { provider: "anthropic" },
+          },
+        ],
+      },
+    ]);
+    const rows = await readMessages(SERVER, SESSION);
+    expect(rows[0]).toMatchObject({
+      agent: "coder",
+      model: "anthropic/sonnet",
+      durationMs: 1200,
+    });
+    expect(rows[0]?.parts[0]).toEqual({
+      kind: "tool",
+      name: "read",
+      status: "completed",
+      detail: "Dateiinhalt",
+      input: { filePath: "/src/app.ts" },
+      metadata: { provider: "anthropic" },
+    });
+  });
+
+  it("fills nulls for legacy rows without the chat meta fields", async () => {
+    await putMessages(SERVER, SESSION, [{ id: "legacy", role: "user", text: "Alt", created: 3 }]);
+    const rows = await readMessages(SERVER, SESSION);
+    expect(rows[0]).toMatchObject({ agent: null, model: null, durationMs: null });
   });
 
   it("returns an empty list for unknown shapes", () => {
