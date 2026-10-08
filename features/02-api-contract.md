@@ -22,7 +22,9 @@ Client: `@opencode/client` promise entrypoint, `OpenCode.make({ baseUrl, headers
 | List ptys     | `GET /api/pty`    | `pty.list()`           | returns `{ location, data }`   |
 | PTY connect token | `POST /api/pty/:ptyID/connect-token` | `pty.connect.token({ ptyID })` | returns `{ location, data: { ticket, expires_in } }`; raw body (no unwrap); no in-app terminal yet (see `features/05-parity.md`) |
 | List agents   | `GET /api/agent`  | `agent.list()`         | dashboard count + session filter |
-| List projects | `GET /api/project` | `project.list()`      | project grouping + dashboard count (direct-fetch fallback with Basic header) |
+| List projects | `GET /api/project` | `project.list()`      | project grouping + dashboard count (direct-fetch fallback with Basic header); `vcs`/`canonical` feed the diff empty states |
+| Session diff  | `GET /api/session/:sessionID/diff` | `session.diff({ sessionID })` | one `FileDiffInfo` row per changed file (`file`, `patch`, `additions`, `deletions`, `status`); rendered by `src/lib/diffView.ts` |
+| Init git repo | `POST /api/vcs/init` | `vcs.init({ location })` | 204/empty; the "Kein Git-Repository" empty state of the diff surface offers it (German confirm + `vcs-init` offline guard) |
 | List files    | `GET /api/fs/list?path=` | `file.list({ path? })` | server tools, read-only browser; rows via `extractFileEntries` |
 | Read file     | `GET /api/fs/read/:path` | `file.read({ path })` | binary `Uint8Array`, decoded + capped by `decodeFileContent` |
 | VCS status    | `GET /api/vcs/status` | `vcs.status()`     | changed files, rows via `extractVcsStatus` |

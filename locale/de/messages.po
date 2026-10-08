@@ -16,6 +16,10 @@ msgstr "{ \"feld\": \"wert\" }"
 #~ msgid "{0} weitere anzeigen"
 #~ msgstr "{0} weitere anzeigen"
 
+#: src/components/SessionDiffView.tsx
+msgid "{addedLines} Zeilen hinzugefügt, {removedLines} entfernt"
+msgstr "{addedLines} Zeilen hinzugefügt, {removedLines} entfernt"
+
 #: src/pages/Agents.tsx
 msgid "{agentLabel} · {modelLabel}"
 msgstr "{agentLabel} · {modelLabel}"
@@ -35,6 +39,14 @@ msgstr "{base} (offline aus Zwischenspeicher)"
 #: src/components/IntegrationsCard.tsx
 msgid "{connectionCount} Verbindungen"
 msgstr "{connectionCount} Verbindungen"
+
+#: src/components/SessionDiffView.tsx
+msgid "{count} Kontextzeilen anzeigen"
+msgstr "{count} Kontextzeilen anzeigen"
+
+#: src/components/SessionDiffView.tsx
+msgid "{fileCount} Dateien"
+msgstr "{fileCount} Dateien"
 
 #: src/components/ChatMessageList.tsx
 msgid "{hiddenCount} weitere anzeigen"
@@ -79,6 +91,14 @@ msgstr "← Server"
 #: src/components/SessionTabBar.tsx
 msgid "+ Neu"
 msgstr "+ Neu"
+
+#: src/components/SessionDiffView.tsx
+msgid "1 Datei"
+msgstr "1 Datei"
+
+#: src/components/SessionDiffView.tsx
+msgid "1 Kontextzeile anzeigen"
+msgstr "1 Kontextzeile anzeigen"
 
 #: src/components/ChatMessageList.tsx
 msgid "1 Lesevorgang"
@@ -552,6 +572,10 @@ msgstr "Bezeichnung (optional)"
 msgid "Bezeichnung für die Verbindung"
 msgstr "Bezeichnung für die Verbindung"
 
+#: src/components/SessionDiffView.tsx
+msgid "Binärdatei – der Inhalt wird nicht angezeigt."
+msgstr "Binärdatei – der Inhalt wird nicht angezeigt."
+
 #: src/components/ConfirmDialog.tsx
 #: src/pages/Settings.tsx
 msgid "Bitte warten …"
@@ -663,6 +687,10 @@ msgstr "Der Server bleibt gespeichert und wird automatisch weiter versucht. Sess
 msgid "Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions und Aktionen sind bis dahin deaktiviert."
 msgstr "Der Server bleibt gespeichert und wird automatisch weiter versucht. Sessions und Aktionen sind bis dahin deaktiviert."
 
+#: src/components/SessionDiffView.tsx
+msgid "Der Server kann für dieses Projekt keine Änderungen verfolgen, solange es kein Git-Repository gibt. Lege eins an, um die Änderungen dieser Session zu sehen."
+msgstr "Der Server kann für dieses Projekt keine Änderungen verfolgen, solange es kein Git-Repository gibt. Lege eins an, um die Änderungen dieser Session zu sehen."
+
 #: src/pages/Dashboard.tsx
 msgid "Details öffnen"
 msgstr "Details öffnen"
@@ -758,6 +786,10 @@ msgstr "Dieser Server hat genau ein Projekt: „{projectRenameName}“. Soll die
 #: src/pages/ProjectDetail.tsx
 msgid "Dieses Projekt ist auf dem Server unbekannt – eventuell wurde es gelöscht."
 msgstr "Dieses Projekt ist auf dem Server unbekannt – eventuell wurde es gelöscht."
+
+#: src/components/SessionDiffView.tsx
+msgid "Diff-Ansicht"
+msgstr "Diff-Ansicht"
 
 #: src/pages/SessionDetail.tsx
 #~ msgid "Diffs anzeigen"
@@ -860,6 +892,10 @@ msgstr "Erkundung abgeschlossen"
 #: src/pages/SessionDetail.tsx
 msgid "Erst staging starten (ab einer Nachricht), dann übernehmen oder verwerfen. Das Übernehmen ändert Nachrichten und Dateien unwiderruflich."
 msgstr "Erst staging starten (ab einer Nachricht), dann übernehmen oder verwerfen. Das Übernehmen ändert Nachrichten und Dateien unwiderruflich."
+
+#: src/pages/SessionDetail.tsx
+msgid "Erstellen"
+msgstr "Erstellen"
 
 #: src/pages/SessionDetail.tsx
 msgid "Export als Datei laden"
@@ -981,9 +1017,17 @@ msgstr "Freigabe beantwortet"
 msgid "Freigabe erforderlich"
 msgstr "Freigabe erforderlich"
 
+#: src/components/SessionDiffView.tsx
+msgid "Geändert"
+msgstr "Geändert"
+
 #: src/components/ConfigCard.tsx
 msgid "geeignet"
 msgstr "geeignet"
+
+#: src/components/SessionDiffView.tsx
+msgid "Gelöscht"
+msgstr "Gelöscht"
 
 #: src/pages/SessionDetail.tsx
 msgid "Gesamt (alle Sessions): {totalPrompts} Prompts, {totalSteps} Schritte"
@@ -1002,6 +1046,10 @@ msgstr "Gesamt (alle Sessions): {totalPrompts} Prompts, {totalSteps} Schritte, {
 msgid "Gespeicherte Server ({serverCount})"
 msgstr "Gespeicherte Server ({serverCount})"
 
+#: src/components/SessionDiffView.tsx
+msgid "Geteilt"
+msgstr "Geteilt"
+
 #: src/components/Layout.tsx
 msgid "Geteilte Ansicht"
 msgstr "Geteilte Ansicht"
@@ -1009,6 +1057,23 @@ msgstr "Geteilte Ansicht"
 #: src/components/Layout.tsx
 msgid "Geteilte Ansicht: Bereiche nebeneinander oder untereinander"
 msgstr "Geteilte Ansicht: Bereiche nebeneinander oder untereinander"
+
+#: src/components/SessionDiffView.tsx
+#: src/pages/SessionDetail.tsx
+msgid "Git-Repository erstellen"
+msgstr "Git-Repository erstellen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Git-Repository erstellt – die Änderungen werden neu geladen."
+msgstr "Git-Repository erstellt – die Änderungen werden neu geladen."
+
+#: src/pages/SessionDetail.tsx
+#~ msgid "Git-Repository konnte nicht erstellt werden: {initError}"
+#~ msgstr "Git-Repository konnte nicht erstellt werden: {initError}"
+
+#: src/pages/SessionDetail.tsx
+msgid "Git-Repository konnte nicht erstellt werden."
+msgstr "Git-Repository konnte nicht erstellt werden."
 
 #: src/pages/ServerTools.tsx
 msgid "Git-Status"
@@ -1055,12 +1120,20 @@ msgid "Hinzugefügte Zeilen"
 msgstr "Hinzugefügte Zeilen"
 
 #: src/pages/SessionDetail.tsx
+msgid "Im Projektverzeichnis des Servers wird ein Git-Repository angelegt. Danach kann der Server die Änderungen dieser Session verfolgen. Fortfahren?"
+msgstr "Im Projektverzeichnis des Servers wird ein Git-Repository angelegt. Danach kann der Server die Änderungen dieser Session verfolgen. Fortfahren?"
+
+#: src/pages/SessionDetail.tsx
 msgid "Import fehlgeschlagen."
 msgstr "Import fehlgeschlagen."
 
 #: src/pages/SessionDetail.tsx
 msgid "Importieren"
 msgstr "Importieren"
+
+#: src/components/SessionDiffView.tsx
+msgid "In dieser Session wurden noch keine Dateien geändert. Sobald der Agent Dateien schreibt oder bearbeitet, erscheinen sie hier."
+msgstr "In dieser Session wurden noch keine Dateien geändert. Sobald der Agent Dateien schreibt oder bearbeitet, erscheinen sie hier."
 
 #: src/pages/SessionDetail.tsx
 msgid "Inbox konnte nicht geladen werden."
@@ -1082,6 +1155,10 @@ msgstr "Integrationen konnten nicht geladen werden."
 msgid "Ja"
 msgstr "Ja"
 
+#: src/components/SessionDiffView.tsx
+msgid "Kein Git-Repository"
+msgstr "Kein Git-Repository"
+
 #: src/lib/opencode.ts
 msgid "Kein gültiger Session-Export: „info“ und „messages“ fehlen."
 msgstr "Kein gültiger Session-Export: „info“ und „messages“ fehlen."
@@ -1091,8 +1168,8 @@ msgid "Kein Modell zugewiesen."
 msgstr "Kein Modell zugewiesen."
 
 #: src/pages/SessionDetail.tsx
-msgid "Kein Patch verfügbar."
-msgstr "Kein Patch verfügbar."
+#~ msgid "Kein Patch verfügbar."
+#~ msgstr "Kein Patch verfügbar."
 
 #: src/pages/ServerTools.tsx
 msgid "Kein Projekt ausgewählt."
@@ -1114,6 +1191,10 @@ msgstr "Kein Server ausgewählt. Wähle oben einen Server."
 msgid "Kein Terminal für diese Session."
 msgstr "Kein Terminal für diese Session."
 
+#: src/components/SessionDiffView.tsx
+msgid "Kein Zeilenumbruch am Dateiende"
+msgstr "Kein Zeilenumbruch am Dateiende"
+
 #: src/pages/ServerTools.tsx
 msgid "Keine Agenten."
 msgstr "Keine Agenten."
@@ -1121,6 +1202,10 @@ msgstr "Keine Agenten."
 #: src/pages/ServerTools.tsx
 msgid "Keine Anbieter konfiguriert."
 msgstr "Keine Anbieter konfiguriert."
+
+#: src/components/SessionDiffView.tsx
+msgid "Keine Änderungen"
+msgstr "Keine Änderungen"
 
 #: src/pages/ServerTools.tsx
 msgid "Keine Änderungen."
@@ -1139,8 +1224,8 @@ msgid "Keine Befehle."
 msgstr "Keine Befehle."
 
 #: src/pages/SessionDetail.tsx
-msgid "Keine Dateiänderungen in dieser Session."
-msgstr "Keine Dateiänderungen in dieser Session."
+#~ msgid "Keine Dateiänderungen in dieser Session."
+#~ msgstr "Keine Dateiänderungen in dieser Session."
 
 #: src/pages/SessionDetail.tsx
 msgid "Keine Einträge in der Warteschlange."
@@ -1242,6 +1327,10 @@ msgstr "Keine Verbindungsmethoden."
 msgid "Keine Worktrees."
 msgstr "Keine Worktrees."
 
+#: src/components/SessionDiffView.tsx
+msgid "Keine zeilenweisen Änderungen in dieser Datei."
+msgstr "Keine zeilenweisen Änderungen in dieser Datei."
+
 #: src/components/PromptComposer.tsx
 msgid "Keiner"
 msgstr "Keiner"
@@ -1291,6 +1380,10 @@ msgstr "Kompaktierung läuft …"
 msgid "Konfiguration"
 msgstr "Konfiguration"
 
+#: src/components/SessionDiffView.tsx
+msgid "Kontext ausblenden"
+msgstr "Kontext ausblenden"
+
 #: src/pages/SessionDetail.tsx
 msgid "Kontext der Session zusammenfassen"
 msgstr "Kontext der Session zusammenfassen"
@@ -1302,6 +1395,10 @@ msgstr "Kopieren"
 #: src/components/CopyButton.tsx
 msgid "Kopiert"
 msgstr "Kopiert"
+
+#: src/components/SessionDiffView.tsx
+msgid "Kopiert:"
+msgstr "Kopiert:"
 
 #: src/pages/SessionDetail.tsx
 msgid "Kosten:"
@@ -1444,6 +1541,7 @@ msgstr "Modell gewechselt"
 msgid "Modell wählen"
 msgstr "Modell wählen"
 
+#: src/components/SessionDiffView.tsx
 #: src/pages/AgentDetail.tsx
 msgid "Modus:"
 msgstr "Modus:"
@@ -1481,6 +1579,10 @@ msgstr "Nachrichten konnten nicht geladen werden (offline?): {error}"
 msgid "Nachrichten werden geladen …"
 msgstr "Nachrichten werden geladen …"
 
+#: src/components/SessionDiffView.tsx
+msgid "Nächste Datei"
+msgstr "Nächste Datei"
+
 #: src/components/SessionRunIndicators.tsx
 msgid "Nächster Versuch in {seconds} s"
 msgstr "Nächster Versuch in {seconds} s"
@@ -1500,6 +1602,10 @@ msgstr "Name und Basis-URL sind Pflichtfelder."
 #: src/pages/AgentDetail.tsx
 msgid "Nein"
 msgstr "Nein"
+
+#: src/components/SessionDiffView.tsx
+msgid "Neu"
+msgstr "Neu"
 
 #: src/hooks/useEventNotifications.ts
 msgid "Neue Inbox-Nachricht"
@@ -1549,6 +1655,10 @@ msgstr "Neueste Sessions auf {selectedServerName}"
 #: src/pages/Settings.tsx
 msgid "nicht angefragt"
 msgstr "nicht angefragt"
+
+#: src/components/SessionDiffView.tsx
+msgid "Nicht lesbare Zeile:"
+msgstr "Nicht lesbare Zeile:"
 
 #: src/pages/SessionDetail.tsx
 msgid "Nicht möglich: Der Server behält einen gesetzten Titel. Ein leerer Titel wird von PATCH /api/session/<id> übergangen."
@@ -2275,6 +2385,10 @@ msgstr "Übernehmen"
 msgid "Übersicht"
 msgstr "Übersicht"
 
+#: src/components/SessionDiffView.tsx
+msgid "Umbenannt:"
+msgstr "Umbenannt:"
+
 #: src/pages/ServerDetail.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Umbenennen"
@@ -2403,6 +2517,10 @@ msgstr "Verbrauch dieser Session"
 msgid "Verbunden"
 msgstr "Verbunden"
 
+#: src/components/SessionDiffView.tsx
+msgid "Vereint"
+msgstr "Vereint"
+
 #: src/components/ConfigCard.tsx
 msgid "Verfügbare Shells"
 msgstr "Verfügbare Shells"
@@ -2422,6 +2540,10 @@ msgstr "Verwerfen"
 #: src/components/ChatMessageList.tsx
 msgid "Verzeichnis gewechselt"
 msgstr "Verzeichnis gewechselt"
+
+#: src/components/SessionDiffView.tsx
+msgid "Vorherige Datei"
+msgstr "Vorherige Datei"
 
 #: src/pages/SessionDetail.tsx
 msgid "Warten"
@@ -2480,6 +2602,10 @@ msgstr "Willkommen"
 msgid "Wird erkundet"
 msgstr "Wird erkundet"
 
+#: src/components/SessionDiffView.tsx
+msgid "Wird erstellt …"
+msgstr "Wird erstellt …"
+
 #: src/pages/ServerTools.tsx
 msgid "Worktrees"
 msgstr "Worktrees"
@@ -2487,6 +2613,10 @@ msgstr "Worktrees"
 #: src/pages/Settings.tsx
 msgid "z. B. Heimserver"
 msgstr "z. B. Heimserver"
+
+#: src/components/SessionDiffView.tsx
+msgid "Zeilen"
+msgstr "Zeilen"
 
 #: src/lib/serverConnectionTest.ts
 #~ msgid "Zeitüberschreitung: Der Server hat nicht innerhalb von 15 Sekunden geantwortet. Bitte prüfen, ob der Server erreichbar ist."

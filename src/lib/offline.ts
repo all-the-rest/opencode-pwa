@@ -45,7 +45,8 @@ export type ServerAction =
   | "shell-output"
   | "pty-token"
   | "file-read"
-  | "permission-reply";
+  | "permission-reply"
+  | "vcs-init";
 
 /** Actions that need a live round-trip and are therefore disabled while offline. */
 const ACTIONS_REQUIRING_SERVER: ReadonlySet<ServerAction> = new Set<ServerAction>([
@@ -86,6 +87,7 @@ const ACTIONS_REQUIRING_SERVER: ReadonlySet<ServerAction> = new Set<ServerAction
   "pty-token",
   "file-read",
   "permission-reply",
+  "vcs-init",
 ]);
 
 /**

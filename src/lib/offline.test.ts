@@ -39,6 +39,7 @@ const ALL_ACTIONS: ServerAction[] = [
   "pty-token",
   "file-read",
   "permission-reply",
+  "vcs-init",
 ];
 
 describe("reachability", () => {

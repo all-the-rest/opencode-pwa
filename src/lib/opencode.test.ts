@@ -30,6 +30,7 @@ import {
   getSessionDiff,
   getSessionStats,
   groupSessionsByProject,
+  initVcs,
   listAgents,
   listProviders,
   MAX_FILE_PREVIEW_CHARS,
@@ -83,8 +84,24 @@ describe("extractProjects", () => {
         { id: "p2", canonical: "/repo/b" },
       ]),
     ).toEqual([
-      { id: "p1", name: "Alpha" },
-      { id: "p2", name: "/repo/b" },
+      { id: "p1", name: "Alpha", canonical: "/repo/a" },
+      { id: "p2", name: "/repo/b", canonical: "/repo/b" },
+    ]);
+  });
+
+  it("carries the vcs marker in both the string and the object shape", () => {
+    expect(
+      extractProjects([
+        { id: "p1", canonical: "/repo/a", vcs: "git" },
+        { id: "p2", canonical: "/repo/b", vcs: "none" },
+        { id: "p3", canonical: "/repo/c", vcs: { type: "git", store: "/repo/c" } },
+        { id: "p4", canonical: "/repo/d", vcs: 42 },
+      ]),
+    ).toEqual([
+      { id: "p1", name: "/repo/a", canonical: "/repo/a", vcs: "git" },
+      { id: "p2", name: "/repo/b", canonical: "/repo/b", vcs: "none" },
+      { id: "p3", name: "/repo/c", canonical: "/repo/c", vcs: { type: "git" } },
+      { id: "p4", name: "/repo/d", canonical: "/repo/d" },
     ]);
   });
 
@@ -912,6 +929,28 @@ describe("parity batch 2 direct-fetch fallbacks", () => {
       expect.objectContaining({
         headers: expect.objectContaining({ accept: "application/json" }),
       }),
+    );
+  });
+
+  it("initializes a git repository via POST /api/vcs/init", async () => {
+    // 204 / empty body: the client path cancels the response, the fallback
+    // only checks the status.
+    fetchMock.mockResolvedValue({ ok: true, status: 204 } as unknown as Response);
+    const result = await initVcs(parityServer, "/repo/a");
+    expect(result.error).toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://x.local/api/vcs/init?location[directory]=%2Frepo%2Fa",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("initializes the server default location without a query", async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 204 } as unknown as Response);
+    const result = await initVcs(parityServer);
+    expect(result.error).toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://x.local/api/vcs/init",
+      expect.objectContaining({ method: "POST" }),
     );
   });
 

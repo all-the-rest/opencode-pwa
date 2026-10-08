@@ -6,6 +6,7 @@ import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import ChatMessageList from "../components/ChatMessageList.tsx";
 import PromptComposer from "../components/PromptComposer.tsx";
 import SessionRunIndicators from "../components/SessionRunIndicators.tsx";
+import SessionDiffView from "../components/SessionDiffView.tsx";
 import Icon from "../components/Icon.tsx";
 import { SESSION_PAGE_SIZE, useSessionMessages, type SessionMessageSource } from "../hooks/useSessionMessages.ts";
 import { useSessionRunState } from "../hooks/useSessionRunState.ts";
@@ -23,10 +24,12 @@ import {
   getSessionInfo,
   getSessionStats,
   importSession,
+  initVcs,
   interruptSession,
   listAgents,
   listCommands,
   listModels,
+  listProjects,
   listSessionForms,
   listSessionInbox,
   listSessions,
@@ -49,6 +52,7 @@ import {
   type AgentOption,
   type CommandRow,
   type ModelOption,
+  type ProjectInfo,
   type ServerConfig,
   type SessionDiffRow,
   type SessionFormRow,
@@ -104,7 +108,8 @@ export default function SessionDetail() {
   // Direct-URL mount: resolve the real session title from the session list
   // (fetched once per server+id) instead of showing the raw session id.
   // Fallback: the id stays the label when the list is unreachable (offline)
-  // or the id matches no known session.
+  // or the id matches no known session. The same row carries the project key,
+  // which the diff surface uses to tell "no changes" from "no git repo".
   useEffect(() => {
     if (server === null || server === undefined || id === undefined) return;
     let cancelled = false;
@@ -113,6 +118,7 @@ export default function SessionDetail() {
       const match = extractSessionRows(result.data).find((row) => row.id === id);
       if (match !== undefined) {
         retitleTab(server.id, id, match.label);
+        setSessionProjectKey(match.projectKey);
       }
     });
     return () => {
@@ -155,7 +161,9 @@ export default function SessionDetail() {
   const [renaming, setRenaming] = useState(false);
   const [renameText, setRenameText] = useState("");
   const [renameBusy, setRenameBusy] = useState(false);
-  const [confirm, setConfirm] = useState<"interrupt" | "delete" | "fork" | "compact" | "revert-commit" | null>(null);
+  const [confirm, setConfirm] = useState<
+    "interrupt" | "delete" | "fork" | "compact" | "revert-commit" | "init-git" | null
+  >(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   // Parity batch 3: revert staging, share/export-import, command run.
   const [commands, setCommands] = useState<CommandRow[]>([]);
@@ -204,6 +212,12 @@ export default function SessionDetail() {
   const [diffRows, setDiffRows] = useState<SessionDiffRow[] | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
   const [diffError, setDiffError] = useState<string | null>(null);
+  // Rendered diff (wave 4): the project list tells "keine Änderungen" from
+  // "kein Git-Repository", the project key comes from the session list row.
+  const [projects, setProjects] = useState<ProjectInfo[]>([]);
+  const [sessionProjectKey, setSessionProjectKey] = useState<string | null>(null);
+  const [initGitBusy, setInitGitBusy] = useState(false);
+  const [gitDirectory, setGitDirectory] = useState<string | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const [showJumpToNewest, setShowJumpToNewest] = useState(false);
   // Window-scroll chat behavior: stick to the bottom for new live messages
@@ -401,6 +415,7 @@ export default function SessionDetail() {
   const canFormReply = isActionEnabled(offline, "session-form-reply");
   const canFormCancel = isActionEnabled(offline, "session-form-cancel");
   const canTerminal = isActionEnabled(offline, "terminal-read");
+  const canVcsInit = isActionEnabled(offline, "vcs-init");
   // Lingui messages take plain variables only — no member access or calls —
   // so every formatted stat is hoisted here (see `lingui/no-expression-in-message`).
   const statInput = (sessionTokens?.input ?? 0).toLocaleString("de");
@@ -587,6 +602,11 @@ export default function SessionDetail() {
       notify(t`Revert übernommen – die Session steht auf dem gewählten Stand.`, "success");
       return;
     }
+    if (confirm === "init-git") {
+      await runInitGit();
+      setConfirmBusy(false);
+      return;
+    }
     const result =
       confirm === "interrupt"
         ? await interruptSession(activeServer, activeSession)
@@ -610,13 +630,40 @@ export default function SessionDetail() {
     if (server === null || server === undefined || id === undefined) return;
     setDiffLoading(true);
     setDiffError(null);
-    const result = await getSessionDiff(server, id);
+    const [result, projectResult] = await Promise.all([
+      getSessionDiff(server, id),
+      listProjects(server),
+    ]);
     setDiffLoading(false);
+    if (projectResult.error === null && projectResult.data !== null) setProjects(projectResult.data);
     if (result.error !== null || result.data === null) {
       setDiffError(result.error ?? t`Diffs konnten nicht geladen werden.`);
       return;
     }
     setDiffRows(result.data);
+  }
+
+  // Wave 4: the empty state offers to create the missing git repository; the
+  // write itself goes through the same German confirm as every other write.
+  function askInitGit(directory: string | null) {
+    if (!canVcsInit || initGitBusy) return;
+    setGitDirectory(directory);
+    setConfirm("init-git");
+  }
+
+  async function runInitGit() {
+    if (server === null || server === undefined) return;
+    setInitGitBusy(true);
+    const result = await initVcs(server, gitDirectory);
+    setInitGitBusy(false);
+    setConfirm(null);
+    if (result.error !== null) {
+      notify(t`Git-Repository konnte nicht erstellt werden.`, "error");
+      return;
+    }
+    notify(t`Git-Repository erstellt – die Änderungen werden neu geladen.`, "success");
+    setDiffRows(null);
+    void ensureDiffLoaded();
   }
 
   // --- Parity batch 3: staged revert (stage → commit with confirm / clear) ---
@@ -1263,37 +1310,20 @@ export default function SessionDetail() {
                     <span className="loading loading-spinner loading-sm" aria-label={t`Lädt`} />
                   )}
                   {diffError !== null && (
-                    <div className="alert alert-warning">
+                    <div className="alert alert-warning" data-testid="session-diff-error">
                       <span>
                         <Trans>Diffs konnten nicht geladen werden: {diffError}</Trans>
                       </span>
                     </div>
                   )}
-                  {!diffLoading && diffError === null && diffRows !== null && diffRows.length === 0 && (
-                    <p className="opacity-70 text-sm">
-                      <Trans>Keine Dateiänderungen in dieser Session.</Trans>
-                    </p>
-                  )}
-                  {!diffLoading && diffError === null && diffRows !== null && diffRows.length > 0 && (
-                    <ul className="flex flex-col gap-2" data-testid="session-diff">
-                      {diffRows.map((row) => (
-                        <li key={row.file} data-testid={`session-diff-${row.file}`}>
-                          <details className="collapse collapse-arrow bg-base-300 rounded">
-                            <summary className="collapse-title text-sm font-mono flex items-center gap-2">
-                              <span className="flex-1 break-all">{row.file}</span>
-                              <span className="text-xs opacity-70">
-                                {`+${row.additions} −${row.deletions}`}
-                              </span>
-                            </summary>
-                            <div className="collapse-content">
-                              <pre className="text-xs whitespace-pre-wrap break-words max-h-72 overflow-auto">
-                                {row.patch === "" ? t`Kein Patch verfügbar.` : row.patch}
-                              </pre>
-                            </div>
-                          </details>
-                        </li>
-                      ))}
-                    </ul>
+                  {!diffLoading && diffError === null && diffRows !== null && (
+                    <SessionDiffView
+                      rows={diffRows}
+                      projects={projects}
+                      projectKey={sessionProjectKey}
+                      onInitGit={askInitGit}
+                      initGitBusy={initGitBusy}
+                    />
                   )}
                         </section>
                       )}
@@ -1724,7 +1754,9 @@ export default function SessionDetail() {
                 ? t`Session kompaktieren`
                 : confirm === "revert-commit"
                   ? t`Revert übernehmen`
-                  : t`Ausführung unterbrechen`
+                  : confirm === "init-git"
+                    ? t`Git-Repository erstellen`
+                    : t`Ausführung unterbrechen`
         }
         message={
           confirm === "delete"
@@ -1735,7 +1767,9 @@ export default function SessionDetail() {
                 ? t`Der Kontext wird zusammengefasst, um Platz zu schaffen. Fortfahren?`
                 : confirm === "revert-commit"
                   ? t`Das gestagete Revert wird übernommen. Nachrichten und Dateien nach dem gewählten Stand gehen verloren. Fortfahren?`
-                  : t`Die laufende Ausführung wird unterbrochen. Die Session selbst bleibt erhalten. Fortfahren?`
+                  : confirm === "init-git"
+                    ? t`Im Projektverzeichnis des Servers wird ein Git-Repository angelegt. Danach kann der Server die Änderungen dieser Session verfolgen. Fortfahren?`
+                    : t`Die laufende Ausführung wird unterbrochen. Die Session selbst bleibt erhalten. Fortfahren?`
         }
         confirmLabel={
           confirm === "delete"
@@ -1746,7 +1780,9 @@ export default function SessionDetail() {
                 ? t`Kompaktieren`
                 : confirm === "revert-commit"
                   ? t`Übernehmen`
-                  : t`Unterbrechen`
+                  : confirm === "init-git"
+                    ? t`Erstellen`
+                    : t`Unterbrechen`
         }
         busy={confirmBusy}
         // Always null on purpose: the confirm *question* lives here, the

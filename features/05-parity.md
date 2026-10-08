@@ -31,8 +31,29 @@ Legend: ✅ in this app · 🚧 partial · ❌ missing (post-MVP unless noted).
   filter, no session id) — there is no per-session stats endpoint, so the card
   combines both sources instead of pretending the aggregate is per-session.
 - ✅ Session diff view (`GET /api/session/{id}/diff`): collapsible section on
-  SessionDetail, per-file `<details>` with +/- counts and the patch in
-  `<pre>`, read-only.
+  SessionDetail (wave 4 renders it like the original's review panel instead of
+  dumping the raw patch): `src/lib/diffView.ts` parses each unified patch into
+  hunks with line rows (old/new line numbers, `+`/`−` gutter, coloured
+  additions/deletions) — hand-rolled, no `diff`/`@pierre/diffs` runtime
+  dependency. Per-file header with the directory/file-name split and the
+  reported +/- counts, a session-level summary header ("N Dateien · +A −B
+  Zeilen"), a unified/split segmented control (reference:
+  `ui.sessionReviewV2.unifiedDiff/splitDiff`), ←/→ navigation with a "N/M"
+  position and "show more context" expansion for long hunks. Robustness is
+  pure and unit-tested: renames, mode changes, copies, binary files, a missing
+  trailing newline, empty (jsdiff `emptyPatch`) and malformed patches degrade
+  into readable notes or a readable line — never a crash, never a raw JSON
+  dump, never a raw `<pre>`.
+  Empty states are cards (not alerts): "Keine Änderungen" with icon +
+  description, and a distinct "Kein Git-Repository" state that explains what a
+  missing repository means for the session and offers the real action
+  (`POST /api/vcs/init` with the project's `canonical` as location, behind a
+  German confirm + toast + the `vcs-init` offline guard). The project's
+  `Project.vcs` (string marker or the newer `{ type: "git" }` object) decides
+  between the two; an unknown marker never claims a missing repo. Covered by
+  `src/lib/diffView.test.ts` (parser, context expansion, split pairing,
+  summary, empty-state resolution) plus E2E `tests/e2e/w18-diff-render.spec.ts`
+  (`@feature:session-diff-render`), including the 360px scroll/no-overlap case.
 - ✅ File attachments in prompts: workspace paths attached in the prompt box
   (mention input + chips), sent as `SessionPromptInput.files` (`file://` URIs
   — verified in the installed client package, so no UI-only limitation).
@@ -115,7 +136,8 @@ Legend: ✅ in this app · 🚧 partial · ❌ missing (post-MVP unless noted).
   `session-import`, `session-command`, `session-inbox`, `session-inbox-cancel`,
   `session-inbox-update`, `session-form-list`, `session-form-reply`,
   `session-form-cancel`, `command-list`, `skill-list`, `websearch-providers`,
-  `websearch-query` are all blocked while offline (`src/lib/offline.ts`).
+  `websearch-query`, `vcs-init` are all blocked while offline
+  (`src/lib/offline.ts`).
 - Covered by `src/lib/parity3.test.ts` (extractors + fallback-fetch paths with
   a throwing client, so every URL/method/body is pinned) and E2E
   `tests/e2e/w8-parity3.spec.ts` (`@feature` for revert flow, command run,

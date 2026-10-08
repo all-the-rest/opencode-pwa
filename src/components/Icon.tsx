@@ -34,7 +34,10 @@ export type AppIconName =
   | "todos"
   | "question"
   | "skill"
-  | "chevron";
+  | "chevron"
+  | "branch"
+  | "circle-check"
+  | "binary";
 
 const ICONS: Record<AppIconName, string> = {
   menu: "mdi:menu",
@@ -72,6 +75,10 @@ const ICONS: Record<AppIconName, string> = {
   question: "mdi:help-circle-outline",
   skill: "mdi:brain",
   chevron: "mdi:chevron-right",
+  // Diff-surface icons (wave 4, parity with the original's review panel).
+  branch: "mdi:source-branch",
+  "circle-check": "mdi:check-circle-outline",
+  binary: "mdi:file-alert-outline",
 };
 
 interface IconProps {

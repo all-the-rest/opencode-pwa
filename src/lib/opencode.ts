@@ -308,9 +308,16 @@ export function extractModels(value: unknown): ModelOption[] {
   return options;
 }
 
+/** `Project.vcs` as a server reports it: a string marker or a newer object. */
+export type ProjectVcs = string | { type?: string };
+
 export interface ProjectInfo {
   id: string;
   name: string;
+  /** Directory of the project (`Project.canonical`), when the server sends it. */
+  canonical?: string;
+  /** VCS marker of the project directory (`Project.vcs`); absent when unknown. */
+  vcs?: ProjectVcs;
 }
 
 export const UNASSIGNED_PROJECT_KEY = "Ohne Projekt";
@@ -328,7 +335,20 @@ function toProjectInfo(entry: unknown, index: number): ProjectInfo {
     const record = entry as Record<string, unknown>;
     const id = readString(record, ["id"]) ?? `projekt-${index}`;
     const name = readString(record, ["name", "canonical"]) ?? id;
-    return { id, name };
+    const canonical = readString(record, ["canonical"]);
+    const rawVcs: unknown = record["vcs"];
+    const vcs: ProjectVcs | undefined =
+      typeof rawVcs === "string"
+        ? rawVcs
+        : rawVcs !== null && typeof rawVcs === "object"
+          ? { type: (rawVcs as { type?: unknown }).type as string | undefined }
+          : undefined;
+    return {
+      id,
+      name,
+      ...(canonical !== null ? { canonical } : {}),
+      ...(vcs !== undefined ? { vcs } : {}),
+    };
   }
   const fallback = `projekt-${index}`;
   return { id: fallback, name: String(entry) === "" ? fallback : String(entry) };
@@ -1071,6 +1091,36 @@ export function extractVcsStatus(value: unknown): VcsStatusRow[] {
 /** GET /api/vcs/status — working-tree changes of the server location. */
 export function listVcsStatus(server: ServerConfig): Promise<ApiResult<VcsStatusRow[]>> {
   return guarded(async () => extractVcsStatus(await (await makeClient(server)).vcs.status()));
+}
+
+/**
+ * POST /api/vcs/init — initialize a git repository for one directory. The
+ * empty-state card of the diff surface offers it when the session's project
+ * has no repository (`Project.vcs`), so a change set can be tracked at all.
+ */
+export function initVcs(server: ServerConfig, directory?: string | null) {
+  return guarded(async () => {
+    const location =
+      directory === undefined || directory === null ? undefined : { directory };
+    try {
+      // Verified in the installed package: `vcs.init()` exists
+      // (node_modules/@opencode/client `vcs: { init, get, base, status, ... }`,
+      // POST /api/vcs/init, success status 204, `empty: true`).
+      await (await makeClient(server)).vcs.init(location === undefined ? undefined : { location });
+      return;
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const query =
+        location === undefined ? "" : `?location[directory]=${encodeURIComponent(location.directory)}`;
+      const response = await fetch(`${baseUrl}/api/vcs/init${query}`, {
+        method: "POST",
+        headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) },
+      });
+      if (!response.ok) {
+        throw new Error(`POST /api/vcs/init failed with status ${response.status}`);
+      }
+    }
+  });
 }
 
 export interface WorktreeRow {
