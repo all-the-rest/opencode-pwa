@@ -35,15 +35,62 @@ describe("extractMessageInputs", () => {
   it("supports { data } envelopes and plain arrays", () => {
     const payload = { data: [{ id: "a", role: "user", text: "Hallo" }] };
     const rows = extractMessageInputs(payload, 1000);
-    expect(rows).toEqual([{ id: "a", role: "user", text: "Hallo", created: 1000 }]);
+    expect(rows).toEqual([
+      {
+        id: "a",
+        role: "user",
+        text: "Hallo",
+        created: 1000,
+        noteKind: null,
+        noteDetail: null,
+        parts: [{ kind: "text", text: "Hallo" }],
+      },
+    ]);
     expect(extractMessageInputs([{ id: "b" }], 500)[0]).toMatchObject({ id: "b" });
   });
 
   it("falls back for missing fields and keeps payload order as recency", () => {
     const rows = extractMessageInputs({ messages: [{}, { role: "assistant", content: "Hi" }] }, 1000);
-    expect(rows[0]).toMatchObject({ id: "nachricht-0", role: "unbekannt" });
+    expect(rows[0]).toMatchObject({ id: "nachricht-0", role: "note" });
     expect(rows[1]).toMatchObject({ role: "assistant", text: "Hi" });
     expect(rows[0]?.created).toBeLessThan(rows[1]?.created ?? 0);
+  });
+
+  it("parses real V2 assistant content and degrades future types", () => {
+    const rows = extractMessageInputs(
+      {
+        data: [
+          {
+            type: "assistant",
+            id: "a1",
+            content: [{ type: "reasoning", text: "Denken" }],
+          },
+          { type: "idle", id: "i1", outcome: "succeeded" },
+          { type: "mystery", id: "x1", payload: { deep: true } },
+        ],
+      },
+      1000,
+    );
+    expect(rows[0]).toMatchObject({
+      role: "assistant",
+      parts: [{ kind: "reasoning", text: "Denken" }],
+    });
+    expect(rows[1]).toMatchObject({ role: "note", noteKind: "idle", noteDetail: "succeeded" });
+    expect(rows[2]).toMatchObject({ role: "note", noteKind: "unknown", text: "" });
+    // Never a JSON dump, even for unknown shapes.
+    for (const row of rows) {
+      expect(row.text).not.toContain('"payload"');
+    }
+  });
+
+  it("scrubs JSON dumps of legacy rows on read", async () => {
+    await putMessages(SERVER, SESSION, [
+      { id: "dump", role: "unbekannt", text: '{"id":"dump","odd":true}', created: 5 },
+      { id: "echt", role: "user", text: "Echter Text", created: 6 },
+    ]);
+    const rows = await readMessages(SERVER, SESSION);
+    expect(rows.find((m) => m.messageID === "dump")).toMatchObject({ text: "", parts: [] });
+    expect(rows.find((m) => m.messageID === "echt")).toMatchObject({ text: "Echter Text" });
   });
 
   it("returns an empty list for unknown shapes", () => {

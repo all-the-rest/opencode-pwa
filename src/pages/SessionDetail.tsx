@@ -3,6 +3,7 @@ import { Trans } from "@lingui/react/macro";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
+import ChatMessageList from "../components/ChatMessageList.tsx";
 import Icon from "../components/Icon.tsx";
 import { SESSION_PAGE_SIZE, useSessionMessages, type SessionMessageSource } from "../hooks/useSessionMessages.ts";
 import {
@@ -142,6 +143,11 @@ export default function SessionDetail() {
   const [commandBusy, setCommandBusy] = useState(false);
   const [commandError, setCommandError] = useState<string | null>(null);
   const [commandNotice, setCommandNotice] = useState<string | null>(null);
+  // Secondary panels below the chat start collapsed (chat-first layout).
+  const [statsOpen, setStatsOpen] = useState(false);
+  const [revertOpen, setRevertOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
   // Parity batch 3: session inbox (queued entries) and pending forms.
   const [inboxOpen, setInboxOpen] = useState(false);
   const [inboxRows, setInboxRows] = useState<SessionInboxRow[] | null>(null);
@@ -235,6 +241,10 @@ export default function SessionDetail() {
     preserveOffsetRef.current = null;
     nearBottomRef.current = true;
     setShowJumpToNewest(false);
+    setStatsOpen(false);
+    setRevertOpen(false);
+    setShareOpen(false);
+    setCommandOpen(false);
     setStagedRevert(null);
     setRevertMessageID("");
     setRevertError(null);
@@ -906,73 +916,6 @@ export default function SessionDetail() {
               <span>{actionNotice}</span>
             </div>
           )}
-          <section className="card bg-base-200 shadow" data-testid="session-stats">
-            <div className="card-body py-3">
-              <h2 className="card-title text-base">
-                <Trans>Verbrauch dieser Session</Trans>
-              </h2>
-              {sessionTokens === null && sessionCost === null ? (
-                <p className="opacity-70 text-sm">
-                  <Trans>Noch keine Verbrauchsdaten vorhanden.</Trans>
-                </p>
-              ) : (
-                <dl className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                  <div className="flex gap-1">
-                    <dt className="opacity-70">
-                      <Trans>Eingabe:</Trans>
-                    </dt>
-                    <dd className="font-mono" data-testid="session-stats-input">
-                      {statInput}
-                    </dd>
-                  </div>
-                  <div className="flex gap-1">
-                    <dt className="opacity-70">
-                      <Trans>Ausgabe:</Trans>
-                    </dt>
-                    <dd className="font-mono" data-testid="session-stats-output">
-                      {statOutput}
-                    </dd>
-                  </div>
-                  <div className="flex gap-1">
-                    <dt className="opacity-70">
-                      <Trans>Denken:</Trans>
-                    </dt>
-                    <dd className="font-mono">{statReasoning}</dd>
-                  </div>
-                  <div className="flex gap-1">
-                    <dt className="opacity-70">
-                      <Trans>Cache (lesen/schreiben):</Trans>
-                    </dt>
-                    <dd className="font-mono">
-                      {statCacheRead}/{statCacheWrite}
-                    </dd>
-                  </div>
-                  <div className="flex gap-1">
-                    <dt className="opacity-70">
-                      <Trans>Kosten:</Trans>
-                    </dt>
-                    <dd className="font-mono" data-testid="session-stats-cost">
-                      {statCost}
-                    </dd>
-                  </div>
-                </dl>
-              )}
-              {globalStats !== null && (
-                <p className="text-xs opacity-70">
-                  {totalToolCalls === null ? (
-                    <Trans>
-                      Gesamt (alle Sessions): {totalPrompts} Prompts, {totalSteps} Schritte
-                    </Trans>
-                  ) : (
-                    <Trans>
-                      Gesamt (alle Sessions): {totalPrompts} Prompts, {totalSteps} Schritte,{" "}
-                      {totalToolCalls} Werkzeugaufrufe
-                    </Trans>
-                  )}
-                </p>
-              )}
-            </div>
-          </section>
           <p className="text-sm opacity-70" data-testid="cache-status">
             {loading && total === 0 ? (
               <Trans>Nachrichten werden geladen …</Trans>
@@ -1034,26 +977,7 @@ export default function SessionDetail() {
                   <Trans>Ältere Nachrichten laden ({remaining} weitere)</Trans>
                 </button>
               )}
-              <ul className="flex flex-col gap-2" data-testid="message-list">
-                {visible.map((m) => (
-                  <li
-                    key={m.messageID}
-                    data-testid="message-item"
-                    className={m.role === "user" ? "chat chat-end" : "chat chat-start"}
-                  >
-                    <div className="chat-header text-xs opacity-70 mb-1">{m.role}</div>
-                    <div
-                      className={
-                        m.role === "user"
-                          ? "chat-bubble chat-bubble-primary whitespace-pre-wrap break-words"
-                          : "chat-bubble chat-bubble-neutral whitespace-pre-wrap break-words"
-                      }
-                    >
-                      {m.text}
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <ChatMessageList messages={visible} />
             </>
           )}
           {showJumpToNewest && (
@@ -1067,6 +991,80 @@ export default function SessionDetail() {
               <Trans>Neueste ↓</Trans>
             </button>
           )}
+          {/* Chat-first: attachments + sticky composer directly below the
+              conversation; the secondary panels follow as a collapsed
+              accordion and never push the composer down. */}
+          {attachments.length > 0 && (
+            <ul className="flex flex-wrap gap-1" data-testid="prompt-attachments" aria-label={t`Angehängte Dateien`}>
+              {attachments.map((path) => (
+                <li
+                  key={path}
+                  data-testid={`prompt-attachment-${path}`}
+                  className="badge badge-primary gap-1 py-3"
+                >
+                  <Icon name="file" />
+                  <span className="font-mono max-w-48 truncate" title={path}>
+                    {path}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-ghost"
+                    aria-label={t`Anhang ${path} entfernen`}
+                    onClick={() => removeAttachment(path)}
+                  >
+                    <Icon name="close" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              addAttachment();
+            }}
+          >
+            <input
+              className="input input-bordered input-sm flex-1 font-mono"
+              placeholder={t`Dateipfad anhängen, z. B. src/app.ts`}
+              value={attachmentInput}
+              onChange={(e) => setAttachmentInput(e.target.value)}
+              aria-label={t`Datei an den Prompt anhängen`}
+              disabled={sending}
+              data-testid="prompt-attachment-input"
+            />
+            <button
+              type="submit"
+              className="btn btn-sm btn-ghost"
+              disabled={sending || attachmentInput.trim() === ""}
+              aria-label={t`Datei anhängen`}
+            >
+              <Icon name="plus" /> <Trans>Anhängen</Trans>
+            </button>
+          </form>
+          <form
+            className="flex gap-2 sticky bottom-4 bg-base-100 py-2 z-10"
+            data-testid="session-composer"
+            onSubmit={(e) => void handleSend(e)}
+          >
+            <input
+              className="input input-bordered flex-1"
+              placeholder={t`Nachricht schreiben`}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              aria-label={t`Nachricht schreiben`}
+              disabled={sending}
+            />
+            <button
+              className="btn btn-primary"
+              type="submit"
+              disabled={sending || draft.trim() === ""}
+              aria-label={t`Nachricht senden`}
+            >
+              <Icon name="send" /> {sending ? <Trans>Sendet …</Trans> : <Trans>Senden</Trans>}
+            </button>
+          </form>
           {/* Secondary panels: stacked on narrow screens, tiled 2–3 across
               on wide screens in split mode. The conversation above (messages
               + composer) always keeps the full width. */}
@@ -1078,6 +1076,88 @@ export default function SessionDetail() {
             }
             data-testid="session-panels"
           >
+          <section className="card bg-base-200 shadow" data-testid="session-stats">
+            <div className="card-body py-3">
+              <div className="flex items-center gap-2">
+                <h2 className="card-title text-base flex-1">
+                  <Trans>Verbrauch dieser Session</Trans>
+                </h2>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  aria-expanded={statsOpen}
+                  aria-label={statsOpen ? t`Verbrauch ausblenden` : t`Verbrauch anzeigen`}
+                  onClick={() => setStatsOpen((open) => !open)}
+                >
+                  {statsOpen ? <Trans>Ausblenden</Trans> : <Trans>Anzeigen</Trans>}
+                </button>
+              </div>
+              {statsOpen && (
+                <>
+              {sessionTokens === null && sessionCost === null ? (
+                <p className="opacity-70 text-sm">
+                  <Trans>Noch keine Verbrauchsdaten vorhanden.</Trans>
+                </p>
+              ) : (
+                <dl className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  <div className="flex gap-1">
+                    <dt className="opacity-70">
+                      <Trans>Eingabe:</Trans>
+                    </dt>
+                    <dd className="font-mono" data-testid="session-stats-input">
+                      {statInput}
+                    </dd>
+                  </div>
+                  <div className="flex gap-1">
+                    <dt className="opacity-70">
+                      <Trans>Ausgabe:</Trans>
+                    </dt>
+                    <dd className="font-mono" data-testid="session-stats-output">
+                      {statOutput}
+                    </dd>
+                  </div>
+                  <div className="flex gap-1">
+                    <dt className="opacity-70">
+                      <Trans>Denken:</Trans>
+                    </dt>
+                    <dd className="font-mono">{statReasoning}</dd>
+                  </div>
+                  <div className="flex gap-1">
+                    <dt className="opacity-70">
+                      <Trans>Cache (lesen/schreiben):</Trans>
+                    </dt>
+                    <dd className="font-mono">
+                      {statCacheRead}/{statCacheWrite}
+                    </dd>
+                  </div>
+                  <div className="flex gap-1">
+                    <dt className="opacity-70">
+                      <Trans>Kosten:</Trans>
+                    </dt>
+                    <dd className="font-mono" data-testid="session-stats-cost">
+                      {statCost}
+                    </dd>
+                  </div>
+                </dl>
+              )}
+              {globalStats !== null && (
+                <p className="text-xs opacity-70">
+                  {totalToolCalls === null ? (
+                    <Trans>
+                      Gesamt (alle Sessions): {totalPrompts} Prompts, {totalSteps} Schritte
+                    </Trans>
+                  ) : (
+                    <Trans>
+                      Gesamt (alle Sessions): {totalPrompts} Prompts, {totalSteps} Schritte,{" "}
+                      {totalToolCalls} Werkzeugaufrufe
+                    </Trans>
+                  )}
+                </p>
+              )}
+                </>
+              )}
+            </div>
+          </section>
           <section className="card bg-base-200 shadow" data-testid="session-diff-section">
             <div className="card-body py-3">
               <div className="flex items-center gap-2">
@@ -1139,9 +1219,22 @@ export default function SessionDetail() {
           </section>
           <section className="card bg-base-200 shadow" data-testid="session-revert-section">
             <div className="card-body py-3">
-              <h2 className="card-title text-base">
-                <Trans>Zurücksetzen (Revert)</Trans>
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="card-title text-base flex-1">
+                  <Trans>Zurücksetzen (Revert)</Trans>
+                </h2>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  aria-expanded={revertOpen}
+                  aria-label={revertOpen ? t`Revert ausblenden` : t`Revert anzeigen`}
+                  onClick={() => setRevertOpen((open) => !open)}
+                >
+                  {revertOpen ? <Trans>Ausblenden</Trans> : <Trans>Anzeigen</Trans>}
+                </button>
+              </div>
+              {revertOpen && (
+                <>
               <p className="text-xs opacity-70">
                 <Trans>
                   Erst staging starten (ab einer Nachricht), dann übernehmen oder verwerfen. Das
@@ -1179,7 +1272,9 @@ export default function SessionDetail() {
                     </option>
                     {visible.map((m) => (
                       <option key={m.messageID} value={m.messageID}>
-                        {`${m.role}: ${m.text.slice(0, 80)}`}
+                        {`${m.role === "user" ? t`Benutzer` : m.role === "assistant" ? t`Assistent` : t`Notiz`}: ${
+                          m.text === "" ? t`unbekannter Inhalt` : m.text.slice(0, 80)
+                        }`}
                       </option>
                     ))}
                   </select>
@@ -1226,13 +1321,28 @@ export default function SessionDetail() {
                   </button>
                 </div>
               )}
+                </>
+              )}
             </div>
           </section>
           <section className="card bg-base-200 shadow" data-testid="session-share-section">
             <div className="card-body py-3">
-              <h2 className="card-title text-base">
-                <Trans>Teilen (Export / Import)</Trans>
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="card-title text-base flex-1">
+                  <Trans>Teilen (Export / Import)</Trans>
+                </h2>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  aria-expanded={shareOpen}
+                  aria-label={shareOpen ? t`Teilen ausblenden` : t`Teilen anzeigen`}
+                  onClick={() => setShareOpen((open) => !open)}
+                >
+                  {shareOpen ? <Trans>Ausblenden</Trans> : <Trans>Anzeigen</Trans>}
+                </button>
+              </div>
+              {shareOpen && (
+                <>
               <p className="text-xs opacity-70">
                 <Trans>
                   Export als JSON teilen, Import als neue Session übernehmen.
@@ -1307,13 +1417,28 @@ export default function SessionDetail() {
               >
                 <Trans>Importieren</Trans>
               </button>
+                </>
+              )}
             </div>
           </section>
           <section className="card bg-base-200 shadow" data-testid="session-command-section">
             <div className="card-body py-3">
-              <h2 className="card-title text-base">
-                <Trans>Befehl ausführen</Trans>
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="card-title text-base flex-1">
+                  <Trans>Befehl ausführen</Trans>
+                </h2>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  aria-expanded={commandOpen}
+                  aria-label={commandOpen ? t`Befehle ausblenden` : t`Befehle anzeigen`}
+                  onClick={() => setCommandOpen((open) => !open)}
+                >
+                  {commandOpen ? <Trans>Ausblenden</Trans> : <Trans>Anzeigen</Trans>}
+                </button>
+              </div>
+              {commandOpen && (
+                <>
               {commandError !== null && (
                 <div className="alert alert-error">
                   <span>{commandError}</span>
@@ -1362,6 +1487,8 @@ export default function SessionDetail() {
                   <Trans>Ausführen</Trans>
                 </button>
               </div>
+                </>
+              )}
             </div>
           </section>
           <section className="card bg-base-200 shadow" data-testid="session-inbox-section">
@@ -1632,73 +1759,6 @@ export default function SessionDetail() {
             </div>
           </section>
           </div>
-          {attachments.length > 0 && (
-            <ul className="flex flex-wrap gap-1" data-testid="prompt-attachments" aria-label={t`Angehängte Dateien`}>
-              {attachments.map((path) => (
-                <li
-                  key={path}
-                  data-testid={`prompt-attachment-${path}`}
-                  className="badge badge-primary gap-1 py-3"
-                >
-                  <Icon name="file" />
-                  <span className="font-mono max-w-48 truncate" title={path}>
-                    {path}
-                  </span>
-                  <button
-                    type="button"
-                    className="btn btn-xs btn-ghost"
-                    aria-label={t`Anhang ${path} entfernen`}
-                    onClick={() => removeAttachment(path)}
-                  >
-                    <Icon name="close" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <form
-            className="flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              addAttachment();
-            }}
-          >
-            <input
-              className="input input-bordered input-sm flex-1 font-mono"
-              placeholder={t`Dateipfad anhängen, z. B. src/app.ts`}
-              value={attachmentInput}
-              onChange={(e) => setAttachmentInput(e.target.value)}
-              aria-label={t`Datei an den Prompt anhängen`}
-              disabled={sending}
-              data-testid="prompt-attachment-input"
-            />
-            <button
-              type="submit"
-              className="btn btn-sm btn-ghost"
-              disabled={sending || attachmentInput.trim() === ""}
-              aria-label={t`Datei anhängen`}
-            >
-              <Icon name="plus" /> <Trans>Anhängen</Trans>
-            </button>
-          </form>
-          <form className="flex gap-2 sticky bottom-4" onSubmit={(e) => void handleSend(e)}>
-            <input
-              className="input input-bordered flex-1"
-              placeholder={t`Nachricht schreiben`}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              aria-label={t`Nachricht schreiben`}
-              disabled={sending}
-            />
-            <button
-              className="btn btn-primary"
-              type="submit"
-              disabled={sending || draft.trim() === ""}
-              aria-label={t`Nachricht senden`}
-            >
-              <Icon name="send" /> {sending ? <Trans>Sendet …</Trans> : <Trans>Senden</Trans>}
-            </button>
-          </form>
         </>
       )}
       <ConfirmDialog

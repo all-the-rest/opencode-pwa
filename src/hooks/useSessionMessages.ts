@@ -108,6 +108,9 @@ export function useSessionMessages(
           role: message.role,
           text: message.text,
           created: message.created,
+          noteKind: message.noteKind,
+          noteDetail: message.noteDetail,
+          parts: message.parts,
         })),
       );
       if (cancelled) return;
@@ -133,6 +136,9 @@ export function useSessionMessages(
         role: message.role,
         text: message.text,
         created: message.created,
+        noteKind: message.noteKind,
+        noteDetail: message.noteDetail,
+        parts: message.parts,
       };
       setAll((prev) => mergeMessageLists(prev, toCachedMessages(activeServer.id, activeSession, [input])));
       setLiveCount((count) => count + 1);
@@ -159,6 +165,9 @@ export function useSessionMessages(
         role,
         text,
         created: now,
+        noteKind: null,
+        noteDetail: null,
+        parts: [{ kind: "text", text }],
       };
       // Deliberately not persisted: the server echo arrives with its own id.
       // Oldest first (chat style): local messages append at the bottom.

@@ -1,7 +1,15 @@
 /**
  * Extract session messages from raw V2 events so live events can be merged
- * into the IndexedDB message cache (`messageCache.ts`).
+ * into the IndexedDB message cache (`messageCache.ts`). Shapes follow the
+ * real `SessionMessageInfo` union (`sessionMessages.ts`); streaming deltas
+ * and non-message events return null.
  */
+
+import {
+  parseSessionMessages,
+  type ChatNoteKind,
+  type ChatPart,
+} from "./sessionMessages.ts";
 
 export interface EventMessage {
   sessionID: string;
@@ -9,6 +17,9 @@ export interface EventMessage {
   role: string;
   text: string;
   created: number;
+  noteKind: ChatNoteKind | null;
+  noteDetail: string | null;
+  parts: ChatPart[];
 }
 
 function readStringField(record: Record<string, unknown>, keys: string[]): string | null {
@@ -75,11 +86,19 @@ export function extractMessageFromEvent(event: unknown, now: number = Date.now()
   if (sessionID === null) return null;
   const candidate = readMessageCandidate(event);
   if (candidate === null) return null;
-  const messageID = readStringField(candidate, ["id", "messageID", "messageId"]);
-  if (messageID === null) return null;
-  const role = readStringField(candidate, ["role"]) ?? "unbekannt";
-  const text =
-    readStringField(candidate, ["text", "content", "body"]) ??
-    JSON.stringify(candidate).slice(0, 500);
-  return { sessionID, messageID, role, text, created: now };
+  if (readStringField(candidate, ["id", "messageID", "messageId"]) === null) return null;
+  // Parse through the shared V2 parser so live notes (idle/compaction) and
+  // tool parts render exactly like fetched messages — never as JSON dumps.
+  const parsed = parseSessionMessages([candidate], now)[0];
+  if (parsed === undefined) return null;
+  return {
+    sessionID,
+    messageID: parsed.id,
+    role: parsed.role,
+    text: parsed.text,
+    created: parsed.created,
+    noteKind: parsed.noteKind,
+    noteDetail: parsed.noteDetail,
+    parts: parsed.parts,
+  };
 }

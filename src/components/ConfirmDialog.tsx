@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Trans } from "@lingui/react/macro";
 
 interface ConfirmDialogProps {
@@ -22,6 +23,19 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  // Escape closes the dialog (unless an action is running); the callers
+  // additionally guard `busy` in their `onCancel` handlers.
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !busy) onCancel();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, busy, onCancel]);
+
   if (!open) return null;
   return (
     <div
@@ -29,6 +43,10 @@ export default function ConfirmDialog({
       role="alertdialog"
       aria-modal="true"
       aria-label={title}
+      data-testid="confirm-dialog"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !busy) onCancel();
+      }}
     >
       <div className="modal-box">
         <h3 className="font-bold text-lg">{title}</h3>

@@ -306,6 +306,7 @@ test(
     await page.goto(`/sessions/ses-1?server=${server.id}`);
 
     await expect(page.getByTestId("session-revert-section")).toBeVisible();
+    await page.getByRole("button", { name: "Revert anzeigen" }).click();
     await page.getByTestId("revert-message-select").selectOption("m2");
     await page.getByRole("button", { name: "Revert-Staging starten" }).click();
 
@@ -336,6 +337,7 @@ test(
     await page.goto(`/sessions/ses-1?server=${server.id}`);
 
     await expect(page.getByTestId("session-command-section")).toBeVisible();
+    await page.getByRole("button", { name: "Befehle anzeigen" }).click();
     await page.getByTestId("session-command-select").selectOption("test");
     await page.getByTestId("session-command-text").fill("schnell");
     await page.getByTestId("session-command-run").click();

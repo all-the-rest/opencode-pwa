@@ -19,7 +19,8 @@ export type AppIconName =
   | "fork"
   | "compact"
   | "file"
-  | "columns";
+  | "columns"
+  | "tool";
 
 const ICONS: Record<AppIconName, string> = {
   menu: "mdi:menu",
@@ -41,6 +42,7 @@ const ICONS: Record<AppIconName, string> = {
   compact: "mdi:compress",
   file: "mdi:file-outline",
   columns: "mdi:view-column",
+  tool: "mdi:wrench-outline",
 };
 
 interface IconProps {

@@ -31,6 +31,9 @@ describe("extractMessageFromEvent", () => {
       role: "assistant",
       text: "Hallo Welt",
       created: 1234,
+      noteKind: null,
+      noteDetail: null,
+      parts: [{ kind: "text", text: "Hallo Welt" }],
     });
   });
 
@@ -44,6 +47,40 @@ describe("extractMessageFromEvent", () => {
       messageID: "msg-1",
       role: "user",
       text: "Frage",
+      parts: [{ kind: "text", text: "Frage" }],
+    });
+  });
+
+  it("parses real V2 assistant events with tool parts", () => {
+    const event = {
+      type: "message.created",
+      data: {
+        sessionID: "session-3",
+        message: {
+          type: "assistant",
+          id: "a-1",
+          time: { created: 99 },
+          content: [
+            { type: "text", text: "Fertig" },
+            {
+              type: "tool",
+              id: "t-1",
+              name: "bash",
+              state: { status: "completed", content: [{ type: "text", text: "ok" }] },
+            },
+          ],
+        },
+      },
+    };
+    expect(extractMessageFromEvent(event, 100)).toMatchObject({
+      sessionID: "session-3",
+      messageID: "a-1",
+      role: "assistant",
+      text: "Fertig",
+      parts: [
+        { kind: "text", text: "Fertig" },
+        { kind: "tool", name: "bash", status: "completed", detail: "ok" },
+      ],
     });
   });
 

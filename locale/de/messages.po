@@ -78,6 +78,10 @@ msgstr "Agent"
 msgid "Agent der Session"
 msgstr "Agent der Session"
 
+#: src/components/ChatMessageList.tsx
+msgid "Agent gewechselt"
+msgstr "Agent gewechselt"
+
 #: src/pages/AgentDetail.tsx
 msgid "Agent konnte nicht geladen werden: {error}"
 msgstr "Agent konnte nicht geladen werden: {error}"
@@ -269,6 +273,11 @@ msgstr "API-Schlüssel"
 msgid "API-Schlüssel …"
 msgstr "API-Schlüssel …"
 
+#: src/components/ChatMessageList.tsx
+#: src/pages/SessionDetail.tsx
+msgid "Assistent"
+msgstr "Assistent"
+
 #: src/pages/ServerDetail.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Ausblenden"
@@ -382,6 +391,14 @@ msgid "Befehle"
 msgstr "Befehle"
 
 #: src/pages/SessionDetail.tsx
+msgid "Befehle anzeigen"
+msgstr "Befehle anzeigen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Befehle ausblenden"
+msgstr "Befehle ausblenden"
+
+#: src/pages/SessionDetail.tsx
 msgid "Befehlstext"
 msgstr "Befehlstext"
 
@@ -401,6 +418,7 @@ msgstr "Benachrichtigungen für {serverName}"
 msgid "Benachrichtigungen sind blockiert. Bitte in den Browser-Einstellungen wieder zulassen."
 msgstr "Benachrichtigungen sind blockiert. Bitte in den Browser-Einstellungen wieder zulassen."
 
+#: src/pages/SessionDetail.tsx
 #: src/pages/Settings.tsx
 msgid "Benutzer"
 msgstr "Benutzer"
@@ -486,6 +504,10 @@ msgstr "Dateipfad anhängen, z. B. src/app.ts"
 #: src/pages/ServerTools.tsx
 msgid "Dateivorschau schließen"
 msgstr "Dateivorschau schließen"
+
+#: src/components/ChatMessageList.tsx
+msgid "Denken anzeigen"
+msgstr "Denken anzeigen"
 
 #: src/pages/SessionDetail.tsx
 msgid "Denken:"
@@ -619,6 +641,10 @@ msgstr "Diffs konnten nicht geladen werden: {diffError}"
 msgid "Diffs konnten nicht geladen werden."
 msgstr "Diffs konnten nicht geladen werden."
 
+#: src/components/ChatMessageList.tsx
+msgid "Du"
+msgstr "Du"
+
 #: src/pages/ServerTools.tsx
 msgid "Ein Verzeichnis zurück"
 msgstr "Ein Verzeichnis zurück"
@@ -729,9 +755,17 @@ msgstr "Fähigkeiten"
 msgid "Farbe"
 msgstr "Farbe"
 
+#: src/components/ChatMessageList.tsx
+msgid "Fehler"
+msgstr "Fehler"
+
 #: src/lib/opencode.ts
 msgid "Feld „{key}“ hat einen ungültigen Wert (erlaubt: Text, Zahl, Ja/Nein, Textliste)."
 msgstr "Feld „{key}“ hat einen ungültigen Wert (erlaubt: Text, Zahl, Ja/Nein, Textliste)."
+
+#: src/components/ChatMessageList.tsx
+msgid "Fertig"
+msgstr "Fertig"
 
 #: src/pages/SessionDetail.tsx
 msgid "Forken"
@@ -825,6 +859,10 @@ msgstr "GitHub-Repository öffnen"
 #: src/components/Layout.tsx
 msgid "Hauptnavigation"
 msgstr "Hauptnavigation"
+
+#: src/components/ChatMessageList.tsx
+msgid "Hinweis"
+msgstr "Hinweis"
 
 #: src/pages/ServerDetail.tsx
 msgid "Hinweis: Der Terminal-Bildschirm einer Session steht lesend in der Session-Ansicht. Ein Connect-Token kann pro PTY angefordert werden (für externe Terminal-Clients)."
@@ -1029,6 +1067,11 @@ msgstr "Kennzeichnet Tabs, Listen und Badges dieses Servers."
 msgid "Kompaktieren"
 msgstr "Kompaktieren"
 
+#: src/components/ChatMessageList.tsx
+msgid "Kompaktierung"
+msgstr "Kompaktierung"
+
+#: src/components/ChatMessageList.tsx
 #: src/hooks/useEventNotifications.ts
 msgid "Kompaktierung fehlgeschlagen"
 msgstr "Kompaktierung fehlgeschlagen"
@@ -1048,6 +1091,10 @@ msgstr "Kompaktierung gestartet – der Kontext wird zusammengefasst."
 #: src/hooks/useEventNotifications.ts
 msgid "Kompaktierung läuft"
 msgstr "Kompaktierung läuft"
+
+#: src/components/ChatMessageList.tsx
+msgid "Kompaktierung läuft …"
+msgstr "Kompaktierung läuft …"
 
 #: src/components/ConfigCard.tsx
 msgid "Konfiguration"
@@ -1090,6 +1137,10 @@ msgstr "Laufende Sessions"
 msgid "Laufende Shells"
 msgstr "Laufende Shells"
 
+#: src/components/ChatMessageList.tsx
+msgid "Läuft"
+msgstr "Läuft"
+
 #: src/pages/Settings.tsx
 msgid "Leer lassen, um das gespeicherte Passwort zu behalten"
 msgstr "Leer lassen, um das gespeicherte Passwort zu behalten"
@@ -1105,6 +1156,18 @@ msgstr "Leere Datei."
 #: src/pages/SessionDetail.tsx
 msgid "Leeres Terminal."
 msgstr "Leeres Terminal."
+
+#: src/components/ChatMessageList.tsx
+msgid "Leerlauf"
+msgstr "Leerlauf"
+
+#: src/components/ChatMessageList.tsx
+msgid "Leerlauf (fehlgeschlagen)"
+msgstr "Leerlauf (fehlgeschlagen)"
+
+#: src/components/ChatMessageList.tsx
+msgid "Leerlauf (unterbrochen)"
+msgstr "Leerlauf (unterbrochen)"
 
 #: src/pages/ServerDetail.tsx
 msgid "Live"
@@ -1156,6 +1219,10 @@ msgstr "Modell"
 #: src/pages/SessionDetail.tsx
 msgid "Modell der Session"
 msgstr "Modell der Session"
+
+#: src/components/ChatMessageList.tsx
+msgid "Modell gewechselt"
+msgstr "Modell gewechselt"
 
 #: src/pages/AgentDetail.tsx
 msgid "Modus:"
@@ -1279,6 +1346,10 @@ msgstr "Noch keine Verbrauchsdaten vorhanden."
 #: src/components/IntegrationsCard.tsx
 msgid "Noch nicht verbunden."
 msgstr "Noch nicht verbunden."
+
+#: src/pages/SessionDetail.tsx
+msgid "Notiz"
+msgstr "Notiz"
 
 #: src/pages/SessionDetail.tsx
 msgid "Nur lesend: Bildschirminhalt des Session-Terminals als Text. Ohne Emulator, ohne Eingabe."
@@ -1427,6 +1498,14 @@ msgstr "Projekte ({projectCount})"
 #: src/pages/ServerDetail.tsx
 msgid "PTYs ({ptyCount})"
 msgstr "PTYs ({ptyCount})"
+
+#: src/pages/SessionDetail.tsx
+msgid "Revert anzeigen"
+msgstr "Revert anzeigen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Revert ausblenden"
+msgstr "Revert ausblenden"
 
 #: src/pages/SessionDetail.tsx
 msgid "Revert übernehmen"
@@ -1737,6 +1816,10 @@ msgstr "Shells ({shellCount})"
 msgid "Sicherer Passwortspeicher nicht verfügbar (WebCrypto oder IndexedDB fehlt). Passwörter bleiben nur für diese Sitzung im Arbeitsspeicher und werden nicht dauerhaft gespeichert. Nach einem Neuladen bitte neu eingeben."
 msgstr "Sicherer Passwortspeicher nicht verfügbar (WebCrypto oder IndexedDB fehlt). Passwörter bleiben nur für diese Sitzung im Arbeitsspeicher und werden nicht dauerhaft gespeichert. Nach einem Neuladen bitte neu eingeben."
 
+#: src/components/ChatMessageList.tsx
+msgid "Skill"
+msgstr "Skill"
+
 #: src/pages/ServerTools.tsx
 msgid "Skills"
 msgstr "Skills"
@@ -1823,6 +1906,10 @@ msgstr "Suche fehlgeschlagen."
 msgid "Suchen"
 msgstr "Suchen"
 
+#: src/components/ChatMessageList.tsx
+msgid "System"
+msgstr "System"
+
 #: src/components/SessionTabBar.tsx
 msgid "Tab {tabTitle} schließen"
 msgstr "Tab {tabTitle} schließen"
@@ -1839,6 +1926,15 @@ msgstr "Teilen"
 msgid "Teilen (Export / Import)"
 msgstr "Teilen (Export / Import)"
 
+#: src/pages/SessionDetail.tsx
+msgid "Teilen anzeigen"
+msgstr "Teilen anzeigen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Teilen ausblenden"
+msgstr "Teilen ausblenden"
+
+#: src/components/ChatMessageList.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Terminal"
 msgstr "Terminal"
@@ -1902,6 +1998,14 @@ msgstr "Umgebung"
 #: src/pages/Dashboard.tsx
 msgid "Unbekannter Fehler"
 msgstr "Unbekannter Fehler"
+
+#: src/pages/SessionDetail.tsx
+msgid "unbekannter Inhalt"
+msgstr "unbekannter Inhalt"
+
+#: src/components/ChatMessageList.tsx
+msgid "Unbekannter Inhalt – wird in einer künftigen Version angezeigt."
+msgstr "Unbekannter Inhalt – wird in einer künftigen Version angezeigt."
 
 #: src/lib/opencode.ts
 msgid "Unerwartete Agent-Antwort vom Server."
@@ -1973,6 +2077,14 @@ msgid "Verbindung testen"
 msgstr "Verbindung testen"
 
 #: src/pages/SessionDetail.tsx
+msgid "Verbrauch anzeigen"
+msgstr "Verbrauch anzeigen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Verbrauch ausblenden"
+msgstr "Verbrauch ausblenden"
+
+#: src/pages/SessionDetail.tsx
 msgid "Verbrauch dieser Session"
 msgstr "Verbrauch dieser Session"
 
@@ -1991,6 +2103,10 @@ msgstr "Version"
 #: src/pages/SessionDetail.tsx
 msgid "Verwerfen"
 msgstr "Verwerfen"
+
+#: src/components/ChatMessageList.tsx
+msgid "Verzeichnis gewechselt"
+msgstr "Verzeichnis gewechselt"
 
 #: src/pages/SessionDetail.tsx
 msgid "Warten"
@@ -2016,6 +2132,10 @@ msgstr "Websuche starten"
 #: src/pages/ServerDetail.tsx
 msgid "Weitere Sessions laden"
 msgstr "Weitere Sessions laden"
+
+#: src/components/ChatMessageList.tsx
+msgid "Werkzeug"
+msgstr "Werkzeug"
 
 #: src/pages/AgentDetail.tsx
 msgid "Werkzeuge:"

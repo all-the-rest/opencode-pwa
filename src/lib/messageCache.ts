@@ -11,11 +11,20 @@
  * have to branch.
  */
 
+import {
+  parseSessionMessages,
+  type ChatNoteKind,
+  type ChatPart,
+} from "./sessionMessages.ts";
+
 export interface MessageInput {
   id: string;
   role: string;
   text: string;
   created?: number;
+  noteKind?: ChatNoteKind | null;
+  noteDetail?: string | null;
+  parts?: ChatPart[];
 }
 
 export interface CachedMessage {
@@ -27,6 +36,9 @@ export interface CachedMessage {
   role: string;
   text: string;
   created: number;
+  noteKind: ChatNoteKind | null;
+  noteDetail: string | null;
+  parts: ChatPart[];
 }
 
 /** Newest ~200 messages per session are kept, older ones are evicted. */
@@ -45,41 +57,22 @@ export function sessionCacheKey(serverID: string, sessionID: string): string {
   return `${serverID}:${sessionID}`;
 }
 
-function readStringField(record: Record<string, unknown>, keys: string[]): string | null {
-  for (const key of keys) {
-    const value: unknown = record[key];
-    if (typeof value === "string" && value !== "") return value;
-  }
-  return null;
-}
-
 /**
- * Normalize a `message.list` payload (`{ data: [...] }`, `{ messages: [...] }`
- * or a plain array) into message inputs. `created` preserves the payload
- * order: the last entry counts as the newest.
+ * Normalize a `message.list` payload into message inputs. Parsing follows
+ * the real V2 shapes (`sessionMessages.ts`: user/assistant/notes); `created`
+ * preserves the payload order when the server sent no timestamps — the last
+ * entry counts as the newest.
  */
 export function extractMessageInputs(value: unknown, now: number = Date.now()): MessageInput[] {
-  let list: unknown[] = [];
-  if (Array.isArray(value)) {
-    list = value;
-  } else if (value !== null && typeof value === "object") {
-    const record = value as { data?: unknown; messages?: unknown };
-    if (Array.isArray(record.data)) list = record.data;
-    else if (Array.isArray(record.messages)) list = record.messages;
-  }
-  const total = list.length;
-  return list.map((entry, index) => {
-    const created = now - (total - 1 - index);
-    if (entry !== null && typeof entry === "object") {
-      const item = entry as Record<string, unknown>;
-      const id = readStringField(item, ["id", "messageID", "messageId"]) ?? `nachricht-${index}`;
-      const role = readStringField(item, ["role"]) ?? "unbekannt";
-      const text =
-        readStringField(item, ["text", "content", "body"]) ?? JSON.stringify(item).slice(0, 500);
-      return { id, role, text, created };
-    }
-    return { id: `nachricht-${index}`, role: "unbekannt", text: String(entry), created };
-  });
+  return parseSessionMessages(value, now).map((message) => ({
+    id: message.id,
+    role: message.role,
+    text: message.text,
+    created: message.created,
+    noteKind: message.noteKind,
+    noteDetail: message.noteDetail,
+    parts: message.parts,
+  }));
 }
 
 export function toCachedMessages(
@@ -98,12 +91,40 @@ export function toCachedMessages(
     role: input.role,
     text: input.text,
     created: input.created ?? now - (total - 1 - index),
+    noteKind: input.noteKind ?? null,
+    noteDetail: input.noteDetail ?? null,
+    parts: input.parts ?? [],
   }));
 }
 
 function compareNewestFirst(a: CachedMessage, b: CachedMessage): number {
   if (b.created !== a.created) return b.created - a.created;
   return a.messageID.localeCompare(b.messageID);
+}
+
+/**
+ * Migrate rows written by older app versions: they carry no `parts` (and
+ * `role: "unbekannt"` rows may hold a raw JSON dump as text). Part-less rows
+ * get an empty part list (the view falls back to the plain text), and text
+ * that is visibly a JSON object dump is dropped so it never renders again.
+ */
+export function normalizeCachedRow(row: CachedMessage): CachedMessage {
+  const rawParts: unknown = (row as { parts?: unknown }).parts;
+  const parts = Array.isArray(rawParts) ? (rawParts as ChatPart[]) : [];
+  // Fresh parses always carry at least one part, so a part-less row with
+  // JSON-object text is unambiguously a legacy dump — drop the text so it
+  // never renders again.
+  const text = typeof row.text === "string" ? row.text : "";
+  const trimmed = text.trim();
+  const dumped = parts.length === 0 && trimmed.startsWith("{") && trimmed.endsWith("}");
+  if (Array.isArray(rawParts) && !dumped && row.noteKind !== undefined) return row;
+  return {
+    ...row,
+    text: dumped ? "" : text,
+    noteKind: row.noteKind ?? null,
+    noteDetail: row.noteDetail ?? null,
+    parts,
+  };
 }
 
 /** Newest first. */
@@ -235,12 +256,16 @@ export async function readMessages(serverID: string, sessionID: string): Promise
   const db = await openDatabase();
   if (db === null) {
     return sortNewestFirst(
-      [...memoryStore.values()].filter((message) => message.sessionKey === sessionKey),
+      [...memoryStore.values()]
+        .filter((message) => message.sessionKey === sessionKey)
+        .map(normalizeCachedRow),
     );
   }
   const tx = db.transaction(STORE_NAME, "readonly");
   const index = tx.objectStore(STORE_NAME).index(INDEX_SESSION);
-  const rows = (await requestToPromise(index.getAll(sessionKey))) as CachedMessage[];
+  const rows = (
+    (await requestToPromise(index.getAll(sessionKey))) as CachedMessage[]
+  ).map(normalizeCachedRow);
   return sortNewestFirst(rows);
 }
 

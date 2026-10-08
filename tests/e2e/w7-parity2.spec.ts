@@ -251,6 +251,7 @@ test(
     await page.goto(`/sessions/ses-1?server=${server.id}`);
 
     await expect(page.getByTestId("session-stats")).toBeVisible();
+    await page.getByRole("button", { name: "Verbrauch anzeigen" }).click();
     await expect(page.getByTestId("session-stats-input")).toContainText("12.345");
     await expect(page.getByTestId("session-stats-output")).toContainText("678");
     await expect(page.getByTestId("session-stats-cost")).toContainText("0,05");
