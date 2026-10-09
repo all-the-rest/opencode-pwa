@@ -1,7 +1,7 @@
 # AGENTS.todo.md
 
-Stand: 2026-10-08. Nur offene TODOs (veraltete Einträge bereinigt: Parität-Batches,
-Deep-Link-Paste, Prozess-Regel und Userscripts-Verdikt sind umgesetzt/dokumentiert).
+Stand: 2026-10-08 (Welle 5 hinzugefügt). Nur offene TODOs (veraltete Einträge bereinigt:
+Parität-Batches, Deep-Link-Paste, Prozess-Regel und Userscripts-Verdikt sind umgesetzt/dokumentiert).
 
 ## Navigation (Owner-Entscheidung 2026-10-07, umgesetzt)
 
@@ -15,8 +15,19 @@ für Agenten-Aktivität (dokumentierte Lücke).
 - [ ] Auth-Fehler-Banner mit Direkt-Link zum Bearbeiten der Zugangsdaten (Server-Seite + „Server bearbeiten"-Aktion; Umbenennen/Löschen existiert bereits).
 - [ ] Echter Geräte-Test: PWA-Install + Offline/SW auf realem Handy (nur Config + `dist` verifiziert).
 
-## UI-Review-Befunde (Screenshot-Review, 2026-10-08 — aus allen 44 Captures)
+### Welle-5-Entscheidungen (Owner abwesend, vom Orchestrator dokumentiert)
 
+1. **Todo-Dock: Slot bleibt** (leer, mit `EXTENSION_POINT_TODOS` markiert) — es gibt nachweislich kein
+   Todo-Symbol im installierten Client. Entfernt wird er erst, wenn ein Endpunkt existiert.
+2. **„Bearbeiten" einer Eingangsbox-Zeile** lädt den Text in den Composer — es gibt keinen
+   Text-Update-Endpunkt (`SessionInboxUpdateInput` trägt nur `delivery`). Bleibt so.
+3. **Cmd/Ctrl+1…9**: nur Cmd (macOS) bzw. Meta (Linux) erreichen die App zuverlässig, Ctrl+1…9 frißt
+   der Browser als Tab-Wechsler. E2E prüft `Meta+2`. Bleibt so, dokumentiert.
+4. **Revert-Dock** erscheint erst nach dem Bereitstellen; das Staging mit Nachrichten-Wahl bleibt im
+   „Mehr…"-Panel. Bei Bedarf folgt ein Picker im Dock.
+5. **Ungelesen-Punkt** leert sich beim Öffnen; ein „als gelesen markieren"-Endpunkt existiert nicht.
+
+## UI-Review-Befunde (Screenshot-Review, 2026-10-08 — aus allen 44 Captures)
 Reihenfolge = Behebungsreihenfolge, „W5/W6/W7" = in welcher Welle sie mitkommen.
 
 | # | Schwere | Fund (Capture) | Behebung | Welle |
@@ -45,7 +56,10 @@ Reihenfolge steht, jede Welle wird vor dem commit verifiziert (lint/test/build/e
       Zähler je Datei, Unified/Split-Toggle, Kontext-Ausklappen, Karten-Leerzustände. — **erledigt** (`a4d43c7`)
 - [ ] **Welle 5 — Docks + Listen + Tabs**: Permission-/Frage-/Eingangsbox-/Revert-Dock direkt über dem
       Composer (statt Umweg über Server-Werkzeuge), Skeleton-Zeilen + Suchoverlay in den Listen,
-      Tab-Rename per Doppelklick + Mittelklick schließen. — **offen** (Agent zweimal am Rate-Limit gescheitert)
+      Tab-Rename per Doppelklick + Mittelklick schließen. — **erledigt** (`w19-docks-lists-tabs.spec.ts`,
+      Docks: `src/lib/dockStack.ts` + `src/components/SessionDocks.tsx`; Suchoverlay:
+      `src/lib/sessionSearchOverlay.ts` + `src/components/SessionSearchOverlay.tsx`; Tab-Gesten:
+      `src/lib/tabShortcuts.ts`; Details in `features/05-parity.md`).
 - [ ] **Markdown-Vollständigkeit**: GFM-Tabellen (mit Ausrichtung), nummerierte/verschachtelte/Task-Listen,
       Durchstreichung — Fund aus dem Screenshot-Review, Tabellen renderten als Rohtext.
 - [ ] **UI-Review-Harness**: Manifest auf alle Zustände erweitert (Multi-Step-Chat, laufender Turn, Diff,
@@ -71,6 +85,13 @@ Reihenfolge steht, jede Welle wird vor dem commit verifiziert (lint/test/build/e
 ## Bewusst offen/dokumentiert (kein Handlungsbedarf)
 
 - PTY: Text-Ansicht via `terminal/read` (Entscheidung in `features/05-parity.md`).
+- **Todo-Dock**: Der installierte Client kennt keine Todo-API (kein `todo`-Symbol in
+  `generated/types.d.ts`) — das Dock rendert deshalb nichts. Erweiterungspunkt in
+  `src/components/SessionDocks.tsx` (`TodoDock`) + `{ type: "todos" }` in
+  `src/lib/dockStack.ts`; es genügt ein List-Endpoint auf dem Server.
+- **Permission `decision: "always"`**: dokumentierte Produktentscheidung
+  (`features/05-parity.md`), nicht implementiert. Erweiterungspunkt markiert in
+  `src/components/SessionDocks.tsx` (`DockPermissionDecision`).
 - Userscripts server-stored: nicht statisch machbar (Verdikt in `features/03-userscripts-postmvp.md`).
 - OAuth-complete/Credential-Mgmt/Config-Writes, Plugin: zurückgestellt.
 - Feed-Richtung Chat-Stil, Routen-Regel Pfad-vor-Query: entschieden und umgesetzt.
