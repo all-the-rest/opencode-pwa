@@ -1,6 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import ContentSkeleton from "../components/ContentSkeleton.tsx";
@@ -10,6 +10,11 @@ import ServerErrorBanner from "../components/ServerErrorBanner.tsx";
 import ServerStatusBadge from "../components/ServerStatusBadge.tsx";
 import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
 import { useShellOutputStream } from "../hooks/useShellOutputStream.ts";
+import { useOpenSessionTabs, useSessionUnread } from "../hooks/useSessionSearch.ts";
+import { useActiveSessionID } from "../hooks/useActiveSessionID.ts";
+import SessionListSkeleton from "../components/SessionListSkeleton.tsx";
+import SessionRowMarkers from "../components/SessionRowMarkers.tsx";
+import SessionSearchOverlay from "../components/SessionSearchOverlay.tsx";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
 import {
   createShell,
@@ -94,7 +99,6 @@ function killConfirmLabel(target: KillTarget): string {
   if (target.kind === "session-delete") return t`Löschen`;
   return t`Entfernen`;
 }
-
 interface ShellRowProps {
   server: ServerConfig;
   shell: Row;
@@ -201,6 +205,8 @@ export default function ServerDetail() {
   const { openTab } = useSessionTabs();
   const { split } = useLayoutMode();
   const server = servers.find((s) => s.id === id) ?? null;
+  // Wave 5: the open session of the tab bar clears its unread dot in the list.
+  const activeSessionID = useActiveSessionID();
 
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -376,6 +382,14 @@ export default function ServerDetail() {
     expandedShell === null && !hasPaged,
   );
 
+  // Wave 5: open-tab badge + unread dot per session row. Both come from state
+  // the page already has — `useSessionTabs` and the event hub's derived run
+  // state — so the markers cost no extra request. Called before the early
+  // return below so the hook order stays stable.
+  const openTabs = useOpenSessionTabs();
+  const listedSessionIDs = useMemo(() => sessions.map((row) => row.id), [sessions]);
+  const unread = useSessionUnread(server, listedSessionIDs, activeSessionID);
+
   if (server === null) {
     return (
       <div className="flex flex-col gap-4">
@@ -396,8 +410,7 @@ export default function ServerDetail() {
   const ptyCount = ptys.length;
   // Owner requirement: an unreachable server stays in the list (never removed,
   // never a delete prompt). Its rows stay visible but disabled + badged.
-  const { offline } = reachability(error);
-  const canInterrupt = isActionEnabled(offline, "session-interrupt");
+  const { offline } = reachability(error);  const canInterrupt = isActionEnabled(offline, "session-interrupt");
   const canDeleteSession = isActionEnabled(offline, "session-delete");
   const canLoadMore = isActionEnabled(offline, "sessions-load-more");
   const canCreateShell = isActionEnabled(offline, "shell-create");
@@ -656,7 +669,17 @@ export default function ServerDetail() {
           <span>{renameError}</span>
         </div>
       )}
-      {loading && <ContentSkeleton cards={4} testId="server-detail-skeleton" />}
+      {loading && (
+        <section className="card bg-base-200 shadow" data-testid="sessions-card">
+          <div className="card-body">
+            <h2 className="card-title">
+              <Icon name="session" /> <Trans>Sessions</Trans>
+            </h2>
+            <SessionListSkeleton testId="server-sessions-skeleton" />
+          </div>
+        </section>
+      )}
+      {loading && <ContentSkeleton cards={3} testId="server-detail-skeleton" />}
       {error !== null && (
         <ServerErrorBanner error={error} serverId={server.id} testId="offline-alert">
           <span className="text-xs">
@@ -711,18 +734,24 @@ export default function ServerDetail() {
                 {offline && <OfflineBadge testId="sessions-offline-badge" />}
               </h2>
               <div className="flex flex-col gap-2">
-                <label className="flex flex-col gap-1">
-                  <span className="label label-text">
-                    <Trans>Suche</Trans>
-                  </span>
-                  <input
-                    className="input input-bordered input-sm"
-                    value={search}
-                    onChange={(e) => updateParam("search", e.target.value)}
-                    placeholder={t`Titel oder ID suchen`}
-                    aria-label={t`Sessions suchen`}
-                  />
-                </label>
+                {/* Wave 5: the list's primary search is a server-side overlay
+                    (`GET /api/session?search=&limit=`) with keyboard navigation;
+                    the query stays in `?search=` so the list below keeps its
+                    client-side filter and the URL stays shareable. */}
+                <SessionSearchOverlay
+                  server={activeServer}
+                  value={search}
+                  onValueChange={(value) => updateParam("search", value)}
+                  onOpenSession={(sessionID) => {
+                    openTab({ serverID: server.id, sessionID, title: sessionID });
+                    navigate(
+                      `/sessions/${encodeURIComponent(sessionID)}?server=${encodeURIComponent(server.id)}`,
+                    );
+                  }}
+                  disabled={offline}
+                  testId="server-session-search"
+                  inputTestId="server-search"
+                />
                 <div className="flex gap-2">
                   <label className="flex flex-col gap-1 flex-1">
                     <span className="label label-text">
@@ -766,7 +795,8 @@ export default function ServerDetail() {
                   </label>
                 </div>
               </div>
-              {sessionGroups.length === 0 ? (
+              {loading && <SessionListSkeleton testId="server-sessions-skeleton" />}
+              {!loading && sessionGroups.length === 0 ? (
                 <div className="flex flex-col gap-2" data-testid="server-sessions-empty">
                   <p className="opacity-70 text-sm">
                     {sessions.length === 0 ? (
@@ -818,7 +848,7 @@ export default function ServerDetail() {
                               aria-disabled={offline}
                             >
                               <Link
-                                className="flex-1"
+                                className="flex-1 min-w-0"
                                 to={`/sessions/${s.id}?server=${server.id}`}
                                 tabIndex={offline ? -1 : 0}
                                 aria-disabled={offline}
@@ -826,8 +856,12 @@ export default function ServerDetail() {
                                   openTab({ serverID: server.id, sessionID: s.id, title: s.label })
                                 }
                               >
-                                {s.label}
+                                <span className="truncate">{s.label}</span>
                               </Link>
+                              <SessionRowMarkers
+                                open={openTabs.has(s.id)}
+                                unread={unread.has(s.id)}
+                              />
                               {offline && <OfflineBadge />}
                               <button
                                 type="button"

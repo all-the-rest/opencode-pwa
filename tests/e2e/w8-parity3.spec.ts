@@ -317,7 +317,9 @@ test(
     await expect(page.getByTestId("revert-staged")).toContainText("m2");
     await expect(page.getByTestId("revert-staged")).toContainText("1 Dateien");
 
-    await page.getByRole("button", { name: "Revert übernehmen" }).click();
+    // Wave 5 adds the same action as a dock directly above the composer; this
+    // test covers the "Mehr…" panel path, so it is scoped to the panel.
+    await page.getByTestId("revert-staged").getByRole("button", { name: "Revert übernehmen" }).click();
     await expect(page.getByText("gehen verloren")).toBeVisible();
     await page.getByRole("button", { name: "Übernehmen", exact: true }).click();
 

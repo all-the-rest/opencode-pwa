@@ -93,6 +93,48 @@ Legend: ✅ in this app · 🚧 partial · ❌ missing (post-MVP unless noted).
   select a form, paste the answer as a JSON object (validated client-side:
   Text/Zahl/Ja-Nein/Textliste pro Feld), reply via `POST .../form/{formID}/reply
   {answer}`, reject via `DELETE .../form/{formID}`.
+- ✅ **Dock stack directly above the composer (Welle 5)** — everything a running
+  session needs answered appears *inside* the session instead of a detour
+  through Server-Werkzeuge. One stack (`src/lib/dockStack.ts` reducer +
+  `src/components/SessionDocks.tsx`), rendered top-down in the original's
+  order; a dock with no content renders nothing:
+  - **Permission dock**: `GET /api/session/{id}/permission`
+    (`permission.list({ sessionID })`, `generated/client.d.ts:154-163`, body
+    `{location, data}`), description + patterns, "Ablehnen"/"Einmal erlauben"
+    via `POST /api/session/{id}/permission/{requestID}/reply`. `decision:
+    "always"` stays excluded (product decision below).
+  - **Question dock** (forms): `GET /api/session/{id}/form` parsed into the
+    `FormField` union (`generated/types.d.ts:2169/2135/2147/2159/2186`) as
+    native controls (`src/lib/formFields.ts`: radios for `options`, number
+    input, checkbox, checkbox group, external link). Reply via `POST
+    .../form/{formID}/reply {answer}`. The JSON paste stays as a collapsed
+    **escape hatch** — the happy path never needs it.
+  - **Inbox dock** (queued follow-ups): `GET /api/session/{id}/inbox`,
+    "Sofort"/"Warten" via `PATCH .../inbox/{inboxID}`, "Bearbeiten" puts the
+    text into the composer (no update-text endpoint exists).
+  - **Revert dock**: a staged revert (from staging or `session.revert.staged`)
+    with summary, "Übernehmen" (same German confirm as the panel) and
+    "Verwerfen" (`DELETE /api/session/{id}/revert`).
+  - **Todo dock**: extension point only — the installed client has **no** todo
+    endpoint (no `todo` symbol in `generated/types.d.ts`), so nothing renders.
+    One `dispatch({ type: "todos", rows })` in `src/hooks/useSessionDocks.ts`
+    lights it up the day the server surfaces todos.
+  - Live: folded from the shared event stream (`permission.asked/replied`,
+    `form.created/replied/cancelled`, `session.inbox.enqueued/delivered/
+    cancelled/delivery.changed`, `session.revert.staged/committed/cleared`) plus
+    a 5s poll as backstop.
+- ✅ Session lists (Welle 5): skeleton rows instead of a bare spinner
+  (`SessionListSkeleton`, ServerDetail renders the sessions card with
+  placeholders while it loads), a server-side search **overlay** over the list
+  (`SessionSearchOverlay`, `GET /api/session?search=&limit=`; spinner while
+  loading, keyboard up/down with wrap-around, Enter opens, Escape closes, clear
+  button) and per-row markers: "offen" badge from the tab state
+  (`useSessionTabs`) plus an unread dot derived from the event hub's per-session
+  run state (`useSessionUnread`) — no extra request for either.
+- ✅ Tab bar (Welle 5): middle click closes a tab, double click renames inline
+  (`renameSession` + optimistic `retitleTab`, toast on failure), Cmd/Ctrl+1…9
+  switches tabs (`src/lib/tabShortcuts.ts`). Existing close/close-all/overflow
+  behaviour and every testid are unchanged.
 - ✅ Chat-first message rendering (SOLL, Welle 1 „korrektes Rendern +
   Tool-Cards"): `message.list` is parsed from the **real** V2 union
   (`src/lib/sessionMessages.ts`, verified against the installed
@@ -231,6 +273,12 @@ cards, rows extracted with the `{ data: [...] }`-tolerant patterns in
   (`decision: "once"` = "Einmal erlauben", `decision: "reject"` = "Ablehnen").
   Deliberately **not** implemented: `always` (would persist a grant) and
   `permission.saved` (stored grants).
+  Welle 5 adds a second path to the same endpoint: the **permission dock**
+  inside the session (`GET /api/session/{id}/permission`, i.e.
+  `permission.list({ sessionID })`) shows the pending requests of *that*
+  session directly above the composer. Both paths coexist; the exclusion of
+  `always` applies to both (marked as an extension point in
+  `src/components/SessionDocks.tsx`).
 - 🚧 The page follows the offline policy of `src/lib/offline.ts`: the banner
   appears on reachability loss and the new actions `file-read` /
   `permission-reply` are disabled, so nothing is written to an unreachable

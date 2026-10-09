@@ -1,12 +1,17 @@
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
-import { useCallback, useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Icon from "../components/Icon.tsx";
 import ServerDot from "../components/ServerDot.tsx";
 import ServerErrorBanner from "../components/ServerErrorBanner.tsx";
 import ServerStatusBadge from "../components/ServerStatusBadge.tsx";
 import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
+import { useActiveSessionID } from "../hooks/useActiveSessionID.ts";
+import { useOpenSessionTabs, useSessionUnread } from "../hooks/useSessionSearch.ts";
+import SessionListSkeleton from "../components/SessionListSkeleton.tsx";
+import SessionRowMarkers from "../components/SessionRowMarkers.tsx";
+import SessionSearchOverlay from "../components/SessionSearchOverlay.tsx";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
 import {
   filterSessionRows,
@@ -35,11 +40,14 @@ export default function ProjectDetail() {
   const { serverId, projectId } = useParams<{ serverId: string; projectId: string }>();
   const { servers } = useServers();
   const { openTab } = useSessionTabs();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get("search") ?? "";
   const agentFilter = searchParams.get("agent") ?? "";
 
   const server = servers.find((s) => s.id === serverId) ?? null;
+  // Wave 5: the open session of the tab bar clears its unread dot in the list.
+  const activeSessionID = useActiveSessionID();
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -120,6 +128,13 @@ export default function ProjectDetail() {
   }, [server, projectId]);
 
   useLiveRefresh(server, reload, LIVE_REFRESH_INTERVAL_MS);
+
+  // Wave 5: open-tab badge + unread dot per session row — from state the page
+  // already has (`useSessionTabs`, the event hub's derived run state). Called
+  // before the early return below so the hook order stays stable.
+  const openTabs = useOpenSessionTabs();
+  const listedSessionIDs = useMemo(() => sessions.map((row) => row.id), [sessions]);
+  const unread = useSessionUnread(server, listedSessionIDs, activeSessionID);
 
   function updateParam(key: "search" | "agent", value: string) {
     setSearchParams(
@@ -228,19 +243,23 @@ export default function ProjectDetail() {
             )}
           </h2>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <label className="flex flex-col gap-1 flex-1">
-              <span className="label label-text">
-                <Trans>Suche</Trans>
-              </span>
-              <input
-                className="input input-bordered input-sm"
-                value={search}
-                onChange={(e) => updateParam("search", e.target.value)}
-                placeholder={t`Titel oder ID suchen`}
-                aria-label={t`Sessions suchen`}
-                data-testid="project-search"
-              />
-            </label>
+            {/* Wave 5: server-side search overlay with keyboard navigation; the
+                query stays in `?search=` (shareable, deep-linkable). */}
+            <SessionSearchOverlay
+              server={activeServer}
+              project={projectId ?? null}
+              value={search}
+              onValueChange={(value) => updateParam("search", value)}
+              onOpenSession={(sessionID) => {
+                openTab({ serverID: activeServer.id, sessionID, title: sessionID });
+                navigate(
+                  `/sessions/${encodeURIComponent(sessionID)}?server=${encodeURIComponent(activeServer.id)}`,
+                );
+              }}
+              disabled={offline}
+              testId="project-session-search"
+              inputTestId="project-search"
+            />
             <label className="flex flex-col gap-1 flex-1">
               <span className="label label-text">
                 <Trans>Agent</Trans>
@@ -263,7 +282,7 @@ export default function ProjectDetail() {
               </select>
             </label>
           </div>
-          {loading && <span className="loading loading-spinner loading-md" aria-label={t`Lädt`} />}
+          {loading && <SessionListSkeleton testId="project-sessions-skeleton" />}
           {!loading && filtered.length === 0 && (
             <div className="flex flex-col gap-2" data-testid="project-sessions-empty">
               <p className="opacity-70 text-sm">
@@ -295,7 +314,7 @@ export default function ProjectDetail() {
                     aria-disabled={offline}
                   >
                     <Link
-                      className="flex-1"
+                      className="flex-1 min-w-0"
                       to={`/sessions/${s.id}?server=${activeServer.id}`}
                       tabIndex={offline ? -1 : 0}
                       aria-disabled={offline}
@@ -303,8 +322,12 @@ export default function ProjectDetail() {
                         openTab({ serverID: activeServer.id, sessionID: s.id, title: s.label })
                       }
                     >
-                      {s.label}
+                      <span className="truncate">{s.label}</span>
                     </Link>
+                    <SessionRowMarkers
+                      open={openTabs.has(s.id)}
+                      unread={unread.has(s.id)}
+                    />
                     {offline && (
                       <span className="badge badge-warning gap-1">
                         <Trans>Offline</Trans>

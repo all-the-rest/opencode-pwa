@@ -1,6 +1,7 @@
 import { t } from "@lingui/core/macro";
 import { OpenCode } from "@opencode/client";
 import { readCredential } from "./credentialVault.ts";
+import { extractFormFields, type SessionFormField } from "./formFields.ts";
 
 /**
  * A server as it is persisted (`localStorage`) and passed around the app:
@@ -1241,12 +1242,66 @@ export function listPendingPermissions(
   );
 }
 
+/**
+ * GET /api/session/{sessionID}/permission — pending permission requests of ONE
+ * session. This is what the in-session dock shows; the server-wide list above
+ * stays the tools-page view. Verified against the installed client
+ * (`client.d.ts:154-163`: `permission.list({ sessionID })` →
+ * `GET /api/session/{sessionID}/permission`, body = `PermissionRequest[]`
+ * without an envelope).
+ */
+export function listSessionPermissions(
+  server: ServerConfig,
+  sessionID: string,
+): Promise<ApiResult<PermissionRequestRow[]>> {
+  return guarded(async () => {
+    try {
+      return extractPermissionRequests(
+        await (await makeClient(server)).permission.list({ sessionID }),
+      );
+    } catch {
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(
+        `${baseUrl}/api/session/${encodeURIComponent(sessionID)}/permission`,
+        { headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) } },
+      );
+      if (!response.ok) {
+        throw new Error(`GET /api/session/${sessionID}/permission failed with status ${response.status}`);
+      }
+      return extractPermissionRequests(await response.json());
+    }
+  });
+}
+
 /** Answer of the server's question: allow once, allow permanently, deny. */
 export type PermissionReplyDecision = "once" | "always" | "reject";
 
 /**
  * POST /api/session/{sessionID}/permission/{requestID}/reply — answer one
- * pending permission request.
+ * pending permission request. `decision: "always"` exists on the wire but is
+ * deliberately not offered by any UI (documented product decision, see
+ * `features/05-parity.md`); it stays in the type because the endpoint accepts
+ * it.
+ */
+export function replySessionPermission(
+  server: ServerConfig,
+  sessionID: string,
+  requestID: string,
+  decision: PermissionReplyDecision,
+): Promise<ApiResult<boolean>> {
+  return guarded(async () => {
+    await (await makeClient(server)).permission.reply({
+      sessionID,
+      requestID,
+      decision,
+    });
+    return true;
+  });
+}
+
+/**
+ * Answer one permission request of the server-wide tools page. The row carries
+ * its own `sessionID`, so this is the session-scoped call plus that guard.
  */
 export function replyPermission(
   server: ServerConfig,
@@ -2201,13 +2256,15 @@ export interface SessionFormRow {
   id: string;
   sessionID: string;
   title: string;
+  /** Parsed fields (`FormField[]`) for native controls; empty when absent. */
+  fields: SessionFormField[];
 }
 
 /** Normalize a `session.form.list` payload into pending-form rows. */
 export function extractSessionForms(value: unknown): SessionFormRow[] {
   return extractListRows(value).map((entry, index) => {
     if (entry === null || typeof entry !== "object") {
-      return { id: `formular-${index}`, sessionID: "", title: String(entry) };
+      return { id: `formular-${index}`, sessionID: "", title: String(entry), fields: [] };
     }
     const record = entry as Record<string, unknown>;
     const id = readString(record, ["id", "formID"]) ?? `formular-${index}`;
@@ -2215,6 +2272,7 @@ export function extractSessionForms(value: unknown): SessionFormRow[] {
       id,
       sessionID: readString(record, ["sessionID", "sessionId"]) ?? "",
       title: readString(record, ["title", "name"]) ?? id,
+      fields: extractFormFields(record["fields"]),
     };
   });
 }

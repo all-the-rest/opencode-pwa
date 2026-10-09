@@ -3,8 +3,11 @@ import { Trans } from "@lingui/react/macro";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { serverColor } from "../lib/serverColor.ts";
+import { renameSession } from "../lib/opencode.ts";
+import { resolveTabIndex, tabShortcutIndex } from "../lib/tabShortcuts.ts";
 import { useServers } from "../state/servers.tsx";
 import { useSessionTabs } from "../state/sessionTabs.tsx";
+import { useToast } from "../state/toast.tsx";
 
 /**
  * Tab bar for open sessions from different servers side by side. Each tab
@@ -15,8 +18,8 @@ import { useSessionTabs } from "../state/sessionTabs.tsx";
  * while every server is offline.
  *
  * The bar always renders: with no tabs open only the "+ Neu" shortcut to the
- * session starter (`/`) is shown. The "+" button is always visible next to
- * the bar, so a new session can be started from anywhere.
+ * session starter (`/`) is shown. The "+" button is always visible next to the
+ * bar, so a new session can be started from anywhere.
  *
  * Overflow path: when the tabs exceed the bar width (mobile + narrow
  * desktop), an "Alle Tabs" button appears next to the scrollable bar and
@@ -24,10 +27,19 @@ import { useSessionTabs } from "../state/sessionTabs.tsx";
  * horizontal scroll stays as-is; the popup is the overflow shortcut. The
  * button only renders while the bar actually overflows (ResizeObserver +
  * scrollWidth check).
+ *
+ * Wave 5 gestures (parity with the original's titlebar tabs):
+ *   - middle click closes a tab (`onAuxClick`, button 1)
+ *   - double click renames a tab inline (`renameSession` + optimistic
+ *     `retitleTab`, toast on failure)
+ *   - Cmd/Ctrl+1…9 switches to the nth tab
+ * Every existing behaviour (close, close all, overflow) and every existing
+ * testid stays exactly as it was.
  */
 export default function SessionTabBar() {
-  const { tabs, closeTab, closeAllTabs } = useSessionTabs();
+  const { tabs, closeTab, closeAllTabs, retitleTab } = useSessionTabs();
   const { servers } = useServers();
+  const { notify } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const activeRef = useRef<HTMLDivElement>(null);
@@ -35,6 +47,11 @@ export default function SessionTabBar() {
   const menuWrapRef = useRef<HTMLDivElement>(null);
   const [hasOverflow, setHasOverflow] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Inline rename: exactly one tab is edited at a time. The input replaces the
+  // link inside the same row, so the bar's height never changes.
+  const [renaming, setRenaming] = useState<{ serverID: string; sessionID: string } | null>(null);
+  const [renameText, setRenameText] = useState("");
+  const [renameBusy, setRenameBusy] = useState(false);
 
   const sessionMatch = location.pathname.match(/^\/sessions\/([^/]+)$/);
   const activeSessionID = sessionMatch?.[1] !== undefined
@@ -104,6 +121,21 @@ export default function SessionTabBar() {
     };
   }, [menuOpen]);
 
+  // Cmd/Ctrl+1…9: switch to the nth tab (rule in `tabShortcuts.ts`).
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const index = tabShortcutIndex(event.key, event.metaKey, event.ctrlKey);
+      const resolved = resolveTabIndex(index, tabs.length);
+      if (resolved === null) return;
+      const target = tabs[resolved];
+      if (target === undefined) return;
+      event.preventDefault();
+      navigate(`/sessions/${encodeURIComponent(target.sessionID)}?server=${encodeURIComponent(target.serverID)}`);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [tabs, navigate]);
+
   function handleClose(serverID: string, sessionID: string) {
     const index = tabs.findIndex((tab) => tab.serverID === serverID && tab.sessionID === sessionID);
     const closingActive = isActiveTab(serverID, sessionID);
@@ -125,6 +157,45 @@ export default function SessionTabBar() {
     if (closingActive) navigate("/");
   }
 
+  function startRename(serverID: string, sessionID: string, title: string) {
+    setRenameText(title);
+    setRenaming({ serverID, sessionID });
+  }
+
+  /**
+   * Inline rename of a tab: optimistic `retitleTab` first (the label switches
+   * at once), then the server PATCH. On failure the previous title comes back
+   * and the error surfaces as a toast — never a blocking dialog.
+   */
+  async function commitRename() {
+    if (renaming === null) return;
+    const next = renameText.trim();
+    if (next === "" || renameBusy) {
+      setRenaming(null);
+      return;
+    }
+    const { serverID, sessionID } = renaming;
+    const previous = tabs.find((tab) => tab.serverID === serverID && tab.sessionID === sessionID)?.title ?? sessionID;
+    const target = servers.find((s) => s.id === serverID);
+    if (target === undefined) {
+      setRenaming(null);
+      notify(t`Server dieses Tabs ist nicht mehr eingerichtet.`, "error");
+      return;
+    }
+    setRenaming(null);
+    setRenameBusy(true);
+    retitleTab(serverID, sessionID, next);
+    const result = await renameSession(target, sessionID, next);
+    setRenameBusy(false);
+    if (result.error !== null) {
+      retitleTab(serverID, sessionID, previous);
+      const renameError = result.error;
+      notify(t`Umbenennen fehlgeschlagen: ${renameError}`, "error");
+      return;
+    }
+    notify(t`Tab umbenannt.`, "success");
+  }
+
   const serverById = new Map(servers.map((s) => [s.id, s]));
 
   return (
@@ -135,6 +206,10 @@ export default function SessionTabBar() {
             const active = isActiveTab(tab.serverID, tab.sessionID);
             const server = serverById.get(tab.serverID);
             const color = server !== undefined ? serverColor(server) : undefined;
+            const editing =
+              renaming !== null &&
+              renaming.serverID === tab.serverID &&
+              renaming.sessionID === tab.sessionID;
             // Lingui-safe hoist: no member access inside the message.
             const tabTitle = tab.title;
             const closeLabel = t`Tab ${tabTitle} schließen`;
@@ -144,6 +219,7 @@ export default function SessionTabBar() {
                   role="tab"
                   aria-selected={active}
                   data-testid={`session-tab-${tab.sessionID}`}
+                  data-editing={editing ? "true" : undefined}
                   ref={active ? activeRef : undefined}
                   className={`oc-dense flex max-w-56 items-center gap-1.5 rounded-t-lg border border-b-0 px-2 py-1.5 ${
                     active
@@ -151,6 +227,15 @@ export default function SessionTabBar() {
                       : "border-transparent opacity-70 hover:bg-base-200 hover:opacity-100"
                   }`}
                   style={active && color !== undefined ? { borderTop: `2px solid ${color}` } : undefined}
+                  onMouseDown={(event) => {
+                    // Middle button: close (and never start a text selection)
+                    if (event.button !== 1) return;
+                    event.preventDefault();
+                  }}
+                  onAuxClick={(event) => {
+                    if (event.button !== 1) return;
+                    handleClose(tab.serverID, tab.sessionID);
+                  }}
                 >
                   {color !== undefined && (
                     <span
@@ -160,13 +245,48 @@ export default function SessionTabBar() {
                       data-testid={`session-tab-dot-${tab.sessionID}`}
                     />
                   )}
-                  <Link
-                    className="min-w-0 flex-1 truncate"
-                    to={`/sessions/${encodeURIComponent(tab.sessionID)}?server=${encodeURIComponent(tab.serverID)}`}
-                    title={server !== undefined ? `${tab.title} (${server.name})` : tab.title}
-                  >
-                    {tab.title}
-                  </Link>
+                  {editing ? (
+                    <span className="flex items-center h-6 min-w-0">
+                      <input
+                        className="input input-xs h-6 w-32 min-w-0 rounded border-base-300 bg-base-100"
+                        value={renameText}
+                        autoFocus
+                        aria-label={t`Neuer Tab-Titel`}
+                        placeholder={t`Titel eingeben …`}
+                        data-testid={`session-tab-rename-${tab.sessionID}`}
+                        onChange={(event) => setRenameText(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            void commitRename();
+                          }
+                          if (event.key === "Escape") {
+                            event.preventDefault();
+                            setRenaming(null);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-xs btn-primary shrink-0 ml-1"
+                        disabled={renameBusy || renameText.trim() === ""}
+                        aria-label={t`Tab-Titel speichern`}
+                        data-testid={`session-tab-rename-save-${tab.sessionID}`}
+                        onClick={() => void commitRename()}
+                      >
+                        <Trans>OK</Trans>
+                      </button>
+                    </span>
+                  ) : (
+                    <Link
+                      className="min-w-0 flex-1 truncate"
+                      to={`/sessions/${encodeURIComponent(tab.sessionID)}?server=${encodeURIComponent(tab.serverID)}`}
+                      title={server !== undefined ? `${tab.title} (${server.name})` : tab.title}
+                      onDoubleClick={() => startRename(tab.serverID, tab.sessionID, tab.title)}
+                    >
+                      {tab.title}
+                    </Link>
+                  )}
                   <button
                     type="button"
                     className="btn btn-xs btn-ghost shrink-0"

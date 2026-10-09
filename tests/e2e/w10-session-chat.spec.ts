@@ -513,12 +513,15 @@ test(
     await page.getByRole("button", { name: "Revert-Staging starten" }).click();
     await expect.poll(() => log.revertStages, { timeout: 10_000 }).toContainEqual("ses-1");
 
-    await page.getByRole("button", { name: "Revert übernehmen" }).click();
+    // Wave 5 adds the same action as a dock above the composer; this test
+    // covers the "Mehr…" panel path, so it is scoped to the panel.
+    const staged = page.getByTestId("revert-staged");
+    await staged.getByRole("button", { name: "Revert übernehmen" }).click();
     await expect(page.getByTestId("confirm-dialog")).toContainText("gehen verloren");
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("confirm-dialog")).toHaveCount(0);
 
-    await page.getByRole("button", { name: "Revert übernehmen" }).click();
+    await staged.getByRole("button", { name: "Revert übernehmen" }).click();
     await page.getByRole("button", { name: "Übernehmen", exact: true }).click();
     await expect.poll(() => log.revertCommits, { timeout: 10_000 }).toContainEqual("ses-1");
     await expect(page.getByText("Revert übernommen")).toBeVisible({ timeout: 10_000 });

@@ -127,6 +127,7 @@ msgstr "1 Verbindung"
 msgid "Abbrechen"
 msgstr "Abbrechen"
 
+#: src/components/SessionDocks.tsx
 #: src/pages/ServerTools.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Ablehnen"
@@ -247,6 +248,10 @@ msgstr "Alle Tabs schließen"
 msgid "Als Datei laden"
 msgstr "Als Datei laden"
 
+#: src/components/SessionDocks.tsx
+msgid "Als JSON bearbeiten"
+msgstr "Als JSON bearbeiten"
+
 #: src/pages/SessionDetail.tsx
 msgid "Ältere Nachrichten laden"
 msgstr "Ältere Nachrichten laden"
@@ -288,9 +293,17 @@ msgstr "Anfrage „{requestID}“ einmalig erlaubt."
 msgid "Anfrage {requestId} ablehnen"
 msgstr "Anfrage {requestId} ablehnen"
 
+#: src/components/SessionDocks.tsx
+msgid "Anfrage {requestID} ablehnen"
+msgstr "Anfrage {requestID} ablehnen"
+
 #: src/pages/ServerTools.tsx
 msgid "Anfrage {requestId} einmalig erlauben"
 msgstr "Anfrage {requestId} einmalig erlauben"
+
+#: src/components/SessionDocks.tsx
+msgid "Anfrage {requestID} einmalig erlauben"
+msgstr "Anfrage {requestID} einmalig erlauben"
 
 #: src/pages/ServerTools.tsx
 msgid "Anfragen des Servers, die auf eine Entscheidung warten. Erlaubt wird einmalig („Einmal erlauben“) oder abgelehnt."
@@ -333,6 +346,7 @@ msgstr "Anmeldung nötig"
 msgid "Anmeldung starten"
 msgstr "Anmeldung starten"
 
+#: src/components/SessionDocks.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Antwort als JSON"
 msgstr "Antwort als JSON"
@@ -341,6 +355,11 @@ msgstr "Antwort als JSON"
 msgid "Antwort als JSON-Objekt, z. B. {\"ok\": true}"
 msgstr "Antwort als JSON-Objekt, z. B. {\"ok\": true}"
 
+#: src/components/SessionDocks.tsx
+msgid "Antwort auf {fieldLabel} öffnen"
+msgstr "Antwort auf {fieldLabel} öffnen"
+
+#: src/components/SessionDocks.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Antworten"
 msgstr "Antworten"
@@ -391,6 +410,18 @@ msgstr "Aufgabe"
 #: src/components/ChatMessageList.tsx
 msgid "Aufgaben"
 msgstr "Aufgaben"
+
+#: src/components/SessionDocks.tsx
+msgid "Aufgaben ({doneLabel}/{totalLabel})"
+msgstr "Aufgaben ({doneLabel}/{totalLabel})"
+
+#: src/components/SessionDocks.tsx
+msgid "Aufgaben ausklappen"
+msgstr "Aufgaben ausklappen"
+
+#: src/components/SessionDocks.tsx
+msgid "Aufgaben einklappen"
+msgstr "Aufgaben einklappen"
 
 #: src/components/ChatMessageList.tsx
 msgid "Aufgaben lesen"
@@ -474,6 +505,10 @@ msgstr "Ausgabe:"
 msgid "Ausgabeformate:"
 msgstr "Ausgabeformate:"
 
+#: src/components/SessionDocks.tsx
+msgid "Ausklappen"
+msgstr "Ausklappen"
+
 #: src/pages/ServerTools.tsx
 msgid "Automatisch"
 msgstr "Automatisch"
@@ -495,6 +530,7 @@ msgid "Basis-URL muss mit http:// oder https:// beginnen."
 msgstr "Basis-URL muss mit http:// oder https:// beginnen."
 
 #: src/components/ChatMessageList.tsx
+#: src/components/SessionDocks.tsx
 #: src/pages/Settings.tsx
 msgid "Bearbeiten"
 msgstr "Bearbeiten"
@@ -563,6 +599,18 @@ msgstr "Benutzer"
 #: src/pages/Settings.tsx
 msgid "Benutzer (Basic Auth)"
 msgstr "Benutzer (Basic Auth)"
+
+#: src/pages/SessionDetail.tsx
+msgid "Berechtigung „{permissionAction}“ abgelehnt."
+msgstr "Berechtigung „{permissionAction}“ abgelehnt."
+
+#: src/pages/SessionDetail.tsx
+msgid "Berechtigung „{permissionAction}“ einmalig erteilt."
+msgstr "Berechtigung „{permissionAction}“ einmalig erteilt."
+
+#: src/components/SessionDocks.tsx
+msgid "Berechtigung angefragt: {actionLabel}"
+msgstr "Berechtigung angefragt: {actionLabel}"
 
 #: src/components/IntegrationsCard.tsx
 msgid "Bezeichnung (optional)"
@@ -847,6 +895,11 @@ msgstr "Eingangsbox"
 msgid "Einige Dateien wurden nicht angehängt (Typ oder Größe)."
 msgstr "Einige Dateien wurden nicht angehängt (Typ oder Größe)."
 
+#: src/components/SessionDocks.tsx
+msgid "Einklappen"
+msgstr "Einklappen"
+
+#: src/components/SessionDocks.tsx
 #: src/pages/ServerTools.tsx
 msgid "Einmal erlauben"
 msgstr "Einmal erlauben"
@@ -855,6 +908,18 @@ msgstr "Einmal erlauben"
 #: src/pages/Settings.tsx
 msgid "Einstellungen"
 msgstr "Einstellungen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Eintrag {editedID} zum Bearbeiten im Composer geladen."
+msgstr "Eintrag {editedID} zum Bearbeiten im Composer geladen."
+
+#: src/pages/SessionDetail.tsx
+msgid "Eintrag {inboxID} läuft jetzt."
+msgstr "Eintrag {inboxID} läuft jetzt."
+
+#: src/pages/SessionDetail.tsx
+msgid "Eintrag {inboxID} wartet in der Schlange."
+msgstr "Eintrag {inboxID} wartet in der Schlange."
 
 #: src/pages/SessionDetail.tsx
 msgid "Eintrag {inboxRowID} abbrechen"
@@ -867,6 +932,18 @@ msgstr "Eintrag {inboxRowID} in die Warteschlange legen"
 #: src/pages/SessionDetail.tsx
 msgid "Eintrag {inboxRowID} sofort ausführen"
 msgstr "Eintrag {inboxRowID} sofort ausführen"
+
+#: src/components/SessionDocks.tsx
+msgid "Eintrag {itemID} in die Warteschlange legen"
+msgstr "Eintrag {itemID} in die Warteschlange legen"
+
+#: src/components/SessionDocks.tsx
+msgid "Eintrag {itemID} sofort ausführen"
+msgstr "Eintrag {itemID} sofort ausführen"
+
+#: src/components/SessionDocks.tsx
+msgid "Eintrag {itemID} zum Bearbeiten laden"
+msgstr "Eintrag {itemID} zum Bearbeiten laden"
 
 #: src/pages/SessionDetail.tsx
 msgid "Einträge in der Warteschlange dieser Session. Beantwortet wird über Formulare und Berechtigungen – hier kann die Zustellung umgestellt (sofort oder warten) oder abgebrochen werden."
@@ -964,6 +1041,14 @@ msgstr "Forken fehlgeschlagen."
 #: src/pages/SessionDetail.tsx
 msgid "Formular"
 msgstr "Formular"
+
+#: src/components/SessionDocks.tsx
+msgid "Formular {formID} ablehnen"
+msgstr "Formular {formID} ablehnen"
+
+#: src/components/SessionDocks.tsx
+msgid "Formular {formID} beantworten"
+msgstr "Formular {formID} beantworten"
 
 #: src/pages/SessionDetail.tsx
 msgid "Formular abgelehnt."
@@ -1155,6 +1240,14 @@ msgstr "Integrationen konnten nicht geladen werden."
 msgid "Ja"
 msgstr "Ja"
 
+#: src/components/SessionDocks.tsx
+msgid "JSON senden"
+msgstr "JSON senden"
+
+#: src/components/SessionDocks.tsx
+msgid "JSON-Antwort senden"
+msgstr "JSON-Antwort senden"
+
 #: src/components/SessionDiffView.tsx
 msgid "Kein Git-Repository"
 msgstr "Kein Git-Repository"
@@ -1301,6 +1394,10 @@ msgstr "Keine Sessions auf diesem Server."
 msgid "Keine Sessions für diese Suche oder Filter."
 msgstr "Keine Sessions für diese Suche oder Filter."
 
+#: src/components/SessionSearchOverlay.tsx
+msgid "Keine Sessions für diese Suche."
+msgstr "Keine Sessions für diese Suche."
+
 #: src/pages/ProjectDetail.tsx
 msgid "Keine Sessions in diesem Projekt."
 msgstr "Keine Sessions in diesem Projekt."
@@ -1406,11 +1503,11 @@ msgstr "Kosten:"
 
 #: src/components/ContentSkeleton.tsx
 #: src/components/IntegrationsCard.tsx
+#: src/components/SessionSearchOverlay.tsx
 #: src/components/SessionStarter.tsx
 #: src/pages/AgentDetail.tsx
 #: src/pages/Agents.tsx
 #: src/pages/Dashboard.tsx
-#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerTools.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Lädt"
@@ -1437,6 +1534,10 @@ msgstr "Laufende Sessions"
 #: src/pages/Dashboard.tsx
 msgid "Laufende Shells"
 msgstr "Laufende Shells"
+
+#: src/components/SessionDocks.tsx
+msgid "läuft"
+msgstr "läuft"
 
 #: src/components/ChatMessageList.tsx
 #: src/pages/Agents.tsx
@@ -1632,6 +1733,10 @@ msgstr "Neuer Session-Titel"
 msgid "Neuer Shell-Befehl"
 msgstr "Neuer Shell-Befehl"
 
+#: src/components/SessionTabBar.tsx
+msgid "Neuer Tab-Titel"
+msgstr "Neuer Tab-Titel"
+
 #: src/components/SessionRunIndicators.tsx
 msgid "Neuer Versuch"
 msgstr "Neuer Versuch"
@@ -1733,6 +1838,10 @@ msgstr "Nur lesend: Verzeichnisse durchsuchen und Dateien ansehen."
 msgid "Nur lesend: wirksame Konfiguration des Servers. Schreiben ist bewusst nicht implementiert – die globale Konfiguration bleibt dem Server überlassen."
 msgstr "Nur lesend: wirksame Konfiguration des Servers. Schreiben ist bewusst nicht implementiert – die globale Konfiguration bleibt dem Server überlassen."
 
+#: src/components/SessionRowMarkers.tsx
+msgid "offen"
+msgstr "offen"
+
 #: src/pages/ServerTools.tsx
 msgid "Offene Berechtigungen"
 msgstr "Offene Berechtigungen"
@@ -1775,6 +1884,10 @@ msgstr "Öffnen"
 #: src/pages/ServerTools.tsx
 msgid "Ohne Anbieter"
 msgstr "Ohne Anbieter"
+
+#: src/components/SessionTabBar.tsx
+msgid "OK"
+msgstr "OK"
 
 #: src/components/ServerStatusBadge.tsx
 msgid "Online"
@@ -1861,6 +1974,7 @@ msgstr "Revert"
 #~ msgid "Revert ausblenden"
 #~ msgstr "Revert ausblenden"
 
+#: src/components/SessionDocks.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Revert übernehmen"
 msgstr "Revert übernehmen"
@@ -1873,9 +1987,14 @@ msgstr "Revert übernommen – die Session steht auf dem gewählten Stand."
 msgid "Revert-Staging starten"
 msgstr "Revert-Staging starten"
 
+#: src/components/SessionDocks.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Revert-Staging verwerfen"
 msgstr "Revert-Staging verwerfen"
+
+#: src/components/SessionDocks.tsx
+msgid "Rückgängig vorgemerkt"
+msgstr "Rückgängig vorgemerkt"
 
 #: src/components/SessionTabBar.tsx
 #: src/pages/ServerTools.tsx
@@ -1932,6 +2051,10 @@ msgstr "Server antwortet unerwartet (kein JSON). Bitte Basis-URL prüfen."
 #: src/pages/Settings.tsx
 msgid "Server bearbeiten"
 msgstr "Server bearbeiten"
+
+#: src/components/SessionTabBar.tsx
+msgid "Server dieses Tabs ist nicht mehr eingerichtet."
+msgstr "Server dieses Tabs ist nicht mehr eingerichtet."
 
 #: src/pages/Settings.tsx
 msgid "Server hinzufügen"
@@ -2148,6 +2271,10 @@ msgstr "Session wird kompaktiert{suffix}."
 msgid "Session-Status"
 msgstr "Session-Status"
 
+#: src/pages/ServerDetail.tsx
+msgid "Sessions"
+msgstr "Sessions"
+
 #: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Sessions ({sessionCount})"
@@ -2158,8 +2285,7 @@ msgstr "Sessions ({sessionCount})"
 msgid "Sessions konnten nicht nachgeladen werden."
 msgstr "Sessions konnten nicht nachgeladen werden."
 
-#: src/pages/ProjectDetail.tsx
-#: src/pages/ServerDetail.tsx
+#: src/components/SessionSearchOverlay.tsx
 msgid "Sessions suchen"
 msgstr "Sessions suchen"
 
@@ -2214,10 +2340,12 @@ msgstr "Skill"
 msgid "Skills"
 msgstr "Skills"
 
+#: src/components/SessionDocks.tsx
 #: src/pages/SessionDetail.tsx
 msgid "sofort"
 msgstr "sofort"
 
+#: src/components/SessionDocks.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Sofort"
 msgstr "Sofort"
@@ -2228,10 +2356,12 @@ msgstr "Sofort"
 msgid "Speichern"
 msgstr "Speichern"
 
+#: src/components/SessionDocks.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Staged ab Nachricht {stagedMessageID} ({stagedFileCount} Dateien)."
 msgstr "Staged ab Nachricht {stagedMessageID} ({stagedFileCount} Dateien)."
 
+#: src/components/SessionDocks.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Staged ab Nachricht {stagedMessageID}."
 msgstr "Staged ab Nachricht {stagedMessageID}."
@@ -2286,16 +2416,29 @@ msgstr "Suchbegriff …"
 
 #: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
-msgid "Suche"
-msgstr "Suche"
+#~ msgid "Suche"
+#~ msgstr "Suche"
 
+#: src/components/SessionSearchOverlay.tsx
 #: src/pages/ServerTools.tsx
 msgid "Suche fehlgeschlagen."
 msgstr "Suche fehlgeschlagen."
 
+#: src/components/SessionSearchOverlay.tsx
+msgid "Suche läuft …"
+msgstr "Suche läuft …"
+
+#: src/components/SessionSearchOverlay.tsx
+msgid "Suche zurücksetzen"
+msgstr "Suche zurücksetzen"
+
 #: src/pages/ServerTools.tsx
 msgid "Suchen"
 msgstr "Suchen"
+
+#: src/components/SessionSearchOverlay.tsx
+msgid "Suchergebnisse"
+msgstr "Suchergebnisse"
 
 #: src/components/ChatMessageList.tsx
 msgid "System"
@@ -2304,6 +2447,14 @@ msgstr "System"
 #: src/components/SessionTabBar.tsx
 msgid "Tab {tabTitle} schließen"
 msgstr "Tab {tabTitle} schließen"
+
+#: src/components/SessionTabBar.tsx
+msgid "Tab umbenannt."
+msgstr "Tab umbenannt."
+
+#: src/components/SessionTabBar.tsx
+msgid "Tab-Titel speichern"
+msgstr "Tab-Titel speichern"
 
 #: src/components/ServerErrorBanner.tsx
 msgid "Technische Details"
@@ -2347,12 +2498,12 @@ msgstr "Terminal-Ausgabe aktualisieren"
 msgid "Teste …"
 msgstr "Teste …"
 
+#: src/components/SessionTabBar.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Titel eingeben …"
 msgstr "Titel eingeben …"
 
-#: src/pages/ProjectDetail.tsx
-#: src/pages/ServerDetail.tsx
+#: src/components/SessionSearchOverlay.tsx
 msgid "Titel oder ID suchen"
 msgstr "Titel oder ID suchen"
 
@@ -2376,6 +2527,7 @@ msgstr "Token konnte nicht angefordert werden."
 msgid "Über einen Anbieter des Servers im Web suchen."
 msgstr "Über einen Anbieter des Servers im Web suchen."
 
+#: src/components/SessionDocks.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Übernehmen"
 msgstr "Übernehmen"
@@ -2398,6 +2550,7 @@ msgstr "Umbenennen"
 msgid "Umbenennen abbrechen"
 msgstr "Umbenennen abbrechen"
 
+#: src/components/SessionTabBar.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Umbenennen fehlgeschlagen: {renameError}"
 msgstr "Umbenennen fehlgeschlagen: {renameError}"
@@ -2472,6 +2625,10 @@ msgstr "Unerwartete Token-Antwort vom Server."
 msgid "ungeeignet"
 msgstr "ungeeignet"
 
+#: src/components/SessionRowMarkers.tsx
+msgid "Ungelesene Aktivität"
+msgstr "Ungelesene Aktivität"
+
 #: src/lib/serverConnectionTest.ts
 msgid "Unter dieser URL läuft keine Opencode-API. Bitte die Basis-URL prüfen (Origin oder Reverse-Proxy-Pfad, ohne /api)."
 msgstr "Unter dieser URL läuft keine Opencode-API. Bitte die Basis-URL prüfen (Origin oder Reverse-Proxy-Pfad, ohne /api)."
@@ -2533,6 +2690,7 @@ msgstr "Version"
 msgid "Versuch {attempt}"
 msgstr "Versuch {attempt}"
 
+#: src/components/SessionDocks.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Verwerfen"
 msgstr "Verwerfen"
@@ -2545,13 +2703,19 @@ msgstr "Verzeichnis gewechselt"
 msgid "Vorherige Datei"
 msgstr "Vorherige Datei"
 
+#: src/components/SessionDocks.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Warten"
 msgstr "Warten"
 
+#: src/components/SessionDocks.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Warteschlange"
 msgstr "Warteschlange"
+
+#: src/components/SessionDocks.tsx
+msgid "Warteschlange ({total})"
+msgstr "Warteschlange ({total})"
 
 #: src/components/Layout.tsx
 msgid "Web PWA for Opencode · <0>GitHub-Repository</0>"

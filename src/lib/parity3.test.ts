@@ -21,6 +21,7 @@ import {
   listWebsearchProviders,
   parseFormAnswerText,
   parseSessionTransferText,
+  listSessionPermissions,
   queryWebsearch,
   replySessionForm,
   runSessionCommand,
@@ -334,8 +335,17 @@ describe("extractSessionForms / parseFormAnswerText", () => {
   it("normalizes pending-form rows", () => {
     expect(
       extractSessionForms([{ id: "f-1", sessionID: "ses-1", title: "Freigabe?" }]),
-    ).toEqual([{ id: "f-1", sessionID: "ses-1", title: "Freigabe?" }]);
+    ).toEqual([{ id: "f-1", sessionID: "ses-1", title: "Freigabe?", fields: [] }]);
     expect(extractSessionForms(null)).toEqual([]);
+  });
+
+  it("parses the form fields for the native dock controls", () => {
+    const [row] = extractSessionForms([
+      { id: "f-1", sessionID: "ses-1", title: "Freigabe?", fields: [{ key: "ok", type: "boolean" }] },
+    ]);
+    expect(row?.fields).toEqual([
+      { key: "ok", label: "ok", description: null, required: false, kind: "boolean", default: false },
+    ]);
   });
 
   it("accepts JSON objects and rejects bad values in German", () => {
@@ -354,7 +364,7 @@ describe("session forms", () => {
     );
     const result = await listSessionForms(server, "ses-1");
     expect(result.error).toBeNull();
-    expect(result.data).toEqual([{ id: "f-1", sessionID: "ses-1", title: "Freigabe?" }]);
+    expect(result.data).toEqual([{ id: "f-1", sessionID: "ses-1", title: "Freigabe?", fields: [] }]);
     expect(lastCall().url).toBe("http://x.local/api/session/ses-1/form");
   });
 
@@ -375,5 +385,40 @@ describe("session forms", () => {
     const { url, init } = lastCall();
     expect(url).toBe("http://x.local/api/session/ses-1/form/f-1");
     expect(init.method).toBe("DELETE");
+  });
+});
+
+describe("session permissions (wave 5 dock)", () => {
+  it("lists the pending requests of one session via GET /api/session/{id}/permission", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse([
+        {
+          id: "per-1",
+          sessionID: "ses-1",
+          action: "bash",
+          resources: ["ls -la"],
+          message: "Shell ausführen?",
+        },
+      ]),
+    );
+    const result = await listSessionPermissions(server, "ses-1");
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual([
+      {
+        id: "per-1",
+        sessionID: "ses-1",
+        action: "bash",
+        resources: ["ls -la"],
+        message: "Shell ausführen?",
+      },
+    ]);
+    expect(lastCall().url).toBe("http://x.local/api/session/ses-1/permission");
+  });
+
+  it("reports a failed session permission list in German", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({}, 500));
+    const result = await listSessionPermissions(server, "ses-1");
+    expect(result.data).toBeNull();
+    expect(result.error).toContain("500");
   });
 });

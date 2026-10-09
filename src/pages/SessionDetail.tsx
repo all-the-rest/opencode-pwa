@@ -10,6 +10,8 @@ import SessionDiffView from "../components/SessionDiffView.tsx";
 import Icon from "../components/Icon.tsx";
 import { SESSION_PAGE_SIZE, useSessionMessages, type SessionMessageSource } from "../hooks/useSessionMessages.ts";
 import { useSessionRunState } from "../hooks/useSessionRunState.ts";
+import { useSessionDocks } from "../hooks/useSessionDocks.ts";
+import SessionDocks, { type DockPermissionDecision } from "../components/SessionDocks.tsx";
 import {
   cancelSessionForm,
   cancelSessionInbox,
@@ -35,6 +37,8 @@ import {
   listSessions,
   readSessionTerminal,
   renameSession,
+  replySessionForm,
+  replySessionPermission,
   updateSessionInbox,
   modelLabelLookup,
   modelOptionValue,
@@ -42,7 +46,6 @@ import {
   parseModelOptionValue,
   parseSessionTransferText,
   removeSession,
-  replySessionForm,
   runSessionCommand,
   sendPrompt,
   sessionTitle,
@@ -64,6 +67,7 @@ import {
   type TokenUsage,
 } from "../lib/opencode.ts";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
+import type { FormFieldValue } from "../lib/formFields.ts";
 import {
   createFileAttachment,
   pathAttachmentID,
@@ -155,6 +159,11 @@ export default function SessionDetail() {
   // Derived run state drives the live progress indicators (working row, retry
   // card, interrupted/error divider) below the message list.
   const run = useSessionRunState(server, id);
+  // Wave 5: everything a running session needs answered appears in a dock stack
+  // directly above the composer (permissions, questions/forms, queued
+  // follow-ups, a staged revert) instead of a detour through the tools page.
+  // "No dock = nothing rendered": each dock hides while it has no content.
+  const docks = useSessionDocks(server, id);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -415,6 +424,7 @@ export default function SessionDetail() {
   const canFormReply = isActionEnabled(offline, "session-form-reply");
   const canFormCancel = isActionEnabled(offline, "session-form-cancel");
   const canTerminal = isActionEnabled(offline, "terminal-read");
+  const canReplyPermission = isActionEnabled(offline, "permission-reply");
   const canVcsInit = isActionEnabled(offline, "vcs-init");
   // Lingui messages take plain variables only — no member access or calls —
   // so every formatted stat is hoisted here (see `lingui/no-expression-in-message`).
@@ -599,6 +609,7 @@ export default function SessionDetail() {
         return;
       }
       setStagedRevert(null);
+      docks.reverted(null);
       notify(t`Revert übernommen – die Session steht auf dem gewählten Stand.`, "success");
       return;
     }
@@ -679,6 +690,9 @@ export default function SessionDetail() {
       return;
     }
     setStagedRevert(result.data);
+    // Keep the dock's revert in sync: the mock-free path shows the dock only
+    // after the event stream confirms the staging.
+    docks.reverted(result.data);
   }
 
   async function handleClearRevert() {
@@ -692,11 +706,109 @@ export default function SessionDetail() {
       return;
     }
     setStagedRevert(null);
+    docks.reverted(null);
     notify(t`Staging verworfen – die Session ist unverändert.`, "success");
   }
 
-  // --- Parity batch 3: share via export/import JSON ---
+  // --- Wave 5: dock answers (permission, question/form, inbox, revert) ---
 
+  /**
+   * Answer a pending permission request from the dock. Only `once` and
+   * `reject` are offered — `decision: "always"` would persist a grant and is
+   * excluded by the documented product decision (`features/05-parity.md`).
+   */
+  async function handleDockPermissionReply(requestID: string, decision: DockPermissionDecision) {
+    if (server === null || server === undefined || id === undefined) return;
+    if (docks.busy || !canReplyPermission) return;
+    const activeServer: ServerConfig = server;
+    const activeSession: string = id;
+    const request = docks.docks.permissions.find((row) => row.id === requestID);
+    if (request === undefined) return;
+    // Optimistic: the dock row disappears at once; a failure re-syncs the list.
+    docks.answeredPermission(requestID);
+    const result = await replySessionPermission(activeServer, activeSession, requestID, decision);
+    if (result.error !== null) {
+      notify(result.error, "error");
+      docks.reload();
+      return;
+    }
+    // Lingui-safe hoist: no member access inside a message.
+    const permissionAction = request.action;
+    notify(
+      decision === "once"
+        ? t`Berechtigung „${permissionAction}“ einmalig erteilt.`
+        : t`Berechtigung „${permissionAction}“ abgelehnt.`,
+      "success",
+    );
+  }
+
+  /** Answer a pending form from the dock with native-control values. */
+  async function handleDockFormSubmit(formID: string, answer: Record<string, FormFieldValue>) {
+    if (server === null || server === undefined || id === undefined) return;
+    if (docks.busy || !canFormReply) return;
+    const activeServer: ServerConfig = server;
+    const activeSession: string = id;
+    docks.answeredForm(formID);
+    const result = await replySessionForm(activeServer, activeSession, formID, answer);
+    if (result.error !== null) {
+      notify(result.error, "error");
+      docks.reload();
+      return;
+    }
+    notify(t`Formular beantwortet.`, "success");
+  }
+
+  /** Reject a pending form from the dock. */
+  async function handleDockFormCancel(formID: string) {
+    if (server === null || server === undefined || id === undefined) return;
+    if (docks.busy || !canFormCancel) return;
+    const activeServer: ServerConfig = server;
+    const activeSession: string = id;
+    docks.answeredForm(formID);
+    const result = await cancelSessionForm(activeServer, activeSession, formID);
+    if (result.error !== null) {
+      notify(result.error, "error");
+      docks.reload();
+      return;
+    }
+    notify(t`Formular abgelehnt.`, "success");
+  }
+
+  /** Change how one queued entry is delivered (steer = run it now). */
+  async function handleDockInboxDeliver(inboxID: string, delivery: SessionInboxDelivery) {
+    if (server === null || server === undefined || id === undefined) return;
+    if (docks.busy || !canInboxUpdate) return;
+    const activeServer: ServerConfig = server;
+    const activeSession: string = id;
+    docks.deliveredInbox(inboxID, delivery);
+    const result = await updateSessionInbox(activeServer, activeSession, inboxID, delivery);
+    if (result.error !== null) {
+      notify(result.error, "error");
+      docks.reload();
+      return;
+    }
+    notify(
+      delivery === "steer"
+        ? t`Eintrag ${inboxID} läuft jetzt.`
+        : t`Eintrag ${inboxID} wartet in der Schlange.`,
+      "success",
+    );
+  }
+
+  /**
+   * "Edit" of a queued follow-up: there is no update-text endpoint, so the text
+   * moves into the composer (the queue entry itself is dropped from the dock
+   * list only after the server confirms). The composer keeps the draft.
+   */
+  function handleDockInboxEdit(item: { id: string; summary: string }) {
+    setDraft(item.summary);
+    setSendError(null);
+    // Lingui-safe hoist: no member access inside a message.
+    const editedID = item.id;
+    notify(t`Eintrag ${editedID} zum Bearbeiten im Composer geladen.`, "success");
+  }
+
+  // --- Parity batch 3: share via export/import JSON ---
   async function handleExport() {
     if (server === null || server === undefined || id === undefined) return;
     if (shareBusy || !canExport) return;
@@ -1104,6 +1216,28 @@ export default function SessionDetail() {
               <Trans>Neueste ↓</Trans>
             </button>
           )}
+          {/* Wave 5: the answer docks sit directly above the composer — while a
+              session runs, nothing forces a detour through the tools page. The
+              stack is a plain flex column, so it stacks (never clips) at
+              360px. */}
+          <SessionDocks
+            permissions={docks.docks.permissions}
+            forms={docks.docks.forms}
+            inbox={docks.docks.inbox}
+            revert={stagedRevert ?? docks.docks.revert}
+            todos={docks.docks.todos}
+            busy={docks.busy}
+            offline={offline}
+            onPermissionReply={(requestID, decision) =>
+              void handleDockPermissionReply(requestID, decision)
+            }
+            onFormSubmit={(formID, answer) => void handleDockFormSubmit(formID, answer)}
+            onFormCancel={(formID) => void handleDockFormCancel(formID)}
+            onInboxDeliver={(inboxID, delivery) => void handleDockInboxDeliver(inboxID, delivery)}
+            onInboxEdit={handleDockInboxEdit}
+            onRevertCommit={() => setConfirm("revert-commit")}
+            onRevertDiscard={() => void handleClearRevert()}
+          />
           {/* Chat-first: the composer sits directly below the conversation
               (attachments + autogrowing editor + agent/model chips + send/stop);
               the secondary panels follow as a collapsed accordion and never
