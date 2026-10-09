@@ -886,6 +886,10 @@ msgstr "Dieser Ordner ist leer."
 msgid "Dieser Server hat genau ein Projekt: „{projectRenameName}“. Soll dieses Projekt auf dem Server in „{projectRenameNewName}“ umbenannt werden? Der Servername wurde bereits lokal gespeichert."
 msgstr "Dieser Server hat genau ein Projekt: „{projectRenameName}“. Soll dieses Projekt auf dem Server in „{projectRenameNewName}“ umbenannt werden? Der Servername wurde bereits lokal gespeichert."
 
+#: src/pages/ServerDetail.tsx
+msgid "Dieser Server ist noch leer"
+msgstr "Dieser Server ist noch leer"
+
 #: src/pages/ProjectDetail.tsx
 msgid "Dieses Projekt ist auf dem Server unbekannt – eventuell wurde es gelöscht."
 msgstr "Dieses Projekt ist auf dem Server unbekannt – eventuell wurde es gelöscht."
@@ -1923,8 +1927,8 @@ msgid "Noch kein Server ausgewählt."
 msgstr "Noch kein Server ausgewählt."
 
 #: src/components/SessionStarter.tsx
-msgid "Noch kein Server eingerichtet. Lege deinen ersten Server an, um Sessions zu starten."
-msgstr "Noch kein Server eingerichtet. Lege deinen ersten Server an, um Sessions zu starten."
+#~ msgid "Noch kein Server eingerichtet. Lege deinen ersten Server an, um Sessions zu starten."
+#~ msgstr "Noch kein Server eingerichtet. Lege deinen ersten Server an, um Sessions zu starten."
 
 #: src/pages/Dashboard.tsx
 msgid "Noch kein Server eingerichtet. Lege deinen ersten Server an, um Sessions, Shells und Werkzeuge zu verwalten."
@@ -1938,6 +1942,10 @@ msgstr "Noch keine Server angelegt."
 #: src/pages/Settings.tsx
 msgid "Noch keine Server vorhanden."
 msgstr "Noch keine Server vorhanden."
+
+#: src/pages/ServerDetail.tsx
+msgid "Noch keine Sessions, Projekte, Shells oder PTYs. Lege ein neues Projekt an, um eine Session in einem Server-Ordner zu starten."
+msgstr "Noch keine Sessions, Projekte, Shells oder PTYs. Lege ein neues Projekt an, um eine Session in einem Server-Ordner zu starten."
 
 #: src/pages/SessionDetail.tsx
 msgid "Noch keine Verbrauchsdaten vorhanden."
@@ -2247,7 +2255,6 @@ msgstr "Senden fehlgeschlagen: {sendError}"
 msgid "Server"
 msgstr "Server"
 
-#: src/components/SessionStarter.tsx
 #: src/pages/Dashboard.tsx
 msgid "Server anlegen"
 msgstr "Server anlegen"

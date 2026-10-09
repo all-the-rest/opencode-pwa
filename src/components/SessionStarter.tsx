@@ -31,7 +31,7 @@ const STARTER_VISIBLE = 10;
  * degrades to an offline note.
  */
 export default function SessionStarter() {
-  const { servers, selectedServer } = useServers();
+  const { selectedServer } = useServers();
   const { tabs, openTab } = useSessionTabs();
   const navigate = useNavigate();
   const [sessions, setSessions] = useState<SessionRow[]>([]);
@@ -147,20 +147,6 @@ export default function SessionStarter() {
               Für ein neues Projekt wird ein Server benötigt — wähle oder lege unten einen an.
             </Trans>
           </p>
-        )}
-        {servers.length === 0 && (
-          <p className="text-sm opacity-70">
-            <Trans>
-              Noch kein Server eingerichtet. Lege deinen ersten Server an, um Sessions zu starten.
-            </Trans>
-          </p>
-        )}
-        {servers.length === 0 && (
-          <div className="card-actions">
-            <Link className="btn btn-primary btn-sm" to="/settings">
-              <Trans>Server anlegen</Trans>
-            </Link>
-          </div>
         )}
         {selectedServer !== null && (
           <p className="text-sm opacity-70 flex items-center gap-2">

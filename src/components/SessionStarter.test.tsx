@@ -148,3 +148,40 @@ describe("SessionStarter (new-project folder picker)", () => {
     expect(screen.queryByTestId("folder-picker")).toBeNull();
   });
 });
+
+describe("SessionStarter empty states (UI-review finding #4)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    listSessionsPagedMock.mockReset();
+    listProjectsMock.mockReset();
+    listSessionsPagedMock.mockResolvedValue({
+      data: { rows: [], cursor: { next: null, previous: null } },
+      error: null,
+    });
+    listProjectsMock.mockResolvedValue({ data: [], error: null });
+  });
+
+  it("does not repeat the no-server welcome — exactly one dashboard empty state owns that CTA", () => {
+    seedServers([]);
+    renderStarter();
+    // The duplicate "Noch kein Server eingerichtet …" line is gone …
+    expect(screen.queryByText(/Noch kein Server eingerichtet/)).toBeNull();
+    // … and so is the starter's own "Server anlegen" button (that CTA lives once,
+    // on the dashboard welcome card).
+    expect(screen.queryByRole("link", { name: "Server anlegen" })).toBeNull();
+    // The disabled project entry and the pointer "lege unten einen an" stay.
+    expect(screen.getByTestId("starter-new-project-button")).toBeDisabled();
+    expect(screen.getByTestId("starter-new-project-hint")).toBeInTheDocument();
+  });
+
+  it("keeps its own empty state when a server IS configured but has no sessions", async () => {
+    seedServers([server]);
+    renderStarter();
+    await waitFor(() =>
+      expect(screen.getByTestId("session-starter-empty")).toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("session-starter-empty")).toHaveTextContent(
+      "Keine Sessions auf diesem Server.",
+    );
+  });
+});

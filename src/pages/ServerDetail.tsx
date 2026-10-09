@@ -433,6 +433,13 @@ export default function ServerDetail() {
   const projectCount = projects.length;
   const shellCount = shells.length;
   const ptyCount = ptys.length;
+  // Finding #3: an entirely empty server page must not render four ~equal-height
+  // cards that each hold a single "Keine …" line. When nothing is present at all
+  // we show one deliberate empty state below; otherwise only the PTY card is
+  // content-gated, because projects/sessions/shells each carry an action (new
+  // project, search + CTA, create shell) and stay visible even when empty.
+  const serverIsEmpty =
+    sessions.length === 0 && projectCount === 0 && shellCount === 0 && ptyCount === 0;
   // Owner requirement: an unreachable server stays in the list (never removed,
   // never a delete prompt). Its rows stay visible but disabled + badged.
   const { offline } = reachability(error);  const canInterrupt = isActionEnabled(offline, "session-interrupt");
@@ -746,7 +753,38 @@ export default function ServerDetail() {
           </span>
         </ServerErrorBanner>
       )}
-      {!loading && (
+      {!loading && serverIsEmpty && (
+        <section className="card bg-base-200 shadow" data-testid="server-empty">
+          <div className="card-body items-center text-center gap-3">
+            <h2 className="card-title">
+              <Icon name="project" /> <Trans>Dieser Server ist noch leer</Trans>
+            </h2>
+            <p className="text-sm opacity-70 max-w-prose">
+              <Trans>
+                Noch keine Sessions, Projekte, Shells oder PTYs. Lege ein neues Projekt
+                an, um eine Session in einem Server-Ordner zu starten.
+              </Trans>
+            </p>
+            <div className="card-actions">
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                disabled={!canCreateProject}
+                title={t`Neues Projekt über die Server-Ordner anlegen`}
+                data-testid="new-project-button"
+                onClick={() => setPickerOpen(true)}
+              >
+                <Icon name="plus" />
+                <Trans>Neues Projekt</Trans>
+              </button>
+              <Link className="btn btn-ghost btn-sm" to="/" data-testid="server-sessions-empty-cta">
+                <Trans>Session starten</Trans>
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+      {!loading && !serverIsEmpty && (
         <div
           className={
             split
@@ -1020,7 +1058,7 @@ export default function ServerDetail() {
               )}
             </div>
           </section>
-          <section className="card bg-base-200 shadow">
+          <section className="card bg-base-200 shadow" data-testid="shells-card">
             <div className="card-body">
               <h2 className="card-title">
                 <Icon name="shell" /> <Trans>Shells ({shellCount})</Trans>
@@ -1073,7 +1111,8 @@ export default function ServerDetail() {
               )}
             </div>
           </section>
-          <section className="card bg-base-200 shadow">
+          {ptyCount > 0 && (
+          <section className="card bg-base-200 shadow" data-testid="ptys-card">
             <div className="card-body">
               <h2 className="card-title">
                 <Icon name="pty" /> <Trans>PTYs ({ptyCount})</Trans>
@@ -1129,6 +1168,7 @@ export default function ServerDetail() {
               )}
             </div>
           </section>
+          )}
         </div>
       )}
       <ConfirmDialog
