@@ -111,6 +111,7 @@ function errorMessage(data: Record<string, unknown> | null): string | null {
  *   - `session.execution.started|succeeded|failed|interrupted`
  *   - `session.retry.scheduled`
  *   - `session.message.content.updated`
+ *   - `session.text.delta|session.reasoning.delta|session.tool.input.delta`
  */
 export function reduceSessionRunState(
   prev: SessionRunState,
@@ -141,6 +142,24 @@ export function reduceSessionRunState(
         status: "active",
         sessionID,
         assistantMessageID: messageID ?? prev.assistantMessageID,
+        retry: null,
+        error: null,
+      };
+    }
+    // Delta frames name the assistant message the same way a snapshot does —
+    // and they arrive far more often (a measured turn produced 92 reasoning
+    // frames in 12 s with no snapshot at all). Without them the working row
+    // would stay up while the reasoning is already on screen below it. Only a
+    // *change* produces a new state, so the frame flood never notifies.
+    case "session.text.delta":
+    case "session.reasoning.delta":
+    case "session.tool.input.delta": {
+      const messageID = eventString(data, "assistantMessageID") ?? eventString(data, "assistantMessageId");
+      if (messageID === null || messageID === prev.assistantMessageID) return prev;
+      return {
+        ...prev,
+        status: "active",
+        assistantMessageID: messageID,
         retry: null,
         error: null,
       };

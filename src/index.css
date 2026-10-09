@@ -124,9 +124,34 @@
     transform: translateY(0);
   }
 }
-
 .tool-card-content {
   animation: tool-card-in 0.16s ease-out;
+}
+
+/* --- Live streaming (delta folding) --- */
+
+/* Trailing caret of a text/reasoning part the stream is still appending to.
+   It sits on its own line right below the text, so it reads as "more is
+   coming" without disturbing the markdown layout above it. */
+@keyframes stream-caret-blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.stream-caret {
+  display: block;
+  width: 0.4rem;
+  height: 0.95em;
+  margin-top: 0.2em;
+  border-radius: 1px;
+  background: currentColor;
+  animation: stream-caret-blink 1.05s steps(1, end) infinite;
 }
 
 details > summary .tool-chevron {

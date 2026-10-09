@@ -558,6 +558,62 @@ Owner requirements covered here (UI-review findings #1, #2, #6, #7, #9):
   `src/state/sessionMode.test.tsx` and the captures `chat-running`,
   `chat-expert`, `agents`, `session-offline` in the screenshot manifest.
 
+## Live delta folding (Welle 8)
+
+Owner request 2026-10-09 („ich möchte das denken sehen"). Measured on the
+owner's live server over one active turn: `session.reasoning.delta` arrives in
+high frequency (92 frames in 12 s; an earlier window measured 174 frames in
+20 s) while `session.message.content.updated` delivered **zero** frames in the
+same windows. The UI therefore showed the "Denkt…" working row and then the
+finished message — the reasoning was never visible while it grew.
+
+- **Payload shapes** (verified in the installed client,
+  `node_modules/@opencode/client/dist/promise/generated/types.d.ts`):
+  `SessionTextDelta` (lines 1506-1520) `session.text.delta`,
+  `SessionReasoningDelta` (lines 1521-1535) `session.reasoning.delta` — both
+  `data: { sessionID, assistantMessageID, ordinal, delta }`, where `ordinal`
+  is the part index inside the assistant message's `content[]`; and
+  `SessionToolInputDelta` (lines 1536-1550) `session.tool.input.delta` —
+  `data: { sessionID, assistantMessageID, id, delta }`, which names the tool
+  **call** by `id` and carries an argument fragment.
+- **Folding** (`src/lib/eventMessages.ts`): `extractStreamDelta` normalizes one
+  frame, `foldDeltaIntoParts` appends it to the part its ordinal addresses
+  (creating the part when the slot is empty, never touching the others) and
+  `foldStreamDelta` creates a placeholder assistant row when the stream names a
+  message the chat model has no row for yet (id = `assistantMessageID`,
+  agent/model unknown → null). A `session.tool.input.delta` accumulates the raw
+  argument string on the tool part it calls and re-parses it through the
+  parser's own `toolInput` — a still-incomplete JSON string degrades to `{}`,
+  exactly like a snapshot that carries a partial string.
+- **Never persisted** (`src/lib/sessionMessages.ts` →
+  `src/lib/messageCache.ts`): the delta branch of
+  `src/hooks/useSessionMessages.ts` updates memory only. Streamed text/reasoning
+  is marked `live: true`, and `downgradePartialToolStatus` — the single
+  cache-write choke point — drops live parts, downgrades in-flight tool statuses
+  and drops the raw argument accumulator. A reload mid-run therefore cannot
+  resurrect a half-streamed row (or a stale "Läuft").
+- **The authoritative refresh wins**: a `session.message.content.updated` or a
+  `message.list` row replaces a streamed row wholesale (`mergeMessageLists`,
+  incoming wins by message id), never merged into it. `useSessionMessages`
+  merges the network response into what is on screen *now*, so an in-flight
+  `listMessages` of a mount cannot wipe a row that streamed in the meantime.
+- **Rendering** (`src/components/ChatMessageList.tsx`): a live part carries a
+  blinking caret (`.stream-caret`) and the reasoning block is forced open while
+  the stream appends to it, so the thinking is visible as it happens instead of
+  hiding behind „Denken anzeigen". `MessageBubble`/`NoteRow` are memoized on the
+  identity of `row.message`, so a frame re-renders only the row it grew.
+- **Run state** (`src/lib/eventHub.ts`): the three delta types record the
+  streaming `assistantMessageID` like a snapshot does, so the "Denkt…" working
+  row retires as soon as the reasoning is on screen. A repeated frame returns
+  the previous state object, so the 92-frame flood produces no subscriber churn.
+- Covered by `tests/e2e/w22-live-delta-fold.spec.ts` (`@feature:live-delta`:
+  growth with caret, snapshot replaces the streamed row, reload shows no
+  half-streamed row), unit tests in `src/lib/eventMessages.test.ts` (folder:
+  append, create-if-missing, ordinal targeting, tool-input accumulation,
+  full-refresh-wins, no persistence), `src/lib/messageCache.test.ts`,
+  `src/lib/eventHub.test.ts` and
+  `src/hooks/useSessionMessages.streaming.test.tsx`.
+
 ## App-Level
 
 - ✅ Multi-server with Basic Auth, offline-tolerant UI, local notifications.

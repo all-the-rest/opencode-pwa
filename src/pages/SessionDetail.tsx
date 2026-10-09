@@ -730,14 +730,21 @@ export default function SessionDetail() {
    * Revert panel — which lives in the Experte surface, so a basic-mode user
    * who asks for it gets switched over (the action stays one tap away, it is
    * never silently dropped).
+   *
+   * Stable identity on purpose: `ChatMessageList` memoizes its rows on this
+   * callback, so a streaming frame (92 in a measured 12 s turn) must not hand
+   * the list a fresh function and force every row to re-render.
    */
-  function handleRevertToMessage(messageID: string) {
-    setRevertMessageID(messageID);
-    setMoreTab("revert");
-    setMoreOpen(true);
-    setMode("expert");
-    notify(t`Revert ab dieser Nachricht – Staging starten bestätigt den Stand.`, "info");
-  }
+  const handleRevertToMessage = useCallback(
+    (messageID: string) => {
+      setRevertMessageID(messageID);
+      setMoreTab("revert");
+      setMoreOpen(true);
+      setMode("expert");
+      notify(t`Revert ab dieser Nachricht – Staging starten bestätigt den Stand.`, "info");
+    },
+    [notify, setMode],
+  );
 
   async function handleStageRevert() {
     if (server === null || server === undefined || id === undefined) return;

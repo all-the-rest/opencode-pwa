@@ -91,6 +91,7 @@ describe("assistant messages", () => {
       { kind: "reasoning", text: "Überlegung" },
       {
         kind: "tool",
+        id: "t1",
         name: "read",
         status: "completed",
         detail: "Dateiinhalt",
@@ -121,6 +122,7 @@ describe("assistant messages", () => {
     expect(message?.parts).toEqual([
       {
         kind: "tool",
+        id: "t",
         name: "grep",
         status: "running",
         detail: null,
@@ -146,6 +148,7 @@ describe("assistant messages", () => {
     expect(message?.parts).toEqual([
       {
         kind: "tool",
+        id: "t",
         name: "bash",
         status: "streaming",
         detail: null,
@@ -189,7 +192,7 @@ describe("assistant messages", () => {
       content: [{ type: "tool", id: "t", name: "bash", state: { status: "running" } }],
     });
     expect(running?.parts).toEqual([
-      { kind: "tool", name: "bash", status: "running", detail: null, input: {}, metadata: null },
+      { kind: "tool", id: "t", name: "bash", status: "running", detail: null, input: {}, metadata: null },
     ]);
     expect(running?.text).toBe("bash");
 
@@ -208,6 +211,7 @@ describe("assistant messages", () => {
     expect(failed?.parts).toEqual([
       {
         kind: "tool",
+        id: "t",
         name: "bash",
         status: "error",
         detail: "Boom",
@@ -234,7 +238,7 @@ describe("assistant messages", () => {
       ],
     });
     expect(fileTool?.parts).toEqual([
-      { kind: "tool", name: "read", status: "completed", detail: "a.png", input: {}, metadata: null },
+      { kind: "tool", id: "t", name: "read", status: "completed", detail: "a.png", input: {}, metadata: null },
     ]);
 
     const empty = single({ type: "assistant", id: "a5", content: [] });

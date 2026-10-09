@@ -29,6 +29,12 @@
  * subtitle, argument chips, change badges). Assistant messages carry
  * `agent`/`model` and, when the turn finished, `time.completed` — the
  * difference to `time.created` becomes the turn duration.
+ *
+ * Text/reasoning parts can carry `live: true` and tool parts a `rawInput`
+ * string: both are set by the streaming folder (`eventMessages.ts`) while a
+ * `session.*.delta` frame is still appending. `live` is purely a render hint
+ * (trailing caret, expanded reasoning) and is never persisted —
+ * `downgradePartialToolStatus` drops such parts on the way to the cache.
  */
 
 export type ChatRole = "user" | "assistant" | "note";
@@ -51,7 +57,7 @@ export type ChatToolStatus = "streaming" | "running" | "completed" | "error" | "
 const FINAL_TOOL_STATUSES: readonly ChatToolStatus[] = ["completed", "error"];
 
 /**
- * Neutralize in-flight tool parts before they are persisted as final.
+ * Neutralize in-flight parts before they are persisted as final.
  *
  * A live `content.updated` snapshot (or a mid-run `message.list`) can carry a
  * tool in `streaming`/`running`. Caching that verbatim would resurrect a stale
@@ -60,23 +66,59 @@ const FINAL_TOOL_STATUSES: readonly ChatToolStatus[] = ["completed", "error"];
  * label + arguments) but drops the shimmer and the "Läuft"/streaming badge —
  * the honest state for "we do not know the outcome after a reload".
  * `input`/`metadata` stay so the card remains informative.
+ *
+ * The same choke point guards the streaming folds (`eventMessages.ts`): a part
+ * marked `live` was grown from a `session.*.delta` frame and is by definition
+ * unfinished, so it is dropped entirely rather than written as if final. A half
+ * streamed argument string (`rawInput`) is dropped with it. The live, in-memory
+ * view keeps growing those parts — this only sanitizes what reaches the store.
  */
 export function downgradePartialToolStatus(parts: ChatPart[]): ChatPart[] {
-  return parts.map((part) =>
-    part.kind === "tool" && !FINAL_TOOL_STATUSES.includes(part.status)
-      ? { ...part, status: "unknown", detail: null }
-      : part,
-  );
+  const kept: ChatPart[] = [];
+  for (const part of parts) {
+    if (part.kind === "tool") {
+      kept.push(
+        FINAL_TOOL_STATUSES.includes(part.status)
+          ? part
+          : // Unfinished tool state: keep the card, drop the outcome claims.
+            downgradedToolPart(part),
+      );
+      continue;
+    }
+    // `live` marks text/reasoning that a delta is still appending to.
+    if (part.kind === "text" || part.kind === "reasoning") {
+      if (part.live === true) continue;
+    }
+    kept.push(part);
+  }
+  return kept;
+}
+
+/** A non-final tool part as it may be persisted: no outcome, no raw args. */
+function downgradedToolPart(part: ChatToolPart): ChatToolPart {
+  return {
+    ...part,
+    status: "unknown",
+    detail: null,
+    // The raw argument string is the in-flight accumulator of a
+    // `session.tool.input.delta` frame: a partial JSON string must not be
+    // persisted as if the call had been sent that way.
+    rawInput: undefined,
+  };
 }
 
 export interface ChatTextPart {
   kind: "text";
   text: string;
+  /** True while a `session.text.delta` frame is still appending to this part. */
+  live?: boolean;
 }
 
 export interface ChatReasoningPart {
   kind: "reasoning";
   text: string;
+  /** True while a `session.reasoning.delta` frame is still appending to it. */
+  live?: boolean;
 }
 
 export interface ChatToolPart {
@@ -89,6 +131,10 @@ export interface ChatToolPart {
   input: Record<string, unknown>;
   /** `state.metadata` of the tool call; absent on streaming/errored states. */
   metadata: Record<string, unknown> | null;
+  /** Call id of the tool (`content[].id`) — matches a `session.tool.input.delta`. */
+  id?: string;
+  /** Raw argument string while `session.tool.input.delta` accumulates it. */
+  rawInput?: string;
 }
 
 export interface ChatFilesPart {
@@ -271,8 +317,14 @@ function toolDetail(state: Record<string, unknown>): string | null {
  * (`{ [x: string]: JsonValue }`) for every non-streaming state and a partial
  * JSON *string* while streaming — both are accepted, anything else degrades
  * to an empty argument set.
+ *
+ * Exported because the streaming folder (`eventMessages.ts`) reuses exactly
+ * this path: a `session.tool.input.delta` accumulates the raw argument string
+ * and feeds it through here, so a partial argument set renders from the same
+ * parser the authoritative snapshots use (and degrades to `{}` while the JSON
+ * is still incomplete) instead of a second, divergent one.
  */
-function toolInput(state: Record<string, unknown>): Record<string, unknown> {
+export function toolInput(state: Record<string, unknown>): Record<string, unknown> {
   const raw: unknown = state["input"];
   if (isRecord(raw)) return raw;
   if (typeof raw === "string" && raw.trim() !== "") {
@@ -300,6 +352,9 @@ function parseToolPart(entry: Record<string, unknown>): ChatToolPart {
     isRecord(state) && (status === "completed" || status === "error")
       ? toolDetail(state)
       : null;
+  // The call id is what matches a `session.tool.input.delta` frame to this
+  // card; it is not rendered. Absent for payloads that do not send one.
+  const callID = readStringField(entry, ["id", "callID", "callId"]);
   return {
     kind: "tool",
     name,
@@ -307,6 +362,7 @@ function parseToolPart(entry: Record<string, unknown>): ChatToolPart {
     detail,
     input: isRecord(state) ? toolInput(state) : {},
     metadata: isRecord(state) ? toolMetadata(state) : null,
+    ...(callID !== null ? { id: callID } : {}),
   };
 }
 
@@ -390,8 +446,13 @@ function parseInfoPartsEntry(
   );
 }
 
-/** Plain-text fallback of parts for pickers and legacy displays. */
-function textFallback(parts: ChatPart[]): string {
+/**
+ * Plain-text fallback of parts for pickers and legacy displays. Exported so
+ * the streaming folder can keep a streamed row's `text` in sync with the parts
+ * it just appended to (the row is replaced wholesale once the authoritative
+ * snapshot arrives, so this only covers the live window).
+ */
+export function textFallback(parts: ChatPart[]): string {
   const texts = parts
     .filter((part): part is ChatTextPart => part.kind === "text")
     .map((part) => part.text);

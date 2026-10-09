@@ -14,13 +14,17 @@ Punkte unten.
 
 Umgesetzt und verifiziert (lint 0, vitest 233/233, build ok, e2e 117/117);
 Details in `features/04-projects.md` (Navigation). Streaming-Inspector für
-Agenten-Aktivität: **im Bau** — die Live-Messung am Server des Owners zeigt
-`session.reasoning.delta` mit 174 Frames in 20 Sekunden, während
+Agenten-Aktivität: **umgesetzt und verifiziert** (Welle 8) — die Live-Messung am
+Server des Owners zeigte `session.reasoning.delta` mit 92 Frames in 12 Sekunden
+(ein früheres Fenster: 174 Frames in 20 Sekunden), während
 `session.message.content.updated` in denselben Fenstern 0 Frames lieferte
-(Owner 2026-10-09: „ich möchte das denken sehen"). Die Delta-Frames werden
-jetzt in den Chat gefaltet; die exakten Feldformen (verschlüsselt über `ordinal`,
-`tool.input.delta` über `id`) stehen in `features/05-parity.md` und sind live
-belegt.
+(Owner 2026-10-09: „ich möchte das denken sehen"). Die Delta-Frames
+(`session.text.delta`, `session.reasoning.delta`, `session.tool.input.delta`)
+werden jetzt in den Chat gefaltet und der aufklappbare Denk-Block ist offen,
+solange der Stream schreibt; die exakten Feldformen (Text/Reasoning über
+`ordinal`, `tool.input.delta` über `id`) stehen in `features/05-parity.md`
+(Abschnitt „Live delta folding") und sind live belegt. Delta-Frames landen nie
+im Cache — ein Reload mitten im Lauf zeigt keinen halb gestreamten Stand.
 
 ## Offen
 

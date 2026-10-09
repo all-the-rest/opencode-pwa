@@ -163,6 +163,33 @@ describe("reduceSessionRunState", () => {
     expect(state.status).toBe("active");
     expect(state.retry).toBeNull();
   });
+
+  it("records the streaming assistant id from a delta and keeps the frame flood cheap", () => {
+    // A measured turn produced 92 reasoning frames in 12 s with no snapshot at
+    // all, so the working row has to retire on the delta, not on a snapshot.
+    const delta = (ordinal: number, text: string) => ({
+      type: "session.reasoning.delta",
+      data: { sessionID: "s", assistantMessageID: "a-3", ordinal, delta: text },
+    });
+    let state = reduceSessionRunState(idleSessionRunState("s"), started);
+    expect(state.assistantMessageID).toBeNull();
+    state = reduceSessionRunState(state, delta(0, "ich "));
+    expect(state.status).toBe("active");
+    expect(state.assistantMessageID).toBe("a-3");
+    // Every further frame returns the *same* object: no subscriber churn.
+    expect(reduceSessionRunState(state, delta(0, "denke "))).toBe(state);
+    expect(reduceSessionRunState(state, delta(0, "nach"))).toBe(state);
+    // A tool-input delta addresses the message the same way.
+    const tool = reduceSessionRunState(idleSessionRunState("s"), {
+      type: "session.tool.input.delta",
+      data: { sessionID: "s", assistantMessageID: "a-4", id: "call_1", delta: "{}" },
+    });
+    expect(tool.assistantMessageID).toBe("a-4");
+    // Frames for another session change nothing.
+    expect(
+      reduceSessionRunState(state, { type: "session.text.delta", data: { sessionID: "other", assistantMessageID: "a-9" } }),
+    ).toBe(state);
+  });
 });
 
 describe("subscribeServerRunState", () => {

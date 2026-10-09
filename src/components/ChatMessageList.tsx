@@ -1,6 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
-import { useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import CopyButton from "./CopyButton.tsx";
 import Icon from "./Icon.tsx";
 import Markdown from "./Markdown.tsx";
@@ -9,6 +9,8 @@ import {
   resolveModelLabel,
   type ChatNoteKind,
   type ChatPart,
+  type ChatReasoningPart,
+  type ChatTextPart,
   type ChatToolPart,
 } from "../lib/sessionMessages.ts";
 import {
@@ -129,6 +131,91 @@ function groupStatus(parts: ChatToolPart[]): string {
   if (parts.some((part) => part.status === "streaming" || part.status === "running")) return "running";
   if (parts.every((part) => part.status === "completed")) return "completed";
   return "unknown";
+}
+
+/**
+ * Trailing caret of a part a `session.*.delta` frame is still appending to. It
+ * is the only thing that separates a growing answer from a finished one: the
+ * text itself is identical, and the caret disappears the moment the
+ * authoritative snapshot replaces the row (a reload never shows one).
+ */
+function StreamCaret({ messageID, partIndex }: { messageID: string; partIndex: number }) {
+  return (
+    <span
+      className="stream-caret"
+      aria-hidden="true"
+      data-testid={`stream-caret-${messageID}-${partIndex}`}
+    />
+  );
+}
+
+/** True while the stream is still appending to a text/reasoning part. */
+function isLive(part: ChatTextPart | ChatReasoningPart): boolean {
+  return part.live === true;
+}
+
+/**
+ * Reasoning block ("ich möchte das denken sehen"): while the stream appends to
+ * it the block is forced open, so the reasoning is visible as it grows instead
+ * of hiding behind "Denken anzeigen". Once the turn is over the part loses its
+ * `live` marker and collapses back to the calm default.
+ */
+function ReasoningPart({
+  messageID,
+  partIndex,
+  part,
+}: {
+  messageID: string;
+  partIndex: number;
+  part: ChatReasoningPart;
+}) {
+  const live = isLive(part);
+  const [expanded, setExpanded] = useState(false);
+  const open = live || expanded;
+  return (
+    <details
+      className="opacity-80 text-sm"
+      data-testid={`message-reasoning-${messageID}-${partIndex}`}
+      data-live={live ? "true" : "false"}
+      open={open}
+      onToggle={(event) => {
+        // Opening the block programmatically fires `toggle` as well. Ignoring
+        // a toggle that merely confirms what was just rendered keeps it from
+        // latching the block open after the stream ended.
+        if (event.currentTarget.open === open) return;
+        setExpanded(event.currentTarget.open);
+      }}
+    >
+      <summary className="cursor-pointer">
+        <Trans>Denken anzeigen</Trans>
+      </summary>
+      <div className="whitespace-pre-wrap break-words mt-1">
+        <Markdown text={part.text} />
+        {live && <StreamCaret messageID={messageID} partIndex={partIndex} />}
+      </div>
+    </details>
+  );
+}
+
+/** A text part (or the answer bubble around one) with its optional caret. */
+function TextBody({
+  messageID,
+  partIndex,
+  part,
+  className,
+}: {
+  messageID: string;
+  partIndex: number;
+  part: ChatTextPart;
+  className: string;
+}) {
+  const live = isLive(part);
+  return (
+    <div className={className} data-live={live ? "true" : "false"}>
+      <Markdown text={part.text} />
+      {live && <StreamCaret messageID={messageID} partIndex={partIndex} />}
+    </div>
+  );
 }
 
 function ToolArgChips({ args }: { args: string[] }) {
@@ -385,22 +472,16 @@ function PartView({
 }) {
   if (part.kind === "text") {
     return (
-      <div className="whitespace-pre-wrap break-words">
-        <Markdown text={part.text} />
-      </div>
+      <TextBody
+        messageID={messageID}
+        partIndex={partIndex}
+        part={part}
+        className="whitespace-pre-wrap break-words"
+      />
     );
   }
   if (part.kind === "reasoning") {
-    return (
-      <details className="opacity-80 text-sm" data-testid={`message-reasoning-${messageID}-${partIndex}`}>
-        <summary className="cursor-pointer">
-          <Trans>Denken anzeigen</Trans>
-        </summary>
-        <div className="whitespace-pre-wrap break-words mt-1">
-          <Markdown text={part.text} />
-        </div>
-      </details>
-    );
+    return <ReasoningPart messageID={messageID} partIndex={partIndex} part={part} />;
   }
   if (part.kind === "tool") {
     return <ToolCard messageID={messageID} partIndex={partIndex} part={part} />;
@@ -557,16 +638,23 @@ function MessageActions({
  * attachments together); assistant messages give every text part its own
  * neutral bubble while tool cards stay cards. Quick actions (copy, revert)
  * reveal on hover (desktop) and long-press (touch).
+ *
+ * Memoized on the *identity* of `row.message`: a streaming frame replaces the
+ * one row it grows and leaves every other message object untouched, so the
+ * comparator below skips re-rendering the whole list per frame (measured load:
+ * 92 frames in 12 s). `groupChatMessages` rebuilds its row objects on every
+ * call, so the default shallow compare would never hit.
  */
-function MessageBubble({
-  row,
-  modelNames,
-  onRevert,
-}: {
-  row: ChatBubbleRow;
-  modelNames: Readonly<Record<string, string>>;
-  onRevert?: (messageID: string) => void;
-}) {
+const MessageBubble = memo(
+  function MessageBubble({
+    row,
+    modelNames,
+    onRevert,
+  }: {
+    row: ChatBubbleRow;
+    modelNames: Readonly<Record<string, string>>;
+    onRevert?: (messageID: string) => void;
+  }) {
   const { message, own, groupStart, groupEnd } = row;
   const [actionsShown, setActionsShown] = useState(false);
   const longPressTimer = useRef<number | null>(null);
@@ -633,12 +721,13 @@ function MessageBubble({
             parts={rowItem.parts}
           />
         ) : rowItem.part.kind === "text" ? (
-          <div
+          <TextBody
             key={rowItem.partIndex}
+            messageID={message.messageID}
+            partIndex={rowItem.partIndex}
+            part={rowItem.part}
             className={`chat-bubble chat-bubble-neutral break-words${tailClass}`}
-          >
-            <Markdown text={rowItem.part.text} />
-          </div>
+          />
         ) : (
           <PartView
             key={rowItem.partIndex}
@@ -708,10 +797,21 @@ function MessageBubble({
       </div>
     </li>
   );
-}
+  },
+  (prev, next) =>
+    // Identity of the message plus the group flags the row carries. A streaming
+    // frame swaps exactly one message object; everything else compares equal
+    // and stays mounted.
+    prev.row.message === next.row.message &&
+    prev.row.own === next.row.own &&
+    prev.row.groupStart === next.row.groupStart &&
+    prev.row.groupEnd === next.row.groupEnd &&
+    prev.modelNames === next.modelNames &&
+    prev.onRevert === next.onRevert,
+);
 
 /** Bare centered status line for notes (idle, compaction, switches, …). */
-function NoteRow({ message }: { message: CachedMessage }) {
+const NoteRow = memo(function NoteRow({ message }: { message: CachedMessage }) {
   const parts = messageParts(message);
   // Known status notes (idle, contentless compaction, …) render as a bare
   // centered status line: stray `unknown` parts (e.g. from legacy cache rows)
@@ -755,7 +855,7 @@ function NoteRow({ message }: { message: CachedMessage }) {
       </div>
     </li>
   );
-}
+});
 
 export default function ChatMessageList({
   messages,

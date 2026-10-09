@@ -287,4 +287,45 @@ describe("in-flight tool downgrade on write", () => {
     const [row] = await readMessages(SERVER, SESSION);
     expect(row?.parts[0]).toMatchObject({ kind: "tool", status: "completed" });
   });
+
+  it("never persists a part the stream is still growing", async () => {
+    // A row folded from `session.*.delta` frames carries `live` text/reasoning
+    // and a raw, still-parsing tool argument string. Writing it as if final
+    // would resurrect half-streamed text after a reload.
+    await putMessages(SERVER, SESSION, [
+      {
+        id: "a-stream",
+        role: "assistant",
+        text: "ungefäh",
+        created: 10,
+        parts: [
+          { kind: "reasoning", text: "ungefäh", live: true },
+          { kind: "text", text: "Halb", live: true },
+          {
+            kind: "tool",
+            name: "read",
+            status: "streaming",
+            detail: null,
+            input: {},
+            metadata: null,
+            id: "call_1",
+            rawInput: '{"filePath":',
+          },
+          { kind: "text", text: "schon fertig" },
+        ],
+      },
+    ]);
+    const [row] = await readMessages(SERVER, SESSION);
+    expect(row?.parts.map((part) => part.kind)).toEqual(["tool", "text"]);
+    // The settled text survives; both streamed parts are gone.
+    expect(row?.parts[1]).toEqual({ kind: "text", text: "schon fertig" });
+    // The in-flight tool keeps its card but loses the outcome claims and the
+    // half-parsed argument string.
+    const tool = row?.parts[0];
+    expect(tool?.kind === "tool" && [tool.status, tool.detail, tool.rawInput]).toEqual([
+      "unknown",
+      null,
+      undefined,
+    ]);
+  });
 });
