@@ -38,6 +38,19 @@ SPA-Fallback (`404.html` = App-Shell), HTTPS erzwungen.
 | 10 | Flugmodus an → App neu öffnen | App-Shell lädt (offline), Server als Offline gebadged, Sessions disabled statt gelöscht |
 | 11 | Flugmodus aus | Live-Daten kommen zurück, Cache zuerst |
 | 12 | Server-Werkzeuge öffnen | Dateien, VCS-Status, Worktrees, MCP, Berechtigungen laden oder melden sauber „offline" |
+| 13 | Server-Seite → „Projekte ausblenden"-Filter umschalten (bzw. links der gleiche Filter) | Beide Bildschirme blenden dieselben Projekte aus/ein, Zähler passt (ein gemeinsames Signal, nicht zwei) |
+| 14 | Server-Projekt umbenennen, dann „Zurücksetzen" | Neuer Name sofort in Baum und Karte, nach „Zurücksetzen" wieder der Ordnername |
+
+## Chat-Parität (Welle 6–8)
+
+| # | Schritt | Erwartet |
+|---|---|---|
+| 15 | Lange Session öffnen | Messenger-Stil: Nachrichten gebündelt, Lücken als Zeitmarke („10:24"), älteste oben, „Zu neuesten springen" |
+| 16 | Modus-Umschalter oben | Start ist **„Einfach"**; nur dann zeigt die Composer-Aktion „Anhang" — im Experten-Modus bleibt die Datei-Aktion |
+| 17 | Agent läuft (Nachricht senden) | Laufband oben auf dem **Handy** mit: Agentenname, Tool-Name und **abgelaufene Laufzeit** — identisch wie am Desktop |
+| 18 | Während der Agent denkt | „Denkt…" wächst live mit dem Grübel-Text (Delta-Streaming) statt erst die fertige Nachricht zu zeigen |
+| 19 | Session mit offenen Antworten öffnen | Ungelesen-Punkt verschwindet beim Öffnen; zwischen Sessions wechseln und zurück — Zähler stimmt |
+| 20 | Deep-Link `/server/<base64>/session/<id>` öffnen | App-Shell startet, Server-Session lädt (Deep-Link-Form funktioniert) |
 
 ## Protokoll
 
