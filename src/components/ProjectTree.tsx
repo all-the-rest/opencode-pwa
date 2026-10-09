@@ -240,6 +240,11 @@ function TreeNode({ node, depth, collapsed, onToggle, shared }: NodeProps) {
  * real branch points (a folder with a project of its own, or 2+ children)
  * carry a chevron; a leaf project stays a plain flat row. Usable at 360px:
  * rows truncate, never scroll sideways.
+ *
+ * The tree is handed in already filtered: with the "leere Projekte" filter on,
+ * the caller runs it through `filterProjectTree` (`src/lib/projectTree.ts`), so
+ * a folder whose own project was hidden still renders here as a structural node
+ * (plain label, no link) as long as a project below it has sessions.
  */
 export default function ProjectTree(props: ProjectTreeProps) {
   const { tree } = props;
@@ -300,5 +305,44 @@ export function ProjectTreeHint() {
         Pfade als Baum gruppiert – gemeinsame Ordner nur einmal, projektlose Ordnerketten in einer Zeile.
       </Trans>
     </p>
+  );
+}
+
+/**
+ * The "leere Projekte" toggle (owner ask): a server lists every directory it
+ * ever saw as a project, and 10 of the owner's 23 projects have no session at
+ * all. Those are hidden by default; this row brings them back and names how
+ * many are hidden (`hiddenCount`).
+ *
+ * It lives in this module rather than in the page because the projects card
+ * renders the same rows in tree AND in flat mode — one control for both.
+ * Renders nothing when there is nothing to reveal.
+ */
+export function ProjectEmptyFilter({
+  hiddenCount,
+  showEmpty,
+  onShowEmptyChange,
+}: {
+  /** Number of currently hidden zero-session projects. */
+  hiddenCount: number;
+  /** True while zero-session projects are shown (the default is false). */
+  showEmpty: boolean;
+  onShowEmptyChange: (showEmpty: boolean) => void;
+}) {
+  if (hiddenCount === 0) return null;
+  return (
+    <label className="flex items-center gap-2 cursor-pointer w-fit">
+      <input
+        type="checkbox"
+        className="toggle toggle-xs"
+        checked={showEmpty}
+        onChange={(event) => onShowEmptyChange(event.target.checked)}
+        aria-label={t`Leere Projekte anzeigen`}
+        data-testid="projects-empty-filter"
+      />
+      <span className="text-xs opacity-70">
+        <Trans>Leere Projekte anzeigen</Trans> ({hiddenCount})
+      </span>
+    </label>
   );
 }

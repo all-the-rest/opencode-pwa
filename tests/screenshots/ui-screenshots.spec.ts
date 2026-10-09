@@ -33,6 +33,7 @@ import {
   PERMISSIONS,
   PROJECTS,
   PROJECTS_TREE,
+  PROJECTS_TREE_SESSIONS,
   RUNNING_PTYS,
   RUNNING_SHELLS,
   SESSION_DIFF_ROWS,
@@ -173,14 +174,18 @@ async function mockApi(page: Page, route: UiReviewRoute, state: UiReviewState) {
     if (url.includes("/api/session") && routeReq.request().method() === "GET") {
       // The running-strip and agents captures need recent start times for the
       // elapsed runtime, everything else keeps the fixed `T0` anchors.
+      // The project-tree capture carries the owner's mix: some directories with
+      // sessions, some without (the "leere Projekte" filter hides the latter).
       const sessions =
         (mock === "chat-running" || mock === "agents") && filled
           ? mock === "agents"
             ? AGENTS_SESSION_ROWS
             : CHAT_RUNNING_SESSION_ROWS
-          : filled && mock !== "session-empty" && mock !== "none" && mock !== "settings"
-            ? SESSION_ROWS
-            : [];
+          : filled && mock === "project-tree"
+            ? PROJECTS_TREE_SESSIONS
+            : filled && mock !== "session-empty" && mock !== "none" && mock !== "settings"
+              ? SESSION_ROWS
+              : [];
       await json(routeReq, { data: sessions, cursor: { next: null, previous: null } });
       return;
     }

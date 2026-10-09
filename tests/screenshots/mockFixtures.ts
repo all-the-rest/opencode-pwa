@@ -439,6 +439,67 @@ export const PROJECTS_TREE = [
     time: rowTime(-70, -70, -3), icon: { color: "oklch(0.72 0.19 90)" } },
 ];
 
+/**
+ * Sessions of the `server-project-tree` capture: the realistic mix the "leere
+ * Projekte" filter is built for. The owner measured 13 of their 23 projects as
+ * having at least one session; here 6 of the 12 directories in
+ * {@link PROJECTS_TREE} do — the other 6 (including `/projects`, the PARENT of
+ * the session-carrying `/projects/LuminaRust`) have none and are hidden by
+ * default, so the capture shows the filter at work and the empty parent folder
+ * surviving as a structural node.
+ */
+export const PROJECTS_TREE_SESSIONS = [
+  {
+    id: "ses-users-1",
+    title: "Pages aufräumen",
+    agent: "build",
+    projectID: "live-users",
+    time: { created: minutes(-300), updated: minutes(-30) },
+  },
+  {
+    id: "ses-lab-1",
+    title: "Worker testen",
+    agent: "build",
+    projectID: "live-octest-lab",
+    time: { created: minutes(-120), updated: minutes(-20) },
+  },
+  {
+    id: "ses-lumina-1",
+    title: "Release bauen",
+    agent: "build",
+    projectID: "live-lumina",
+    time: { created: minutes(-40), updated: minutes(-5) },
+  },
+  {
+    id: "ses-lumina-2",
+    title: "Changelog prüfen",
+    agent: "plan",
+    projectID: "live-lumina",
+    time: { created: minutes(-200), updated: minutes(-60) },
+  },
+  {
+    id: "ses-dl-1",
+    title: "Bilder umbenennen",
+    agent: "build",
+    projectID: "live-ebcont-images",
+    time: { created: minutes(-20), updated: minutes(-2) },
+  },
+  {
+    id: "ses-instr-1",
+    title: "Anleitung prüfen",
+    agent: "build",
+    projectID: "live-instr",
+    time: { created: minutes(-80), updated: minutes(-10) },
+  },
+  {
+    id: "ses-event-1",
+    title: "Event-Kette testen",
+    agent: "build",
+    projectID: "live-event",
+    time: { created: minutes(-70), updated: minutes(-3) },
+  },
+];
+
 export const SESSION_ROWS = [
   {
     id: "ses-1",

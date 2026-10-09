@@ -1,4 +1,4 @@
-import type { ProjectInfo } from "./opencode.ts";
+import type { ProjectInfo, SessionRow } from "./opencode.ts";
 
 /**
  * Project path tree — the evaluated answer to "können Projektnamen, wenn sie
@@ -15,6 +15,12 @@ import type { ProjectInfo } from "./opencode.ts";
  * that showed it): folders with no project of their own and exactly one child
  * are compressed into a single row (`.cache/octest/live`), and a directory the
  * server lists twice collapses to one entry.
+ *
+ * A third refinement is the "leere Projekte" filter: `filterProjectTree` /
+ * `filterProjectsBySessions` hide the projects that have no session at all,
+ * because a server lists every directory it ever saw (the owner: 10 of 23
+ * projects without a single session). The signal is the session list the page
+ * already loaded — see {@link sessionProjectKeys}.
  */
 
 /** One directory of the project tree: holds projects and/or sub-directories. */
@@ -275,6 +281,103 @@ export function buildProjectTree(projects: ProjectInfo[]): ProjectTree {
     roots,
     pathed,
     unpathed,
+  };
+}
+
+/**
+ * Ids of the projects the loaded session rows point at.
+ *
+ * `SessionRow.projectKey` is what the server reported for a session
+ * (`projectID`); a row without a key contributes nothing (those sessions are
+ * grouped under "Ohne Projekt" in the list). Reading this costs no request —
+ * the server page already holds the rows of its sessions card.
+ */
+export function sessionProjectKeys(rows: readonly SessionRow[]): ReadonlySet<string> {
+  const keys = new Set<string>();
+  for (const row of rows) {
+    if (row.projectKey !== null && row.projectKey !== "") keys.add(row.projectKey);
+  }
+  return keys;
+}
+
+/**
+ * Projects with zero sessions — the owner's "Bastarde". A server lists every
+ * directory it ever saw as a project, so a real payload carries plenty of
+ * folders that never hosted a session (10 of the owner's 23 projects).
+ */
+export function projectsWithoutSessions(
+  projects: readonly ProjectInfo[],
+  sessionProjectIDs: ReadonlySet<string>,
+): ProjectInfo[] {
+  return projects.filter((project) => !sessionProjectIDs.has(project.id));
+}
+
+/**
+ * Which projects the "leere Projekte" filter keeps.
+ *
+ * `sessionProjectIDs` comes from the rows the page already loaded (see
+ * {@link sessionProjectKeys}) — deliberately not from a second request.
+ */
+export interface ProjectSessionFilter {
+  /** Ids of the projects that have at least one session. */
+  sessionProjectIDs: ReadonlySet<string>;
+  /** True while zero-session projects stay hidden (the default). */
+  hideEmptyProjects: boolean;
+}
+
+/**
+ * The visible slice of a project list: everything while the filter is off,
+ * only the projects with a session while it is on.
+ */
+export function filterProjectsBySessions(
+  projects: readonly ProjectInfo[],
+  filter: ProjectSessionFilter,
+): ProjectInfo[] {
+  if (!filter.hideEmptyProjects) return [...projects];
+  return projects.filter((project) => filter.sessionProjectIDs.has(project.id));
+}
+
+/**
+ * Drop a subtree that shows nothing: no project of its own and no project in
+ * any child either. An empty leaf like `/de` disappears completely, while a
+ * folder whose child has sessions survives (see {@link filterProjectTree}).
+ */
+function pruneNodes(
+  nodes: readonly ProjectTreeNode[],
+  sessionProjectIDs: ReadonlySet<string>,
+): ProjectTreeNode[] {
+  const kept: ProjectTreeNode[] = [];
+  for (const node of nodes) {
+    const projects = node.projects.filter((project) => sessionProjectIDs.has(project.id));
+    const children = pruneNodes(node.children, sessionProjectIDs);
+    if (projects.length === 0 && children.length === 0) continue;
+    kept.push({ ...node, projects, children });
+  }
+  return kept;
+}
+
+/**
+ * Hide zero-session projects in a built tree (the owner's ask). Two rules keep
+ * the tree readable while the filter is on:
+ *
+ *  - a project without a session loses its row (no link, no rename button),
+ *    but the FOLDER it sits in survives as a structural node as long as a
+ *    project below it has sessions. The owner's `/projects` ("Root") is empty
+ *    while `/projects/LuminaRust` is not — dropping the whole branch would
+ *    hide the project that matters;
+ *  - a node with no project of its own and none in its subtree is pruned
+ *    (`/de`, `/tmp/opencode/instr-check`): it carries nothing to show.
+ *
+ * The `mode` is deliberately NOT recomputed: the shape the user sees must not
+ * flip between tree and flat list when a toggle is flipped.
+ */
+export function filterProjectTree(tree: ProjectTree, filter: ProjectSessionFilter): ProjectTree {
+  if (!filter.hideEmptyProjects) return tree;
+  return {
+    mode: tree.mode,
+    roots: pruneNodes(tree.roots, filter.sessionProjectIDs),
+    pathed: filterProjectsBySessions(tree.pathed, filter),
+    unpathed: filterProjectsBySessions(tree.unpathed, filter),
   };
 }
 

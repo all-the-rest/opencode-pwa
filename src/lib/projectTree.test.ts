@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { ProjectInfo, ProjectTimeInfo } from "./opencode.ts";
+import type { ProjectInfo, ProjectTimeInfo, SessionRow } from "./opencode.ts";
 import {
   applyProjectUpdate,
   buildProjectTree,
   dedupeProjectPaths,
+  filterProjectTree,
+  filterProjectsBySessions,
   isPathLike,
   pathBasename,
   pathSegments,
@@ -11,9 +13,12 @@ import {
   projectChainLabel,
   projectIconColor,
   projectRecency,
+  projectsWithoutSessions,
   projectTreeLabel,
   projectTreeNodeLabel,
   projectUpdatePayload,
+  sessionProjectKeys,
+  type ProjectSessionFilter,
   type ProjectTreeNode,
 } from "./projectTree.ts";
 
@@ -76,6 +81,16 @@ function project(
 /** Every label of one (compressed) tree level, top-down. */
 function labels(nodes: readonly ProjectTreeNode[]): string[] {
   return nodes.map((node) => projectChainLabel(node));
+}
+
+/** A `ProjectSessionFilter` over the given project ids (filter on by default). */
+function filterOf(ids: readonly string[], hideEmptyProjects = true): ProjectSessionFilter {
+  return { sessionProjectIDs: new Set(ids), hideEmptyProjects };
+}
+
+/** One session row (the shape the server page already holds). */
+function session(id: string, projectKey: string | null): SessionRow {
+  return { id, label: id, projectKey, agent: null, created: null };
 }
 
 /** Unwrap a possibly-missing value so the assertions below stay one-liners. */
@@ -282,6 +297,155 @@ describe("buildProjectTree", () => {
       project("p3", "/srv/mid"),
     ]);
     expect(tree.roots[0]?.children.map((node) => node.label)).toEqual(["alpha", "mid", "zeta"]);
+  });
+});
+
+/**
+ * The "leere Projekte" filter (owner ask): 10 of their 23 projects have no
+ * session at all and must be out of the tree by default.
+ */
+describe("sessionProjectKeys", () => {
+  it("collects the project key of every row that has one", () => {
+    expect(sessionProjectKeys([session("s1", "p1"), session("s2", "p2"), session("s3", "p1")])).toEqual(
+      new Set(["p1", "p2"]),
+    );
+  });
+
+  it("ignores rows without a project key (the „Ohne Projekt“ group)", () => {
+    expect(sessionProjectKeys([session("s1", null), session("s2", null)])).toEqual(new Set());
+    expect(sessionProjectKeys([])).toEqual(new Set());
+  });
+});
+
+describe("projectsWithoutSessions", () => {
+  const MIX = [
+    project("p-empty-parent", "/srv/app"),
+    project("p-child", "/srv/app/services/api"),
+    project("p-empty-leaf", "/de"),
+    project("p-session", "/tmp/opencode/proj-smoke", "Event Test"),
+  ];
+
+  it("reports exactly the zero-session projects", () => {
+    expect(projectsWithoutSessions(MIX, new Set(["p-child", "p-session"])).map((p) => p.id)).toEqual([
+      "p-empty-parent",
+      "p-empty-leaf",
+    ]);
+  });
+
+  it("reports every project when no session row carries a key", () => {
+    expect(projectsWithoutSessions(MIX, new Set()).map((p) => p.id)).toEqual(MIX.map((p) => p.id));
+  });
+});
+
+describe("filterProjectsBySessions", () => {
+  const MIX = [project("p1", "/a"), project("p2", "/b"), project("p3", "/c")];
+
+  it("keeps only the projects with a session while the filter is on", () => {
+    expect(filterProjectsBySessions(MIX, filterOf(["p2"])).map((p) => p.id)).toEqual(["p2"]);
+  });
+
+  it("keeps every project while the filter is off", () => {
+    expect(filterProjectsBySessions(MIX, filterOf(["p2"], false)).map((p) => p.id)).toEqual(MIX.map((p) => p.id));
+  });
+
+  it("never mutates the input list", () => {
+    const next = filterProjectsBySessions(MIX, filterOf(["p2"]));
+    expect(next).not.toBe(MIX);
+    expect(MIX).toHaveLength(3);
+  });
+});
+
+describe("filterProjectTree", () => {
+  /** Parent folder with no session, a child with one, an empty leaf, a leaf with one. */
+  const MIX = [
+    project("p-empty-parent", "/srv/app"),
+    project("p-child", "/srv/app/services/api"),
+    project("p-empty-leaf", "/de"),
+    project("p-session", "/tmp/opencode/proj-smoke", "Event Test"),
+  ];
+  const keys = new Set(["p-child", "p-session"]);
+
+  it("hides zero-session projects and prunes empty subtrees", () => {
+    const tree = filterProjectTree(buildProjectTree(MIX), filterOf([...keys]));
+    expect(tree.pathed.map((p) => p.id)).toEqual(["p-child", "p-session"]);
+    expect(tree.unpathed).toEqual([]);
+    // `/de` had nothing to show: the whole root is gone, two survive.
+    expect(tree.roots.map((node) => node.path)).toEqual(["/srv/app", "/tmp/opencode/proj-smoke"]);
+    expect(labels(tree.roots)).toEqual(["srv/app", "tmp/opencode/proj-smoke"]);
+  });
+
+  it("keeps an empty parent folder as a structural node while its child has sessions", () => {
+    const tree = filterProjectTree(buildProjectTree(MIX), filterOf([...keys]));
+    const app = must(tree.roots.find((node) => node.path === "/srv/app"));
+    // The parent's own project lost its row (no link, no rename) …
+    expect(app.projects).toEqual([]);
+    // … but the folder stays, and the project below it stays nested under it.
+    expect(app.children.map((child) => child.path)).toEqual(["/srv/app/services/api"]);
+    expect(must(app.children[0]).projects.map((p) => p.id)).toEqual(["p-child"]);
+    // Structure preserved: the tree does not collapse into the flat list.
+    expect(tree.mode).toBe("tree");
+  });
+
+  it("keeps a renamed project on its own node and hides the rest of its row", () => {
+    const tree = filterProjectTree(buildProjectTree(MIX), filterOf([...keys]));
+    const smoke = must(tree.roots.find((node) => node.path === "/tmp/opencode/proj-smoke"));
+    expect(projectTreeLabel(must(smoke.projects[0]))).toBe("Event Test");
+    expect(projectChainLabel(smoke)).toBe("tmp/opencode/proj-smoke");
+  });
+
+  it("returns the tree untouched while the filter is off", () => {
+    const built = buildProjectTree(MIX);
+    expect(filterProjectTree(built, filterOf([...keys], false))).toBe(built);
+  });
+
+  describe("the owner's live payload", () => {
+    /** Projects the owner measured as having at least one session. */
+    const WITH_SESSIONS = [
+      "p-users",
+      "p-octest-lab",
+      "p-luminarust-new",
+      "p-ebcont-images",
+      "p-instr",
+      "p-event",
+    ];
+    const keys = new Set(WITH_SESSIONS);
+    const tree = filterProjectTree(buildProjectTree(LIVE_PROJECTS), filterOf(WITH_SESSIONS));
+
+    it("drops the roots that only held empty projects", () => {
+      // `/de` is gone; `/home/dev` stays because `octest-lab/work` has a session.
+      expect(labels(tree.roots)).toEqual([
+        "home/dev",
+        "projects",
+        "tmp/opencode",
+        "Users/florianreisinger",
+      ]);
+      // 12 rows in the tree, 6 with a session.
+      expect(tree.pathed.map((p) => p.id).sort()).toEqual([...keys].sort());
+      expect(projectsWithoutSessions(tree.pathed, keys)).toEqual([]);
+    });
+
+    it("keeps the empty „Root“ folder as a branch over the projects that have sessions", () => {
+      const projects = atPath(tree.roots, "/projects");
+      // The folder row lost its own project (no link), the branch survived.
+      expect(projects.projects).toEqual([]);
+      expect(labels(projects.children)).toEqual(["ebcont-seo-test", "LuminaRust"]);
+      const ebcont = atPath(projects.children, "/projects/ebcont-seo-test");
+      // Its own project is empty too, but the child below it has a session.
+      expect(ebcont.projects).toEqual([]);
+      expect(ebcont.children.map((child) => child.path)).toEqual([
+        "/projects/ebcont-seo-test/images/dl",
+      ]);
+    });
+
+    it("hides the project-less chain that never hosted a session", () => {
+      const home = atPath(tree.roots, "/home/dev");
+      // `.cache/octest/live` is empty → pruned; `octest-lab/work` stays.
+      expect(labels(home.children)).toEqual(["octest-lab/work"]);
+      const tmp = atPath(tree.roots, "/tmp/opencode");
+      // The branch itself is empty but two leaves below it have sessions.
+      expect(tmp.projects).toEqual([]);
+      expect(labels(tmp.children)).toEqual(["instr-check", "proj-smoke"]);
+    });
   });
 });
 

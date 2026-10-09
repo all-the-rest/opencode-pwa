@@ -3,8 +3,8 @@ import { i18n } from "@lingui/core";
 import { I18nProvider } from "@lingui/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import ProjectTree from "./ProjectTree.tsx";
-import { buildProjectTree } from "../lib/projectTree.ts";
+import ProjectTree, { ProjectEmptyFilter } from "./ProjectTree.tsx";
+import { buildProjectTree, filterProjectTree } from "../lib/projectTree.ts";
 import type { ProjectInfo, ProjectTimeInfo } from "../lib/opencode.ts";
 
 vi.mock("../lib/opencode.ts", async (importOriginal) => {
@@ -59,18 +59,27 @@ interface TreeProps {
   renamingID?: string | null;
   /** Rows the tree is built from; defaults to {@link NESTED}. */
   rows?: ProjectInfo[];
+  /** Projects that have a session; defaults to "all of them". */
+  sessionProjectIDs?: readonly string[];
+  /** Hide zero-session projects (the page default). */
+  hideEmptyProjects?: boolean;
 }
 
 function renderTree(props: TreeProps = {}) {
   const onStartRename = props.onStartRename ?? vi.fn();
   const onRename = props.onRename ?? vi.fn();
   const onCancelRename = vi.fn();
+  const rows = props.rows ?? NESTED;
+  const sessionProjectIDs = props.sessionProjectIDs ?? rows.map((p) => p.id);
   render(
     <I18nProvider i18n={i18n}>
       <MemoryRouter>
         <ProjectTree
           serverID="srv-1"
-          tree={buildProjectTree(props.rows ?? NESTED)}
+          tree={filterProjectTree(buildProjectTree(rows), {
+            sessionProjectIDs: new Set(sessionProjectIDs),
+            hideEmptyProjects: props.hideEmptyProjects ?? true,
+          })}
           renamingID={props.renamingID ?? null}
           onStartRename={onStartRename}
           onCancelRename={onCancelRename}
@@ -184,6 +193,48 @@ describe("ProjectTree", () => {
     expect(screen.getByTestId("project-row-p-tmp")).toBeInTheDocument();
   });
 
+  /**
+   * The "leere Projekte" filter (owner ask): 10 of their 23 projects have no
+   * session at all. Two of the rows below are empty, one of them is the PARENT
+   * of a project that has sessions.
+   */
+  const MIX = [
+    project("p-app", "/srv/app"),
+    project("p-api", "/srv/app/services/api"),
+    project("p-empty-leaf", "/de"),
+    project("p-web", "/home/dev/web"),
+  ];
+  const WITH_SESSIONS = ["p-api", "p-web"];
+
+  it("hides zero-session projects and prunes the root that has nothing", () => {
+    renderTree({ rows: MIX, sessionProjectIDs: WITH_SESSIONS });
+    // The empty leaf root disappears completely.
+    expect(screen.queryByTestId("project-node-/de")).toBeNull();
+    expect(screen.queryByTestId("project-row-p-empty-leaf")).toBeNull();
+    // A project with a session keeps its row …
+    expect(screen.getByTestId("project-row-p-api")).toBeVisible();
+    expect(screen.getByTestId("project-row-p-web")).toBeVisible();
+  });
+
+  it("keeps an empty parent folder as a structural node while its child has sessions", () => {
+    renderTree({ rows: MIX, sessionProjectIDs: WITH_SESSIONS });
+    // The parent's own project lost its row: no link, no rename button.
+    expect(screen.getByTestId("project-node-/srv/app")).toBeInTheDocument();
+    expect(screen.getByTestId("project-node-/srv/app")).toHaveTextContent("srv/app");
+    expect(screen.queryByTestId("project-row-p-app")).toBeNull();
+    expect(screen.queryByTestId("project-rename-p-app")).toBeNull();
+    // … but the folder stays, and the project below it stays nested under it.
+    expect(screen.getByTestId("project-row-p-api")).toBeVisible();
+  });
+
+  it("shows the zero-session projects again with the filter off", () => {
+    renderTree({ rows: MIX, sessionProjectIDs: WITH_SESSIONS, hideEmptyProjects: false });
+    expect(screen.getByTestId("project-node-/srv/app")).toBeInTheDocument();
+    expect(screen.getByTestId("project-row-p-app")).toBeVisible();
+    expect(screen.getByTestId("project-rename-p-app")).toBeVisible();
+    expect(screen.getByTestId("project-node-/de")).toBeInTheDocument();
+  });
+
   it("hands the project to the rename callback", () => {
     const { onStartRename } = renderTree();
     fireEvent.click(screen.getByTestId("project-rename-p-app"));
@@ -277,5 +328,36 @@ describe("ProjectTree", () => {
       backgroundColor: "oklch(0.7 0.2 264)",
     });
     expect(screen.queryByTestId("project-dot-p2")).toBeNull();
+  });
+});
+
+describe("ProjectEmptyFilter", () => {
+  function renderFilter(props: { hiddenCount: number; showEmpty: boolean; onShowEmptyChange: () => void }) {
+    render(
+      <I18nProvider i18n={i18n}>
+        <ProjectEmptyFilter {...props} />
+      </I18nProvider>,
+    );
+  }
+
+  it("renders nothing when no project is hidden", () => {
+    renderFilter({ hiddenCount: 0, showEmpty: false, onShowEmptyChange: vi.fn() });
+    expect(screen.queryByTestId("projects-empty-filter")).toBeNull();
+  });
+
+  it("names the hidden count and stays unchecked while they stay hidden", () => {
+    const onShowEmptyChange = vi.fn();
+    renderFilter({ hiddenCount: 10, showEmpty: false, onShowEmptyChange });
+    const toggle = screen.getByTestId("projects-empty-filter") as HTMLInputElement;
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByText("Leere Projekte anzeigen (10)")).toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(onShowEmptyChange).toHaveBeenCalledWith(true);
+    expect(onShowEmptyChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("is checked while the empty projects are shown", () => {
+    renderFilter({ hiddenCount: 3, showEmpty: true, onShowEmptyChange: vi.fn() });
+    expect(screen.getByTestId("projects-empty-filter")).toBeChecked();
   });
 });

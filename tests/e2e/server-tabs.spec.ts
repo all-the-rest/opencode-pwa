@@ -128,8 +128,16 @@ async function mockApiWithProjects(
       return;
     }
     if (url.includes("/api/session") && method === "GET" && !url.includes("/api/session/")) {
-      const host = new URL(url).hostname;
-      const rows = sessionsByHost[host] ?? [];
+      // One session per project: the server page hides projects with zero
+      // sessions by default ("leere Projekte" filter), and these tests assert
+      // on the project row of the given project.
+      const rows = initialProjects.map((project, index) => ({
+        id: `ses-${project.id}`,
+        title: `Session ${index + 1}`,
+        agent: "build",
+        projectID: project.id,
+        time: { created: Date.now() - (index + 1) * 60_000, updated: Date.now() - 60_000 },
+      }));
       await route.fulfill({
         status: 200,
         contentType: "application/json",

@@ -1496,6 +1496,10 @@ msgstr "Keine offenen Formulare."
 msgid "Keine Projekte"
 msgstr "Keine Projekte"
 
+#: src/pages/ServerDetail.tsx
+msgid "Keine Projekte mit Sessions."
+msgstr "Keine Projekte mit Sessions."
+
 #: src/components/SidebarProjects.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Keine Projekte."
@@ -1694,6 +1698,10 @@ msgstr "Leer lassen, um das gespeicherte Passwort zu behalten. Ein neues Passwor
 #: src/pages/ServerTools.tsx
 msgid "Leere Datei."
 msgstr "Leere Datei."
+
+#: src/components/ProjectTree.tsx
+msgid "Leere Projekte anzeigen"
+msgstr "Leere Projekte anzeigen"
 
 #: src/pages/SessionDetail.tsx
 msgid "Leeres Terminal."
@@ -2171,8 +2179,12 @@ msgstr "Projekte"
 #~ msgstr "Projekte ({0})"
 
 #: src/pages/ServerDetail.tsx
-msgid "Projekte ({projectCount})"
-msgstr "Projekte ({projectCount})"
+#~ msgid "Projekte ({projectCount})"
+#~ msgstr "Projekte ({projectCount})"
+
+#: src/pages/ServerDetail.tsx
+msgid "Projekte ({visibleProjectCount})"
+msgstr "Projekte ({visibleProjectCount})"
 
 #: src/components/ProjectRenameForm.tsx
 msgid "Projektfarbe"

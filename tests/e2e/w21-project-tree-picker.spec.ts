@@ -39,6 +39,21 @@ const NESTED_PROJECTS: Project[] = [
   { id: "proj-web", name: "web", canonical: "/home/dev/web" },
 ];
 
+/**
+ * One session per project. The server page hides projects with zero sessions
+ * by default ("leere Projekte" filter), so the mocks must give every project a
+ * session — otherwise the tree the tests assert on would be filtered away.
+ */
+function sessionsOf(projects: Project[]) {
+  return projects.map((project, index) => ({
+    id: `ses-${project.id}`,
+    title: `Session ${index + 1}`,
+    agent: "build",
+    projectID: project.id,
+    time: { created: Date.now() - (index + 1) * 60_000, updated: Date.now() - 60_000 },
+  }));
+}
+
 function json(route: Route, body: unknown, status = 200) {
   return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 }
@@ -145,7 +160,13 @@ function mockApi(page: Page, log: Log, options: MockOptions = {}) {
       return;
     }
     if (url.match(/\/api\/session(\?|$)/)) {
-      await json(route, { data: [], cursor: { next: null, previous: null } });
+      // `project` is a server-side filter — mirror it, so a project page only
+      // ever sees the sessions of its own project.
+      const project = new URL(url).searchParams.get("project");
+      const rows = sessionsOf(projects).filter(
+        (row) => project === null || row.projectID === project,
+      );
+      await json(route, { data: rows, cursor: { next: null, previous: null } });
       return;
     }
     if (url.includes("/api/shell") || url.includes("/api/pty")) {

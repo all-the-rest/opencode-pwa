@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { I18nProvider } from "@lingui/react";
 import { i18n } from "@lingui/core";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -143,5 +143,143 @@ describe("ServerDetail empty-state rendering (UI-review finding #3)", () => {
     // The session list keeps its own empty state and CTA (e2e relies on both).
     expect(screen.getByTestId("server-sessions-empty")).toHaveTextContent("Keine Sessions.");
     expect(screen.getByTestId("server-sessions-empty-cta")).toHaveAttribute("href", "/");
+  });
+});
+
+/**
+ * The "leere Projekte" filter (owner ask): 10 of their 23 projects have zero
+ * sessions and must be out of the tree by default, with a toggle to bring them
+ * back. The signal is the rows the sessions card already holds — no second
+ * request — so the fixtures below only shape `listSessionsPaged`.
+ */
+describe("ServerDetail leere Projekte filter (owner ask)", () => {
+  /** Two projects with a session, two without (one of them a parent folder). */
+  const MIX = [
+    { id: "p-empty-leaf", name: "/de", canonical: "/de" },
+    { id: "p-parent", name: "/srv/app", canonical: "/srv/app" },
+    { id: "p-child", name: "/srv/app/services/api", canonical: "/srv/app/services/api" },
+    { id: "p-active", name: "/tmp/opencode/proj-smoke", canonical: "/tmp/opencode/proj-smoke" },
+  ];
+
+  /**
+   * What the page's own page-1 session rows carry: `p-child` and `p-active`
+   * from {@link MIX}, plus `p-active-flat` for the flat-list test below.
+   * Everything else in the mix has zero sessions.
+   */
+  const SESSIONS_OF_MIX = {
+    data: {
+      rows: [
+        { id: "ses-child", label: "API bauen", projectKey: "p-child", agent: "build", created: null },
+        { id: "ses-active", label: "Rauchtest", projectKey: "p-active", agent: "build", created: null },
+        { id: "ses-flat", label: "Flach bauen", projectKey: "p-active-flat", agent: "build", created: null },
+      ],
+      cursor: { next: null, previous: null },
+    },
+    error: null,
+  };
+
+  function mockMix() {
+    listSessionsPagedMock.mockResolvedValue(SESSIONS_OF_MIX);
+    listShellsMock.mockResolvedValue(NO_SHELLS);
+    listPtysMock.mockResolvedValue(NO_PTYS);
+    listProjectsMock.mockResolvedValue({ data: MIX, error: null });
+  }
+
+  beforeEach(() => {
+    // The toggle persists in localStorage — every test starts from the default.
+    localStorage.clear();
+    mockMix();
+  });
+
+  it("hides the zero-session projects by default and counts only what it shows", async () => {
+    renderServer();
+
+    await waitFor(() => expect(screen.getByTestId("projects-card")).toBeInTheDocument());
+    // Zero sessions → out of the tree.
+    expect(screen.queryByTestId("project-row-p-empty-leaf")).toBeNull();
+    expect(screen.queryByTestId("project-row-p-parent")).toBeNull();
+    // A session → stays, and the toggle names how many are hidden.
+    expect(screen.getByTestId("project-row-p-child")).toBeInTheDocument();
+    expect(screen.getByTestId("project-row-p-active")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Projekte/ })).toHaveTextContent("Projekte (2)");
+    expect(screen.getByText("Leere Projekte anzeigen (2)")).toBeInTheDocument();
+  });
+
+  it("keeps an empty parent folder as a structural node while its child has sessions", async () => {
+    renderServer();
+
+    await waitFor(() => expect(screen.getByTestId("projects-card")).toBeInTheDocument());
+    // The folder row lost its own project (no link, no rename) …
+    expect(screen.getByTestId("project-node-/srv/app")).toBeInTheDocument();
+    expect(screen.queryByTestId("project-rename-p-parent")).toBeNull();
+    // … but it stays, and the project below it stays nested under it.
+    expect(screen.getByTestId("project-row-p-child")).toBeInTheDocument();
+    // The empty leaf root is gone entirely.
+    expect(screen.queryByTestId("project-node-/de")).toBeNull();
+  });
+
+  it("shows every project again once the toggle is turned on", async () => {
+    renderServer();
+
+    await waitFor(() => expect(screen.getByTestId("projects-card")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("projects-empty-filter"));
+    expect(screen.getByTestId("project-row-p-empty-leaf")).toBeInTheDocument();
+    expect(screen.getByTestId("project-row-p-parent")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Projekte/ })).toHaveTextContent("Projekte (4)");
+  });
+
+  it("keeps the toggle across a reload (one boolean in localStorage)", async () => {
+    const first = renderServer();
+    await waitFor(() => expect(screen.getByTestId("projects-card")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("projects-empty-filter"));
+    expect(screen.getByTestId("project-row-p-empty-leaf")).toBeInTheDocument();
+    expect(localStorage.getItem("opencode-pwa:projects-hide-empty")).toBe("0");
+
+    first.unmount();
+    // A fresh mount is what a reload does: the choice is read back.
+    renderServer();
+    await waitFor(() => expect(screen.getByTestId("projects-card")).toBeInTheDocument());
+    expect(screen.getByTestId("project-row-p-empty-leaf")).toBeInTheDocument();
+    expect(screen.getByTestId("project-row-p-child")).toBeInTheDocument();
+  });
+
+  it("falls back to hiding when the stored value is unreadable", async () => {
+    localStorage.setItem("opencode-pwa:projects-hide-empty", "quatsch");
+    renderServer();
+
+    await waitFor(() => expect(screen.getByTestId("projects-card")).toBeInTheDocument());
+    expect(screen.queryByTestId("project-row-p-empty-leaf")).toBeNull();
+    expect(screen.getByTestId("projects-empty-filter")).not.toBeChecked();
+  });
+
+  it("filters the flat list as well when the tree degenerates", async () => {
+    // Siblings under one common root render as the flat list, not as a tree.
+    listProjectsMock.mockResolvedValue({
+      data: [
+        { id: "p-empty-flat", name: "/repo/leer", canonical: "/repo/leer" },
+        { id: "p-active-flat", name: "/repo/aktiv", canonical: "/repo/aktiv" },
+      ],
+      error: null,
+    });
+    renderServer();
+
+    await waitFor(() => expect(screen.getByTestId("projects-card")).toBeInTheDocument());
+    // One row only: the flat list is filtered like the tree.
+    expect(screen.queryByTestId("project-row-p-empty-flat")).toBeNull();
+    expect(screen.getByTestId("project-row-p-active-flat")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Projekte/ })).toHaveTextContent("Projekte (1)");
+    fireEvent.click(screen.getByTestId("projects-empty-filter"));
+    expect(screen.getByTestId("project-row-p-empty-flat")).toBeInTheDocument();
+  });
+
+  it("still renders the card (not the consolidated empty state) when every project is empty", async () => {
+    listSessionsPagedMock.mockResolvedValue(NO_SESSIONS);
+    renderServer();
+
+    await waitFor(() => expect(screen.getByTestId("projects-card")).toBeInTheDocument());
+    // An empty project list is not an empty server: the cards stay.
+    expect(screen.queryByTestId("server-empty")).toBeNull();
+    expect(screen.getByText("Keine Projekte mit Sessions.")).toBeInTheDocument();
+    expect(screen.getByTestId("projects-empty-filter")).toBeInTheDocument();
   });
 });

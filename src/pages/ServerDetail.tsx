@@ -9,7 +9,7 @@ import ServerDot from "../components/ServerDot.tsx";
 import ServerErrorBanner from "../components/ServerErrorBanner.tsx";
 import ServerStatusBadge from "../components/ServerStatusBadge.tsx";
 import ProjectRenameForm from "../components/ProjectRenameForm.tsx";
-import ProjectTree, { ProjectDot, ProjectTreeHint } from "../components/ProjectTree.tsx";
+import ProjectTree, { ProjectDot, ProjectEmptyFilter, ProjectTreeHint } from "../components/ProjectTree.tsx";
 import ServerFolderPicker from "../components/ServerFolderPicker.tsx";
 import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
 import { useShellOutputStream } from "../hooks/useShellOutputStream.ts";
@@ -43,8 +43,12 @@ import {
 } from "../lib/opencode.ts";
 import {
   buildProjectTree,
+  filterProjectTree,
+  filterProjectsBySessions,
   projectIconColor,
   projectTreeLabel,
+  sessionProjectKeys,
+  type ProjectSessionFilter,
 } from "../lib/projectTree.ts";
 import { useServers } from "../state/servers.tsx";
 import { useLayoutMode } from "../state/layoutMode.tsx";
@@ -52,6 +56,24 @@ import { useSessionTabs } from "../state/sessionTabs.tsx";
 import { serverColor } from "../lib/serverColor.ts";
 
 const SESSION_PAGE_LIMIT = 50;
+
+/**
+ * Owner ask ("Bastarde"): projects with zero sessions are hidden by default,
+ * because a server lists every directory it ever saw as a project (10 of the
+ * owner's 23 projects have no session at all). The toggle is a single boolean,
+ * so persisting it is trivial — same localStorage convention as the layout mode
+ * and the session tabs. Default is "hide"; only an explicit `"0"` (the user
+ * turned the filter off) shows them again.
+ */
+const EMPTY_PROJECTS_STORAGE_KEY = "opencode-pwa:projects-hide-empty";
+
+function loadShowEmptyProjects(): boolean {
+  try {
+    return localStorage.getItem(EMPTY_PROJECTS_STORAGE_KEY) === "0";
+  } catch {
+    return false;
+  }
+}
 
 interface Row {
   id: string;
@@ -228,6 +250,9 @@ export default function ServerDetail() {
   // refresh for filters and the "load more" button.
   const [hasPaged, setHasPaged] = useState(false);
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
+  // The "leere Projekte" filter: on by default, persisted (see the storage key
+  // above). Only a page-level view preference — it never changes what is loaded.
+  const [showEmptyProjects, setShowEmptyProjects] = useState(loadShowEmptyProjects);
   const [shells, setShells] = useState<Row[]>([]);
   const [ptys, setPtys] = useState<Row[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -413,7 +438,39 @@ export default function ServerDetail() {
   // project), and a rename optimistically updates the row with rollback + toast.
   useProjectSync(server, setProjects);
   const renameProject = useProjectRename(server, setProjects);
-  const projectTree = useMemo(() => buildProjectTree(projects), [projects]);
+
+  // "Has sessions" is read from the rows the sessions card ALREADY holds — no
+  // second request. Caveat: that list is ONE cursor-paged page
+  // (`listSessionsPaged`, limit 50), so a project whose only sessions sit on a
+  // later page looks empty until the user clicks "Weitere Sessions laden"
+  // (appended pages land in the same state, so the filter catches up). The
+  // payload carries a cursor and no total, so the rows are all there is to
+  // read; the card's own counter ("Sessions (n)") is `filtered.length`, i.e.
+  // the same rows minus the active agent/project/search filter. That is why the
+  // UNFILTERED rows are used here — the projects filter must not flip when the
+  // session search changes.
+  const sessionProjectIDs = useMemo(() => sessionProjectKeys(sessions), [sessions]);
+  const sessionFilter = useMemo<ProjectSessionFilter>(
+    () => ({ sessionProjectIDs, hideEmptyProjects: !showEmptyProjects }),
+    [sessionProjectIDs, showEmptyProjects],
+  );
+  const visibleProjects = useMemo(
+    () => filterProjectsBySessions(projects, sessionFilter),
+    [projects, sessionFilter],
+  );
+  const emptyProjectCount = projects.length - visibleProjects.length;
+  const projectTree = useMemo(
+    () => filterProjectTree(buildProjectTree(projects), sessionFilter),
+    [projects, sessionFilter],
+  );
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(EMPTY_PROJECTS_STORAGE_KEY, showEmptyProjects ? "0" : "1");
+    } catch {
+      // Storage full or unavailable: the toggle stays session-local.
+    }
+  }, [showEmptyProjects]);
 
   if (server === null) {
     return (
@@ -431,6 +488,10 @@ export default function ServerDetail() {
   const activeServer: ServerConfig = server;
   const serverName = server.name;
   const projectCount = projects.length;
+  // What the card shows: the projects the "leere Projekte" filter leaves in.
+  // `projectCount` (the raw list) keeps driving the consolidated empty state
+  // below — a server whose projects are all empty is not an empty server.
+  const visibleProjectCount = visibleProjects.length;
   const shellCount = shells.length;
   const ptyCount = ptys.length;
   // Finding #3: an entirely empty server page must not render four ~equal-height
@@ -796,7 +857,7 @@ export default function ServerDetail() {
           <section className="card bg-base-200 shadow" data-testid="projects-card">
             <div className="card-body">
               <h2 className="card-title flex-wrap">
-                <Icon name="project" /> <Trans>Projekte ({projectCount})</Trans>
+                <Icon name="project" /> <Trans>Projekte ({visibleProjectCount})</Trans>
                 <button
                   type="button"
                   className="btn btn-xs btn-ghost ml-auto"
@@ -809,9 +870,18 @@ export default function ServerDetail() {
                   <Trans>Neues Projekt</Trans>
                 </button>
               </h2>
-              {projects.length === 0 ? (
+              <ProjectEmptyFilter
+                hiddenCount={emptyProjectCount}
+                showEmpty={showEmptyProjects}
+                onShowEmptyChange={setShowEmptyProjects}
+              />
+              {visibleProjects.length === 0 ? (
                 <p className="opacity-70 text-sm">
-                  <Trans>Keine Projekte.</Trans>
+                  {emptyProjectCount > 0 ? (
+                    <Trans>Keine Projekte mit Sessions.</Trans>
+                  ) : (
+                    <Trans>Keine Projekte.</Trans>
+                  )}
                 </p>
               ) : projectTree.mode === "tree" ? (
                 <>
@@ -828,7 +898,7 @@ export default function ServerDetail() {
                 </>
               ) : (
                 <ul className="menu gap-1">
-                  {projects.map((p) => {
+                  {visibleProjects.map((p) => {
                     // Lingui-safe hoists: no member access inside the message.
                     const projectLabel = p.name;
                     return (
