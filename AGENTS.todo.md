@@ -1,9 +1,14 @@
 # AGENTS.todo.md
 
-Stand: 2026-10-09 (Welle 6 hinzugefügt). Nur offene TODOs (veraltete Einträge bereinigt:
-Parität-Batches, Deep-Link-Paste, Prozess-Regel und Userscripts-Verdikt sind umgesetzt/dokumentiert).
-UI-Review-Befunde 1, 2, 6, 7 und 9 sind mit Welle 6 erledigt (Details in `features/05-parity.md`,
-Abschnitt „Messenger Chat + Running Strip + Basic/Experte").
+Stand: 2026-10-09 (Welle 6 + Welle 7 eingetragen). Nur offene TODOs (veraltete
+Einträge bereinigt: Parität-Batches, Deep-Link-Paste, Prozess-Regel und
+Userscripts-Verdikt sind umgesetzt/dokumentiert).
+UI-Review-Befunde 1, 2, 6, 7 und 9 sind mit Welle 6 erledigt (Details in
+`features/05-parity.md`, Abschnitt „Messenger Chat + Running Strip +
+Basic/Experte"); Befund 8 (Projektseite: Pfad + Farbe) mit Welle 7.
+Welle 7 ist umgesetzt und verifiziert (lint 0, vitest, build, e2e inkl. Mobile,
+Screenshots) — die letzte Code-Welle; danach stehen nur noch die drei offenen
+Punkte unten.
 
 ## Navigation (Owner-Entscheidung 2026-10-07, umgesetzt)
 
@@ -44,6 +49,32 @@ für Agenten-Aktivität (dokumentierte Lücke).
    Experte-Modus. Wenn Anhänge zur Grundausstattung zählen sollen, wird nur der Picker sichtbar
    geschaltet.
 
+### Welle-7-Entscheidungen (Owner abwesend, vom Orchestrator dokumentiert)
+
+1. **Baum nur, wenn er etwas zeigt** (`buildProjectTree`, `src/lib/projectTree.ts`):
+   mehrere Wurzeln oder ein Projekt, das Eltern eines anderen Projekts ist → Baum.
+   Geschwister unter einer gemeinsamen Wurzel (der reale Setup-Fall:
+   `/projects/*`) bleiben flach — die Wurzel doppelt sich nur. Projekte ohne
+   kanonischen Pfad bleiben flache Zeilen unter dem Baum (`unpathed`).
+2. **Neues Projekt = Session im Ordner.** Die Client-Library hat keinen
+   Projekt-Create-Endpoint (nur `list`/`update`, `client.d.ts:147-149`), also
+   legt der Server-Ordner-Picker eine Session mit
+   `location: { directory }` an (`SessionCreateInput`, `types.d.ts:3767+`) —
+   so entsteht ein Projekt auch im Original. Nicht offline verifizierbar: ob ein
+   Server für ein fabrikneues Verzeichnis einen Projekt-Eintrag anlegt; das ist
+   Server-Verhalten, das E2E mockt es.
+3. **Farbe, nicht Emoji/URL.** `ProjectUpdateInput.icon` kann `url`/`override`/
+   `color`; die UI setzt bewusst nur die Farbe (Palette in
+   `ProjectRenameForm`). Ein Emoji/URL-Override ist im selben Payload möglich,
+   braucht aber eine eigene Laden/Anzeigen-Entscheidung — offen, bis es jemand
+   braucht.
+4. **Anlegen nur auf der Server-Seite.** Der Picker hängt an der Projekte-Karte
+   von `/servers/:id` (`new-project-button`); auf der Projektseite selbst macht
+   ein neues Projekt keinen Sinn, im Sidebar wäre er redundant.
+5. **Live-Sync**: `project.updated` trägt das vollständige Projekt im Payload
+   (`useProjectSync` patcht die Liste); der 5s-Refresh von `useLiveRefresh`
+   bleibt das Netz für verlorene Events.
+
 ## UI-Review-Befunde (Screenshot-Review, 2026-10-08 — aus allen 44 Captures)
 Reihenfolge = Behebungsreihenfolge, „W5/W6/W7" = in welcher Welle sie mitkommen.
 
@@ -56,7 +87,7 @@ Reihenfolge = Behebungsreihenfolge, „W5/W6/W7" = in welcher Welle sie mitkomme
 | 5 | mittel | Diff-Tab öffnet eingeklappt, gerenderte Hunks nicht sichtbar (`session-diff.png`) | erste Datei aufgeklappt, Diff inline | W5 |
 | 6 | mittel | Agenten-Übersicht: Modellspalte „Unbekannt", **keine Laufzeit** (`agents.png`) | **erledigt (W6)**: Modell-Lookup (gleiche SDK-Ursache wie #1), Laufzeit je Zeile („läuft 4:12"), Desktop mit Startzeit/Projekt | W6 |
 | 7 | mittel | Chat wirkt nicht wie Messenger: Assistant ist eine durchgehende dunkle Karte (`chat-steps-sec0.png`) | **erledigt (W6)**: Text als eigene Bubble, Tools als Karten, Tages-Trenner, Gruppierung, Bubble-Enden, Kurzaktionen | W6 |
-| 8 | mittel | Projektseite zeigt weder kanonischen Pfad noch Farbe/Icon (`project-detail.png`) | Kopfzeile mit Pfad + Avatar | W7 |
+| 8 | mittel | Projektseite zeigt weder kanonischen Pfad noch Farbe/Icon (`project-detail.png`) | **erledigt (W7)**: Kopfzeile mit Pfad + Farb-Punkt, Umbenennen inkl. Farbe, Projekte-Karte auf dem Server wahlweise als Baum | W7 |
 | 9 | niedrig | Mobile: Assistant-Metazeile bricht in 3 Zeilen, Dateipfad-Feld auf „Datei" gestutzt, Composer-Zeile gedrängt (`filled/mobile-chat-steps-sec0.png`) | **erledigt (W6)**: eine Meta-Zeile pro Gruppe (nicht pro Nachricht), Composer-Zeile im Einfach-Modus auf Textfeld + Senden reduziert | W6 |
 | 10 | niedrig | Server-Werkzeuge: 5 Karten mit „Keine …", „Verfügbare Shells: Keine Shells" obwohl Mock welche liefert (`server-tools.png`) | Mock/Shape prüfen (niedrig) | — |
 
@@ -92,15 +123,20 @@ Reihenfolge steht, jede Welle wird vor dem commit verifiziert (lint/test/build/e
       Einfach = Chat + Composer + Läuft-Streifen; Picker-Reload-Zustand „Lädt…" + Toast statt
       Klebe-Banner; Offline = eine Statuszeile + Senden gesperrt. Details in
       `features/05-parity.md` (Abschnitt „Messenger Chat + Running Strip + Basic/Experte").
-- [ ] **Welle 7 — Projekt-Displayname + Ordner-Baum + Projekt anlegen** (research erledigt): `project.update` existiert
-      (`ProjectUpdateInput.canonical?: { name, icon?: { url, override, color }, commands? }`, Client
-      `client.d.ts:147-149`), das Event `project.updated` (`types.d.ts:2254`) erlaubt Live-Sync —
-      also Projekt-Umbenennung mit Farbe/Icon. Ein Create-Endpoint gibt es **nicht** (nur `list`/`update`):
-      „Neues Projekt" läuft über den Folder-Picker des Servers — `file.list({path})` liefert
-      `FileSystemEntry { path, type: "file" | "directory" }` (`types.d.ts:528`), `file.find({ query, type: "directory" })`
-      sucht Verzeichnisse; unser `listFiles` (`src/lib/opencode.ts:1031`) nutzt das schon in den Server-Werkzeugen.
-      Geplant: (a) Evaluierung Baum-Darstellung, wenn Projektnamen Pfade sind (Verschachtelung nach kanonischem Pfad),
-      (b) Rename + Farbe/Icon mit Live-Sync, (c) Projekt-Anlage über Server-Ordner-Picker → Session im Verzeichnis.
+- [x] **Welle 7 — Projekt-Displayname + Ordner-Baum + Projekt anlegen** — **erledigt**
+      (`tests/e2e/w21-project-tree-picker.spec.ts`, `@feature:project-rename`,
+      `@feature:project-tree`, `@feature:folder-picker`): (a) Umbenennen mit
+      optionaler Farbe (`PATCH /api/project/{id}`, `ProjectUpdateInput`), optimistisch
+      mit Rollback + Toast (Session-Rename-Muster), Live-Sync über `project.updated`;
+      Anzeigename = custom name, sonne Basename des kanonischen Pfads; (b)
+      Baum-Evaluierung: `buildProjectTree` (`src/lib/projectTree.ts`) gruppiert nach
+      Pfad-Präfix und rendert einen Baum nur bei mehreren Wurzeln oder wenn ein
+      Projekt Eltern eines anderen Projekts ist — Geschwister unter einer gemeinsamen
+      Wurzel (der reale Setup-Fall) bleiben flach; (c) „Neues Projekt" über den
+      Server-Ordner-Picker (`file.list` + Breadcrumb) → `session.create({ location:
+      { directory } })`, weil die Client-Library keinen Projekt-Create-Endpoint hat.
+      Details in `features/05-parity.md` („Projekt-Displayname + Ordner-Baum +
+      Projekt anlegen (Welle 7)").
 
 
 ## Bewusst offen/dokumentiert (kein Handlungsbedarf)
