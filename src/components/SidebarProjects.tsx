@@ -2,6 +2,7 @@ import { Trans } from "@lingui/react/macro";
 import { useCallback, useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import ServerDot from "./ServerDot.tsx";
+import { ProjectDot } from "./ProjectTree.tsx";
 import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
 import {
   listProjects,
@@ -10,6 +11,7 @@ import {
   type ServerConfig,
   type SessionRow,
 } from "../lib/opencode.ts";
+import { projectIconColor, projectTreeLabel } from "../lib/projectTree.ts";
 import { useServers } from "../state/servers.tsx";
 
 const SIDEBAR_SESSION_LIMIT = 15;
@@ -102,10 +104,11 @@ export default function SidebarProjects() {
             <NavLink
               to={`/servers/${serverID}/projects/${p.id}`}
               data-testid={`sidebar-project-${p.id}`}
-              title={p.id}
+              title={p.canonical ?? p.id}
             >
               <ServerDot server={selectedServer} />
-              {p.name}
+              <ProjectDot color={projectIconColor(p)} testId={`sidebar-project-dot-${p.id}`} />
+              {projectTreeLabel(p)}
             </NavLink>
           </li>
         ))}

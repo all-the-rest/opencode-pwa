@@ -238,6 +238,9 @@ Legend: ✅ in this app · 🚧 partial · ❌ missing (post-MVP unless noted).
 ## Projects, Agents, Models
 
 - ✅ Projects listed + counted, sessions grouped/filtered by project.
+- ✅ **Project display name** (Welle 7): rename via `PATCH /api/project/{id}`,
+  optional icon color, path-prefix tree where it earns its keep — see the
+  section „Projekt-Displayname + Ordner-Baum + Projekt anlegen (Welle 7)" below.
 - ✅ Agents: counted on dashboard, usable as session filter, and selectable per
   session (`GET /api/agent`).
 - ✅ Agent detail (`GET /api/agent/{id}`, route `/servers/:id/agents/:agentId`,
@@ -379,8 +382,108 @@ Server passwords are **never** in `localStorage` any more.
   guesses which project a server label refers to, so the rename stays
   local-only. No endpoint is invented for this; the only project-write
   endpoint used is the verified `PATCH /api/project/{projectID}`.
-- Covered by E2E `tests/e2e/server-tabs.spec.ts` (`@feature:server-tabs`:
-  one-project confirm + PATCH, multi-project local-only).
+- Server rename with a single project: renamed server-side too
+  (`updateProjectName`); wave 7 generalised this to `updateProject` with name
+  + icon color and a per-project inline rename (`useProjectRename`).
+  Covered by E2E `tests/e2e/server-tabs.spec.ts` (`@feature:server-tabs`):
+  one-project confirm + PATCH, multi-project local-only) and
+  `tests/e2e/w21-project-tree-picker.spec.ts` (`@feature:project-rename`).
+- Project rename/color: `PATCH /api/project/{projectID}` with the verified
+  `ProjectUpdateInput` (`{ name?, icon?: { color? } }`); see the wave-7 section.
+- Project creation: **not** possible as a project write (no endpoint). It
+  happens through the session location — `session.create({ location:
+  { directory } })` via the server folder picker (see the wave-7 section).
+
+## Projekt-Displayname + Ordner-Baum + Projekt anlegen (Welle 7)
+
+Owner asks, verified endpoints (installed `@opencode/client`,
+`dist/promise/generated/{client,types}.d.ts`):
+
+- `project.list()` and `project.update()` only — there is **no project create**
+  endpoint (`client.d.ts:147-149`).
+- `ProjectUpdateInput` = `{ projectID, canonical?, name?, icon?: { url?,
+  override?, color? }, commands?: { start? } }` (`types.d.ts:7732-7745`);
+  `Project` = `{ id, canonical, vcs?, name?, icon?, commands?, time, sandboxes }`
+  (`types.d.ts:2244`).
+- Event `project.updated` (`types.d.ts:2254`) carries the **full** project in
+  `data` — usable for live sync without a reload.
+- `SessionCreateInput` (`types.d.ts:3767+`) accepts
+  `location?: { directory: string }`; `session.create(input?)` exists
+  (`client.d.ts`, `session: { list, create, … }`). This is the lever a new
+  project is created with: the server derives the project from the session's
+  directory.
+- `file.list({ path })` answers `{ location: { directory }, data: FileSystemEntry[] }`
+  (`types.d.ts:528`, `:8001`); our `listDirectory` (an addition to
+  `src/lib/opencode.ts`, next to the existing `listFiles`) returns both the
+  entries and the resolved absolute location.
+
+**1 — Rename + Anzeigename.** `ProjectRenameForm` (`src/components/`)
+takes the display name plus an optional color from a fixed palette
+(`PROJECT_COLOR_PALETTE`, mapped to `icon.color`). `useProjectRename`
+(`src/hooks/`) patches the list optimistically (`patchedProject`), sends
+`updateProject(server, id, { name, color })`, rolls the previous project back
+on failure and answers with a toast — exactly the `renameSession` pattern.
+The header of `/servers/:id/projects/:id` shows the display name, the icon
+color dot and the canonical path; a still-path-like name collapses to its
+basename (`projectTreeLabel`), a custom name wins everywhere (lists, tree,
+sidebar). Live sync: `useProjectSync` subscribes to `project.updated` and
+patches the list from the event payload; the 5s `useLiveRefresh` stays the net
+for missed events. Offline renames are disabled (`project-rename` action).
+
+**2 — Baum-Evaluierung (finding).** The tree is real and the rule is
+implemented in `src/lib/projectTree.ts` (`buildProjectTree`, pure, unit-tested
+for nested, siblings, single root and no paths): projects with a path-like
+`canonical` are grouped by path prefix, and the tree only renders when it shows
+something a flat list cannot — that is when there are **several roots** or when
+a project is **itself the parent** of another project. In real setups the
+picture is this: a dev machine with a workspace directory holds its projects as
+siblings (`/projects/opencode-pwa`, `/projects/agents-skills`) — the shared root
+repeats on every row of a flat list but gains nothing as a tree either, so that
+case stays flat (the tree's single root is exactly the `pathed.length === 1`
+degeneration). Nesting shows up when a repo is a project *and* has sub-projects
+below it (`/srv/app` plus `/srv/app/services/api`): then the parent row is the
+folder that carries the project, the child is one level deeper, and collapsing
+the parent hides the whole branch. Two independent roots (`/srv/…` and
+`/home/dev/…`) are the second tree case — a flat list would interleave unrelated
+hierarchies. It also degenerates when projects carry no canonical path at all
+(older servers, renamed-away entries): those render as plain rows under the
+tree (`unpathed`), never invented directories. Rendering:
+`src/components/ProjectTree.tsx`, expandable per node with a persisted-in-component
+collapse set, every project keeps the `project-row-<id>` testid of the flat list,
+labels truncate at 360px.
+
+**3 — Projekt anlegen über den Server-Ordner-Picker.** `ServerFolderPicker`
+(`src/components/`) opens on „Neues Projekt" in the projects card of
+`/servers/:id`: it loads the server location with `listDirectory`, shows the
+absolute path plus a breadcrumb (every segment clickable, „Eine Ebene höher"
+row), lists directories (descend on click) and files (muted, not selectable),
+and confirms with „Projekt hier anlegen" → `createSession(server, { directory })`
+(`session.create` client call + `POST /api/session` fallback, same body). The
+new session then opens in the tab bar. This is the precise answer to „wie legt
+man ein neues Projekt an": the client library exposes **no** project-create
+endpoint, so the project cannot be registered directly — it comes into
+existence the way the server itself creates projects, namely as the directory
+of a session. Verified: the input (`SessionCreateInput.location.directory`) and
+the endpoint exist; **not** verifiable offline: the exact server-side reaction
+to a brand-new directory (whether `project.list` then reports it), which the
+E2E mocks. A load failure shows a retry inside the dialog and never a sticky
+banner; a failed creation keeps the dialog with its error.
+
+**4 — Mobile/Desktop.** Tree rows indent by 14px per level with `min-w-0`
+truncating labels (no horizontal scroller at 360px); the picker is a
+full-width modal box with touch-sized rows. Desktop gains nothing extra here
+on purpose — the tree is the same on both. On the project page itself there is
+no tree: one project has no siblings to group, so the header carries the tree's
+display rules instead (basename/custom name, color dot, canonical path line,
+rename affordance).
+
+Covered by E2E `tests/e2e/w21-project-tree-picker.spec.ts`
+(`@feature:project-rename`, `@feature:project-tree`, `@feature:folder-picker`,
+each on chromium and mobile), unit tests `src/lib/projectTree.test.ts`,
+`src/components/ProjectTree.test.tsx`,
+`src/components/ServerFolderPicker.test.tsx`,
+`src/hooks/useProjectRename.test.tsx` and the new API cases in
+`src/lib/opencode.test.ts`.
 
 ## Messenger Chat + Running Strip + Basic/Experte (Welle 6)
 

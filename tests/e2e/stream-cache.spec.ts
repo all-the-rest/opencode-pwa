@@ -152,7 +152,15 @@ test(
     // Wave 6 (UI-review finding #2): the two stacked offline alerts became one
     // status line — cache label plus the reason, single line.
     await expect(page.getByTestId("cache-status")).toContainText("Offline:");
-    await expect(page.locator(".alert-warning, .alert-error")).toHaveCount(0);
+    // Wave 6 (UI-review finding #2): the two stacked offline alerts became one
+    // status line — cache label plus the reason, single line. Toasts are
+    // excluded: since wave 6 a failed picker load answers with a toast
+    // (`alert alert-error`), which is the intended feedback, not a banner.
+    await expect(
+      page.locator(
+        '.alert-warning:not([data-testid^="toast-"]), .alert-error:not([data-testid^="toast-"])',
+      ),
+    ).toHaveCount(0);
     await expect(items.first()).toContainText("Nachricht 36");
     await expect(items.last()).toContainText("Nachricht 60");
 

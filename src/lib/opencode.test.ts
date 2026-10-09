@@ -2,10 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   basicAuthHeader,
   compactSession,
+  createSession,
   decodeFileContent,
   extractAgentDetail,
   extractAgents,
   extractFileEntries,
+  extractFileListing,
   extractListRows,
   extractMcpServers,
   extractModelCapabilities,
@@ -21,6 +23,7 @@ import {
   extractSessionRows,
   extractSessionStats,
   extractPtyRows,
+  extractProjectUpdated,
   extractShellRows,
   extractShellOutput,
   extractTokenUsage,
@@ -47,6 +50,7 @@ import {
   sessionTitle,
   toPromptFileUri,
   UNASSIGNED_PROJECT_KEY,
+  updateProject,
   type ServerConfig,
   type ServerCredentials,
 } from "./opencode.ts";
@@ -1209,5 +1213,181 @@ describe("getSessionInfo (client unwrap fallback)", () => {
     fetchMock.mockResolvedValue(jsonResponse({ id: "ses-1", agent: "coder" }));
     const result = await getSessionInfo(infoServer, "ses-1");
     expect(result.data?.agent).toBe("coder");
+  });
+});
+
+describe("extractProjectUpdated", () => {
+  it("reads the full project out of the verified event shape", () => {
+    expect(
+      extractProjectUpdated({
+        type: "project.updated",
+        data: { id: "p1", name: "Neu", canonical: "/srv/app", vcs: "git" },
+      }),
+    ).toEqual({ id: "p1", name: "Neu", canonical: "/srv/app", vcs: "git" });
+  });
+
+  it("carries the icon color", () => {
+    expect(
+      extractProjectUpdated({
+        type: "project.updated",
+        data: { id: "p1", canonical: "/srv/app", icon: { color: "oklch(0.7 0.2 264)", override: "code" } },
+      }),
+    ).toEqual({
+      id: "p1",
+      name: "/srv/app",
+      canonical: "/srv/app",
+      icon: { color: "oklch(0.7 0.2 264)", override: "code" },
+    });
+  });
+
+  it("rejects other types and malformed payloads", () => {
+    expect(extractProjectUpdated({ type: "session.updated", data: { id: "p1" } })).toBeNull();
+    expect(extractProjectUpdated({ type: "project.updated", data: { name: "x" } })).toBeNull();
+    expect(extractProjectUpdated({ type: "project.updated" })).toBeNull();
+    expect(extractProjectUpdated(null)).toBeNull();
+  });
+});
+
+describe("extractFileListing", () => {
+  it("splits the { location, data } shape of file.list", () => {
+    expect(
+      extractFileListing({ location: { directory: "/srv" }, data: [{ path: "src", type: "directory" }] }),
+    ).toEqual({ location: "/srv", entries: [{ path: "src", type: "directory" }] });
+  });
+
+  it("tolerates a missing location and a plain array", () => {
+    expect(extractFileListing([{ path: "a", type: "file" }])).toEqual({
+      location: null,
+      entries: [{ path: "a", type: "file" }],
+    });
+    expect(extractFileListing(null)).toEqual({ location: null, entries: [] });
+  });
+});
+
+describe("updateProject", () => {
+  const patchServer: ServerConfig = {
+    id: "s1",
+    name: "Lokal",
+    baseUrl: "http://x.local/",
+    username: "",
+  };
+
+  function patchResponse(body: string, status = 200): Response {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      text: async () => body,
+    } as unknown as Response;
+  }
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("renames via PATCH /api/project/{id} when the client is unavailable", async () => {
+    // The mocked client has no `project.update` — the client call throws and
+    // the direct-fetch path runs with the same method/path/body.
+    fetchMock.mockResolvedValue(patchResponse(JSON.stringify({ id: "p1", name: "Neu" })));
+    const result = await updateProject(patchServer, "p1", { name: "Neu" });
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({ id: "p1", name: "Neu" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://x.local/api/project/p1",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ projectID: "p1", name: "Neu" }),
+      }),
+    );
+  });
+
+  it("sends the color as an icon override", async () => {
+    fetchMock.mockResolvedValue(patchResponse(""));
+    await updateProject(patchServer, "p1", { name: "Neu", color: "oklch(0.7 0.2 264)" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://x.local/api/project/p1",
+      expect.objectContaining({
+        body: JSON.stringify({
+          projectID: "p1",
+          name: "Neu",
+          icon: { color: "oklch(0.7 0.2 264)" },
+        }),
+      }),
+    );
+  });
+
+  it("survives a 204 without a body", async () => {
+    fetchMock.mockResolvedValue(patchResponse("", 204));
+    const result = await updateProject(patchServer, "p1", { name: "Neu" });
+    expect(result.error).toBeNull();
+    expect(result.data?.name).toBe("Neu");
+  });
+
+  it("surfaces the fetch status when the update fails", async () => {
+    fetchMock.mockResolvedValue(patchResponse("", 500));
+    const result = await updateProject(patchServer, "p1", { name: "Neu" });
+    expect(result.error).toContain("500");
+  });
+});
+
+describe("createSession", () => {
+  const createServer: ServerConfig = {
+    id: "s1",
+    name: "Lokal",
+    baseUrl: "http://x.local/",
+    username: "",
+  };
+
+  function jsonResponse(payload: unknown, status = 200): Response {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      json: async () => payload,
+    } as unknown as Response;
+  }
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("posts the chosen directory as the session location", async () => {
+    // The mocked client has no `session.create` — the client call throws and
+    // the direct-fetch path posts to /api/session.
+    fetchMock.mockResolvedValue(jsonResponse({ data: { id: "ses-new", agent: "coder" } }));
+    const result = await createSession(createServer, { directory: "/srv/new-app" });
+    expect(result.error).toBeNull();
+    expect(result.data?.id).toBe("ses-new");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://x.local/api/session",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ location: { directory: "/srv/new-app" } }),
+      }),
+    );
+  });
+
+  it("posts no location when no directory was chosen", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ id: "ses-plain" }));
+    const result = await createSession(createServer, {});
+    expect(result.data?.id).toBe("ses-plain");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://x.local/api/session",
+      expect.objectContaining({ body: JSON.stringify({}) }),
+    );
+  });
+
+  it("surfaces the fetch status when creation fails", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({}, 500));
+    const result = await createSession(createServer, { directory: "/srv/app" });
+    expect(result.error).toContain("500");
   });
 });

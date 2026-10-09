@@ -34,6 +34,7 @@ const ALL_ACTIONS: ServerAction[] = [
   "config-shells",
   "terminal-read",
   "project-rename",
+  "session-create",
   "shell-create",
   "shell-remove",
   "shell-output",

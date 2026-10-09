@@ -52,3 +52,25 @@
   aggregierte Zähler aus `session.list`, kein Streaming-Inspector.
 - Routen-Regel (Owner 2026-10-07): so viel wie sinnvoll in den Pfad, Rest in
   Query-Params. `+ Neu` führt zum Starter (kein Deep-Link auf Server-Seite).
+
+## Display Name, Path Tree, Creation (Owner-Entscheidung Welle 7)
+
+- **Rename**: `PATCH /api/project/{projectID}` with `{ name }` and optional
+  `icon: { color }` (wrapper `updateProject`, `src/lib/opencode.ts`; optimistic
+  path `useProjectRename` + `ProjectRenameForm`). `projectTreeLabel` decides
+  what a list shows: a custom name wins, a still-path-like name collapses to
+  its basename. `project.updated` (event payload carries the full project)
+  syncs a rename from elsewhere live (`useProjectSync`).
+- **Tree**: `buildProjectTree` (`src/lib/projectTree.ts`) groups projects by
+  the prefixes of `Project.canonical`. Rendered as a tree when there are
+  several roots or a project is the parent of another project; otherwise the
+  flat list stays (a single common root adds nothing). Projects without a
+  path-like canonical are always flat rows. Documentation + evaluation in
+  `features/05-parity.md` („Projekt-Displayname + Ordner-Baum + Projekt
+  anlegen (Welle 7)").
+- **New project**: there is no create endpoint for projects in the installed
+  client (`project: { list, update }`). The server folder picker
+  (`ServerFolderPicker`) browses `file.list` (wrapper `listDirectory`, which
+  also resolves `location.directory` for the breadcrumb) and confirms with
+  `session.create({ location: { directory } })` — the server derives the
+  project from the session's directory, exactly like in the original GUI.

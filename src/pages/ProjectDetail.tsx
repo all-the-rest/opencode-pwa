@@ -3,16 +3,21 @@ import { Trans } from "@lingui/react/macro";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Icon from "../components/Icon.tsx";
+import ProjectRenameForm from "../components/ProjectRenameForm.tsx";
+import { ProjectDot } from "../components/ProjectTree.tsx";
 import ServerDot from "../components/ServerDot.tsx";
 import ServerErrorBanner from "../components/ServerErrorBanner.tsx";
 import ServerStatusBadge from "../components/ServerStatusBadge.tsx";
 import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
 import { useActiveSessionID } from "../hooks/useActiveSessionID.ts";
 import { useOpenSessionTabs, useSessionUnread } from "../hooks/useSessionSearch.ts";
+import { useProjectRename } from "../hooks/useProjectRename.ts";
+import { useProjectSync } from "../hooks/useProjectSync.ts";
 import SessionListSkeleton from "../components/SessionListSkeleton.tsx";
 import SessionRowMarkers from "../components/SessionRowMarkers.tsx";
 import SessionSearchOverlay from "../components/SessionSearchOverlay.tsx";
 import { isActionEnabled, reachability } from "../lib/offline.ts";
+import { projectIconColor, projectTreeLabel } from "../lib/projectTree.ts";
 import {
   filterSessionRows,
   listProjects,
@@ -129,6 +134,18 @@ export default function ProjectDetail() {
 
   useLiveRefresh(server, reload, LIVE_REFRESH_INTERVAL_MS);
 
+  // Wave 7: `project.updated` patches the list live (the event carries the full
+  // project) and a rename optimistically updates the header with rollback + toast.
+  useProjectSync(server, setProjects);
+  const renameProject = useProjectRename(server, setProjects);
+  const [renaming, setRenaming] = useState(false);
+  const [renameBusy, setRenameBusy] = useState(false);
+  // Switching projects (sidebar link) closes the open rename form — the form
+  // always belongs to exactly one project.
+  useEffect(() => {
+    setRenaming(false);
+  }, [projectId]);
+
   // Wave 5: open-tab badge + unread dot per session row — from state the page
   // already has (`useSessionTabs`, the event hub's derived run state). Called
   // before the early return below so the hook order stays stable.
@@ -163,16 +180,28 @@ export default function ProjectDetail() {
 
   const activeServer: ServerConfig = server;
   const project = projects.find((p) => p.id === projectId) ?? null;
-  const projectName = project?.name ?? projectId ?? "";
+  const projectName = project === null ? projectId ?? "" : projectTreeLabel(project);
   // Lingui-safe hoists: no member access inside messages.
   const serverName = activeServer.name;
+  const { offline } = reachability(error);
+  const canRenameProject = isActionEnabled(offline, "project-rename");
+
+  async function handleProjectRename(patch: { name: string; color?: string | null }) {
+    if (project === null || !canRenameProject) return;
+    setRenameBusy(true);
+    try {
+      const saved = await renameProject(project, patch);
+      if (saved) setRenaming(false);
+    } finally {
+      setRenameBusy(false);
+    }
+  }
   const agents = [...new Set(sessions.map((s) => s.agent).filter((a): a is string => a !== null))].sort();
   const filtered = filterSessionRows(sessions, {
     agent: agentFilter === "" ? null : agentFilter,
     search,
   });
   const sessionCount = filtered.length;
-  const { offline } = reachability(error);
   const canLoadMore = isActionEnabled(offline, "sessions-load-more");
 
   async function loadMoreSessions() {
@@ -207,14 +236,53 @@ export default function ProjectDetail() {
           <Trans>← Server</Trans>
         </Link>
       </div>
-      <h1 className="text-2xl font-bold flex items-center gap-2" data-testid="project-title">
-        <ServerDot server={activeServer} />
-        <Icon name="project" />
-        {projectName === "" ? <Trans>Projekt</Trans> : projectName}
-      </h1>
-      <p className="text-sm opacity-70">
-        <Trans>Server: {serverName}</Trans> {!loading && <ServerStatusBadge offline={offline} />}
-      </p>
+      <div className="flex flex-col gap-1">
+        <h1
+          className="text-2xl font-bold flex items-center gap-2 flex-wrap"
+          data-testid="project-title"
+        >
+          <ServerDot server={activeServer} />
+          <Icon name="project" />
+          {project !== null && (
+            <ProjectDot color={projectIconColor(project)} testId="project-dot" />
+          )}
+          {projectName === "" ? <Trans>Projekt</Trans> : projectName}
+        </h1>
+        {project?.canonical !== undefined && (
+          <p
+            className="text-sm opacity-70 font-mono break-all"
+            data-testid="project-canonical"
+          >
+            {project.canonical}
+          </p>
+        )}
+        <p className="text-sm opacity-70 flex flex-wrap items-center gap-2">
+          <Trans>Server: {serverName}</Trans> {!loading && <ServerStatusBadge offline={offline} />}
+          {project !== null && !renaming && (
+            <button
+              type="button"
+              className="btn btn-xs btn-ghost"
+              disabled={!canRenameProject}
+              title={t`Anzeigename und Farbe des Projekts ändern`}
+              data-testid="project-rename-button"
+              onClick={() => setRenaming(true)}
+            >
+              <Icon name="edit" />
+              <Trans>Umbenennen</Trans>
+            </button>
+          )}
+        </p>
+        {project !== null && renaming && (
+          <ProjectRenameForm
+            key={project.id}
+            initialName={project.name}
+            initialColor={projectIconColor(project)}
+            busy={renameBusy}
+            onSubmit={(patch) => void handleProjectRename(patch)}
+            onCancel={() => setRenaming(false)}
+          />
+        )}
+      </div>
       {projectId !== undefined && project === null && !loading && error === null && (
         <div className="alert alert-warning">
           <span>

@@ -2,6 +2,7 @@ import { t } from "@lingui/core/macro";
 import { OpenCode } from "@opencode/client";
 import { readCredential } from "./credentialVault.ts";
 import { extractFormFields, type SessionFormField } from "./formFields.ts";
+import { projectUpdatePayload, type ProjectRenamePatch } from "./projectTree.ts";
 
 /**
  * A server as it is persisted (`localStorage`) and passed around the app:
@@ -393,6 +394,16 @@ export function extractModels(value: unknown): ModelOption[] {
 /** `Project.vcs` as a server reports it: a string marker or a newer object. */
 export type ProjectVcs = string | { type?: string };
 
+/** `Project.icon` as a server reports it: color/override/url hints. */
+export interface ProjectIconInfo {
+  /** Icon color override (folder color in the original GUI). */
+  color?: string;
+  /** Icon override (emoji or short name the original renders instead of the folder). */
+  override?: string;
+  /** Icon URL. */
+  url?: string;
+}
+
 export interface ProjectInfo {
   id: string;
   name: string;
@@ -400,6 +411,22 @@ export interface ProjectInfo {
   canonical?: string;
   /** VCS marker of the project directory (`Project.vcs`); absent when unknown. */
   vcs?: ProjectVcs;
+  /** Icon hints (`Project.icon`); absent when the server sends none. */
+  icon?: ProjectIconInfo;
+}
+
+function readProjectIcon(value: unknown): ProjectIconInfo | null {
+  if (value === null || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const color = readString(record, ["color"]);
+  const override = readString(record, ["override"]);
+  const url = readString(record, ["url"]);
+  if (color === null && override === null && url === null) return null;
+  return {
+    ...(color !== null ? { color } : {}),
+    ...(override !== null ? { override } : {}),
+    ...(url !== null ? { url } : {}),
+  };
 }
 
 export const UNASSIGNED_PROJECT_KEY = "Ohne Projekt";
@@ -418,6 +445,7 @@ function toProjectInfo(entry: unknown, index: number): ProjectInfo {
     const id = readString(record, ["id"]) ?? `projekt-${index}`;
     const name = readString(record, ["name", "canonical"]) ?? id;
     const canonical = readString(record, ["canonical"]);
+    const icon = readProjectIcon(record["icon"]);
     const rawVcs: unknown = record["vcs"];
     const vcs: ProjectVcs | undefined =
       typeof rawVcs === "string"
@@ -429,6 +457,7 @@ function toProjectInfo(entry: unknown, index: number): ProjectInfo {
       id,
       name,
       ...(canonical !== null ? { canonical } : {}),
+      ...(icon !== null ? { icon } : {}),
       ...(vcs !== undefined ? { vcs } : {}),
     };
   }
@@ -1054,24 +1083,23 @@ export function listMessages(server: ServerConfig, sessionID: string) {
 }
 
 /**
- * PATCH /api/project/{projectID} — rename a project.
+ * PATCH /api/project/{projectID} — update a project (name, icon color).
  *
  * Verified against the installed package: `project.update()` exists
- * (node_modules/@opencode/client `project: { list, update }`) and hits
- * `PATCH /api/project/{projectID}` with `{ name }` in the body.
+ * (node_modules/@opencode/client `project: { list, update }`, client.d.ts:147-149)
+ * and hits `PATCH /api/project/{projectID}` with a `ProjectUpdateInput`
+ * (`{ projectID, name?, icon?: { color? } }`, types.d.ts:7732-7745).
  * The direct-fetch fallback pins the same method/path/body.
  */
-export function updateProjectName(
+export function updateProject(
   server: ServerConfig,
   projectID: string,
-  name: string,
+  patch: ProjectRenamePatch,
 ): Promise<ApiResult<ProjectInfo>> {
   return guarded(async () => {
+    const payload = projectUpdatePayload(projectID, patch);
     try {
-      return toProjectInfo(
-        await (await makeClient(server)).project.update({ projectID, name }),
-        0,
-      );
+      return toProjectInfo(await (await makeClient(server)).project.update(payload), 0);
     } catch {
       const baseUrl = server.baseUrl.replace(/\/$/, "");
       const response = await fetch(
@@ -1079,13 +1107,106 @@ export function updateProjectName(
         {
           method: "PATCH",
           headers: { "content-type": "application/json", ...(await fetchAuthHeaders(server)) },
-          body: JSON.stringify({ name }),
+          body: JSON.stringify(payload),
         },
       );
       if (!response.ok) {
         throw new Error(`PATCH /api/project/${projectID} failed with status ${response.status}`);
       }
-      return toProjectInfo(await response.json(), 0);
+      const raw = await response.text();
+      // A 204 carries no body — keep the patched project instead of failing
+      // on the JSON parse.
+      if (raw.trim() === "") return patchedProjectFromPatch(projectID, patch);
+      return toProjectInfo(JSON.parse(raw) as unknown, 0);
+    }
+  });
+}
+
+/** Rename a project (name only) — the single-project server-rename path. */
+export function updateProjectName(
+  server: ServerConfig,
+  projectID: string,
+  name: string,
+): Promise<ApiResult<ProjectInfo>> {
+  return updateProject(server, projectID, { name });
+}
+
+/** Project a 204/empty `PATCH /api/project` answer implies (name, no icon). */
+function patchedProjectFromPatch(projectID: string, patch: ProjectRenamePatch): ProjectInfo {
+  return {
+    id: projectID,
+    name: patch.name ?? projectID,
+    ...(patch.color === undefined || patch.color === null ? {} : { icon: { color: patch.color } }),
+  };
+}
+
+/**
+ * Live sync: read a `project.updated` event into a `ProjectInfo`.
+ *
+ * Verified shape (`ProjectUpdated`, types.d.ts:2254): `{ type: "project.updated",
+ * data: Project }` — the full project rides along, so a rename from another
+ * client patches the list without a reload. Returns null for other types and
+ * malformed payloads.
+ */
+export function extractProjectUpdated(event: unknown): ProjectInfo | null {
+  if (event === null || typeof event !== "object") return null;
+  const record = event as Record<string, unknown>;
+  if (record["type"] !== "project.updated") return null;
+  const data: unknown = record["data"];
+  if (data === null || typeof data !== "object") return null;
+  const dataRecord = data as Record<string, unknown>;
+  if (readString(dataRecord, ["id"]) === null) return null;
+  return toProjectInfo(dataRecord, 0);
+}
+
+/**
+ * POST /api/session — create a session, optionally in a chosen directory.
+ *
+ * Verified against the installed package: `session.create(input?)` exists
+ * (client.d.ts, `session: { list, create, … }`) and `SessionCreateInput`
+ * carries `location?: { directory: string }` (types.d.ts:3767+). That is what
+ * makes a new project possible at all: the server derives the project from the
+ * session's directory, and the client has no project-create endpoint
+ * (`project: { list, update }` only). The direct-fetch fallback pins
+ * `POST /api/session` with the same body.
+ */
+export function createSession(
+  server: ServerConfig,
+  options: { directory?: string; title?: string } = {},
+): Promise<ApiResult<SessionInfo>> {
+  return guarded(async () => {
+    const client = await makeClient(server);
+    // Derived from the generated client so the input shape stays verified
+    // (`SessionCreateInput`, types.d.ts:3767+): `{ location?: { directory }, title? }`.
+    type CreateInput = NonNullable<Parameters<typeof client.session.create>[0]>;
+    const input: CreateInput = {
+      ...(options.directory !== undefined && options.directory !== ""
+        ? { location: { directory: options.directory } }
+        : {}),
+      ...(options.title !== undefined && options.title !== "" ? { title: options.title } : {}),
+    };
+    try {
+      const info = extractSessionInfo(await client.session.create(input));
+      if (info === null) throw new Error(t`Unerwartete Session-Antwort vom Server.`);
+      return info;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Unerwartete Session")) throw error;
+      const baseUrl = server.baseUrl.replace(/\/$/, "");
+      const response = await fetch(`${baseUrl}/api/session`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json",
+          ...(await fetchAuthHeaders(server)),
+        },
+        body: JSON.stringify(input),
+      });
+      if (!response.ok) {
+        throw new Error(`POST /api/session failed with status ${response.status}`);
+      }
+      const info = extractSessionInfo(await response.json());
+      if (info === null) throw new Error(t`Unerwartete Session-Antwort vom Server.`);
+      return info;
     }
   });
 }
@@ -1140,6 +1261,42 @@ export function extractFileEntries(value: unknown): FileEntryRow[] {
 export function listFiles(server: ServerConfig, path?: string): Promise<ApiResult<FileEntryRow[]>> {
   return guarded(async () =>
     extractFileEntries(
+      await (await makeClient(server)).file.list(path === undefined ? {} : { path }),
+    ),
+  );
+}
+
+export interface FileListing {
+  /** Absolute directory the entries live in, when the server reported it. */
+  location: string | null;
+  entries: FileEntryRow[];
+}
+
+/**
+ * Split a `file.list` payload (`FileListOutput`, types.d.ts:8001) into entries
+ * plus the resolved location. `file.list({ path })` answers with the absolute
+ * directory in `location.directory`, which the folder picker needs for its
+ * breadcrumb (the entry paths themselves are relative names).
+ */
+export function extractFileListing(value: unknown): FileListing {
+  const entries = extractFileEntries(value);
+  let location: string | null = null;
+  if (value !== null && typeof value === "object") {
+    const raw: unknown = (value as { location?: unknown }).location;
+    if (raw !== null && typeof raw === "object") {
+      location = readString(raw as Record<string, unknown>, ["directory", "path"]);
+    }
+  }
+  return { location, entries };
+}
+
+/** GET /api/fs/list — listing of one directory plus its absolute location. */
+export function listDirectory(
+  server: ServerConfig,
+  path?: string,
+): Promise<ApiResult<FileListing>> {
+  return guarded(async () =>
+    extractFileListing(
       await (await makeClient(server)).file.list(path === undefined ? {} : { path }),
     ),
   );

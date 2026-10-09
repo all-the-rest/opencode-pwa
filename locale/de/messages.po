@@ -56,6 +56,14 @@ msgstr "{fileCount} Dateien"
 msgid "{hiddenCount} weitere anzeigen"
 msgstr "{hiddenCount} weitere anzeigen"
 
+#: src/components/ProjectTree.tsx
+msgid "{label} aufklappen"
+msgstr "{label} aufklappen"
+
+#: src/components/ProjectTree.tsx
+msgid "{label} einklappen"
+msgstr "{label} einklappen"
+
 #: src/components/ChatMessageList.tsx
 msgid "{lists} Listen"
 msgstr "{lists} Listen"
@@ -129,6 +137,8 @@ msgid "1 Verbindung"
 msgstr "1 Verbindung"
 
 #: src/components/ConfirmDialog.tsx
+#: src/components/ProjectRenameForm.tsx
+#: src/components/ServerFolderPicker.tsx
 #: src/pages/ServerDetail.tsx
 #: src/pages/SessionDetail.tsx
 #: src/pages/Settings.tsx
@@ -414,6 +424,10 @@ msgstr "Anzeige auf {previewLimit} Zeichen gekürzt."
 msgid "Anzeigen"
 msgstr "Anzeigen"
 
+#: src/pages/ProjectDetail.tsx
+msgid "Anzeigename und Farbe des Projekts ändern"
+msgstr "Anzeigename und Farbe des Projekts ändern"
+
 #: src/components/IntegrationsCard.tsx
 msgid "API-Schlüssel"
 msgstr "API-Schlüssel"
@@ -426,6 +440,10 @@ msgstr "API-Schlüssel …"
 #: src/pages/SessionDetail.tsx
 msgid "Assistent"
 msgstr "Assistent"
+
+#: src/components/ServerFolderPicker.tsx
+msgid "Auf dem Server stöbern und bestätigen: Die Session entsteht im gewählten Ordner, das Projekt richtet der Server selbst ein."
+msgstr "Auf dem Server stöbern und bestätigen: Die Session entsteht im gewählten Ordner, das Projekt richtet der Server selbst ein."
 
 #: src/components/ChatMessageList.tsx
 msgid "Auf diesen Stand zurücksetzen"
@@ -690,6 +708,10 @@ msgstr "Das gestagete Revert wird übernommen. Nachrichten und Dateien nach dem 
 msgid "Datei"
 msgstr "Datei"
 
+#: src/components/ServerFolderPicker.tsx
+msgid "Datei – keine Projektwurzel"
+msgstr "Datei – keine Projektwurzel"
+
 #: src/components/PromptComposer.tsx
 msgid "Datei an den Prompt anhängen"
 msgstr "Datei an den Prompt anhängen"
@@ -855,6 +877,10 @@ msgstr "Diese Berechtigungsanfrage hat keine Session und kann nicht beantwortet 
 msgid "Dieser Browser unterstützt keine Benachrichtigungen."
 msgstr "Dieser Browser unterstützt keine Benachrichtigungen."
 
+#: src/components/ServerFolderPicker.tsx
+msgid "Dieser Ordner ist leer."
+msgstr "Dieser Ordner ist leer."
+
 #: src/pages/ServerDetail.tsx
 msgid "Dieser Server hat genau ein Projekt: „{projectRenameName}“. Soll dieses Projekt auf dem Server in „{projectRenameNewName}“ umbenannt werden? Der Servername wurde bereits lokal gespeichert."
 msgstr "Dieser Server hat genau ein Projekt: „{projectRenameName}“. Soll dieses Projekt auf dem Server in „{projectRenameNewName}“ umbenannt werden? Der Servername wurde bereits lokal gespeichert."
@@ -894,6 +920,10 @@ msgstr "Ein Verzeichnis zurück"
 #: src/hooks/useEventNotifications.ts
 msgid "Eine Aktion wartet auf Freigabe{suffix}."
 msgstr "Eine Aktion wartet auf Freigabe{suffix}."
+
+#: src/components/ServerFolderPicker.tsx
+msgid "Eine Ebene höher"
+msgstr "Eine Ebene höher"
 
 #: src/pages/SessionDetail.tsx
 msgid "Einfach"
@@ -1002,6 +1032,7 @@ msgstr "Entfernte Zeilen"
 msgid "Erkundung abgeschlossen"
 msgstr "Erkundung abgeschlossen"
 
+#: src/components/ServerFolderPicker.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Erneut laden"
 msgstr "Erneut laden"
@@ -1061,6 +1092,22 @@ msgstr "Fähigkeiten"
 #: src/pages/Settings.tsx
 msgid "Farbe"
 msgstr "Farbe"
+
+#: src/components/ProjectRenameForm.tsx
+msgid "Farbe {swatch}"
+msgstr "Farbe {swatch}"
+
+#: src/components/ProjectRenameForm.tsx
+msgid "Farbe setzen"
+msgstr "Farbe setzen"
+
+#: src/components/ProjectRenameForm.tsx
+msgid "Farbe zurücksetzen"
+msgstr "Farbe zurücksetzen"
+
+#: src/components/ProjectRenameForm.tsx
+msgid "Farbe:"
+msgstr "Farbe:"
 
 #: src/components/ChatMessageList.tsx
 msgid "Fehler"
@@ -1328,6 +1375,10 @@ msgstr "Kein Projekt ausgewählt."
 msgid "Kein Server"
 msgstr "Kein Server"
 
+#: src/hooks/useProjectRename.ts
+msgid "Kein Server ausgewählt."
+msgstr "Kein Server ausgewählt."
+
 #: src/pages/Dashboard.tsx
 #~ msgid "Kein Server ausgewählt. Lege unter <0>Einstellungen</0> einen Server an."
 #~ msgstr "Kein Server ausgewählt. Lege unter <0>Einstellungen</0> einen Server an."
@@ -1569,6 +1620,7 @@ msgstr "Kosten:"
 msgid "Lädt"
 msgstr "Lädt"
 
+#: src/components/ServerFolderPicker.tsx
 #: src/pages/Dashboard.tsx
 #: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
@@ -1791,6 +1843,10 @@ msgstr "Neue Session"
 msgid "Neue Session öffnen"
 msgstr "Neue Session öffnen"
 
+#: src/components/ProjectRenameForm.tsx
+msgid "Neuer Projektname"
+msgstr "Neuer Projektname"
+
 #: src/pages/ServerDetail.tsx
 msgid "Neuer Servername"
 msgstr "Neuer Servername"
@@ -1814,6 +1870,18 @@ msgstr "Neuer Versuch"
 #: src/pages/Settings.tsx
 msgid "Neues Passwort (Basic Auth)"
 msgstr "Neues Passwort (Basic Auth)"
+
+#: src/pages/ServerDetail.tsx
+msgid "Neues Projekt"
+msgstr "Neues Projekt"
+
+#: src/components/ServerFolderPicker.tsx
+msgid "Neues Projekt – Ordner wählen"
+msgstr "Neues Projekt – Ordner wählen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Neues Projekt über die Server-Ordner anlegen"
+msgstr "Neues Projekt über die Server-Ordner anlegen"
 
 #: src/pages/SessionDetail.tsx
 msgid "Neueste ↓"
@@ -1983,6 +2051,22 @@ msgstr "Online"
 msgid "Ordner"
 msgstr "Ordner"
 
+#: src/components/ServerFolderPicker.tsx
+msgid "Ordner {entryName} öffnen"
+msgstr "Ordner {entryName} öffnen"
+
+#: src/components/ServerFolderPicker.tsx
+msgid "Ordner auf dem Server wählen"
+msgstr "Ordner auf dem Server wählen"
+
+#: src/components/ServerFolderPicker.tsx
+msgid "Ordner konnten nicht geladen werden."
+msgstr "Ordner konnten nicht geladen werden."
+
+#: src/components/ServerFolderPicker.tsx
+msgid "Ordner werden geladen …"
+msgstr "Ordner werden geladen …"
+
 #: src/pages/Settings.tsx
 msgid "Passwort"
 msgstr "Passwort"
@@ -2011,15 +2095,35 @@ msgstr "Pfad im Projekt, z. B. src"
 msgid "Pfad öffnen"
 msgstr "Pfad öffnen"
 
+#: src/components/ProjectTree.tsx
+msgid "Pfade als Baum gruppiert – gemeinsame Ordner nur einmal."
+msgstr "Pfade als Baum gruppiert – gemeinsame Ordner nur einmal."
+
 #: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 #: src/pages/ServerTools.tsx
 msgid "Projekt"
 msgstr "Projekt"
 
+#: src/components/ProjectTree.tsx
+msgid "Projekt {label} umbenennen"
+msgstr "Projekt {label} umbenennen"
+
+#: src/pages/ServerDetail.tsx
+msgid "Projekt {projectLabel} umbenennen"
+msgstr "Projekt {projectLabel} umbenennen"
+
 #: src/pages/ServerTools.tsx
 msgid "Projekt für Worktrees"
 msgstr "Projekt für Worktrees"
+
+#: src/hooks/useProjectRename.ts
+msgid "Projekt gespeichert."
+msgstr "Projekt gespeichert."
+
+#: src/components/ServerFolderPicker.tsx
+msgid "Projekt hier anlegen"
+msgstr "Projekt hier anlegen"
 
 #: src/pages/ServerDetail.tsx
 msgid "Projekt umbenennen"
@@ -2038,6 +2142,10 @@ msgstr "Projekte"
 #: src/pages/ServerDetail.tsx
 msgid "Projekte ({projectCount})"
 msgstr "Projekte ({projectCount})"
+
+#: src/components/ProjectRenameForm.tsx
+msgid "Projektfarbe"
+msgstr "Projektfarbe"
 
 #. placeholder {0}: ptys.length
 #: src/pages/ServerDetail.tsx
@@ -2218,6 +2326,10 @@ msgstr "Server wählen"
 msgid "Server werden lokal im Browser gespeichert: Name, Basis-URL und Benutzer im localStorage, das Passwort (Basic Auth) verschlüsselt mit AES-GCM in der IndexedDB-Datenbank. Pro Server ein Benutzer."
 msgstr "Server werden lokal im Browser gespeichert: Name, Basis-URL und Benutzer im localStorage, das Passwort (Basic Auth) verschlüsselt mit AES-GCM in der IndexedDB-Datenbank. Pro Server ein Benutzer."
 
+#: src/components/ServerFolderPicker.tsx
+msgid "Server-Root"
+msgstr "Server-Root"
+
 #: src/components/Layout.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Server-Werkzeuge"
@@ -2347,6 +2459,10 @@ msgstr "Session kompaktieren"
 msgid "Session kompaktiert{suffix}."
 msgstr "Session kompaktiert{suffix}."
 
+#: src/components/ServerFolderPicker.tsx
+msgid "Session konnte nicht erstellt werden."
+msgstr "Session konnte nicht erstellt werden."
+
 #: src/pages/ServerDetail.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Session löschen"
@@ -2449,6 +2565,7 @@ msgstr "sofort"
 msgid "Sofort"
 msgstr "Sofort"
 
+#: src/components/ProjectRenameForm.tsx
 #: src/pages/ServerDetail.tsx
 #: src/pages/SessionDetail.tsx
 #: src/pages/Settings.tsx
@@ -2478,6 +2595,7 @@ msgid "Staging verworfen – die Session ist unverändert."
 msgstr "Staging verworfen – die Session ist unverändert."
 
 #: src/components/ConfigCard.tsx
+#: src/components/ProjectRenameForm.tsx
 msgid "Standard"
 msgstr "Standard"
 
@@ -2641,6 +2759,8 @@ msgstr "Übersicht"
 msgid "Umbenannt:"
 msgstr "Umbenannt:"
 
+#: src/components/ProjectTree.tsx
+#: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Umbenennen"
@@ -2651,6 +2771,7 @@ msgid "Umbenennen abbrechen"
 msgstr "Umbenennen abbrechen"
 
 #: src/components/SessionTabBar.tsx
+#: src/hooks/useProjectRename.ts
 #: src/pages/SessionDetail.tsx
 msgid "Umbenennen fehlgeschlagen: {renameError}"
 msgstr "Umbenennen fehlgeschlagen: {renameError}"
@@ -2866,6 +2987,7 @@ msgstr "Willkommen"
 msgid "Wird erkundet"
 msgstr "Wird erkundet"
 
+#: src/components/ServerFolderPicker.tsx
 #: src/components/SessionDiffView.tsx
 msgid "Wird erstellt …"
 msgstr "Wird erstellt …"
@@ -2889,6 +3011,15 @@ msgstr "Zeilen"
 #: src/lib/serverConnectionTest.ts
 msgid "Zeitüberschreitung: Der Server hat nicht innerhalb von 4 Sekunden geantwortet. Bitte prüfen, ob der Server erreichbar ist."
 msgstr "Zeitüberschreitung: Der Server hat nicht innerhalb von 4 Sekunden geantwortet. Bitte prüfen, ob der Server erreichbar ist."
+
+#. placeholder {0}: crumb.target
+#: src/components/ServerFolderPicker.tsx
+#~ msgid "Zu {0}"
+#~ msgstr "Zu {0}"
+
+#: src/components/ServerFolderPicker.tsx
+msgid "Zu {target}"
+msgstr "Zu {target}"
 
 #: src/pages/SessionDetail.tsx
 msgid "Zu neuesten springen"

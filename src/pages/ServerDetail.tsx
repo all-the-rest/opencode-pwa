@@ -8,10 +8,15 @@ import Icon from "../components/Icon.tsx";
 import ServerDot from "../components/ServerDot.tsx";
 import ServerErrorBanner from "../components/ServerErrorBanner.tsx";
 import ServerStatusBadge from "../components/ServerStatusBadge.tsx";
+import ProjectRenameForm from "../components/ProjectRenameForm.tsx";
+import ProjectTree, { ProjectDot } from "../components/ProjectTree.tsx";
+import ServerFolderPicker from "../components/ServerFolderPicker.tsx";
 import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
 import { useShellOutputStream } from "../hooks/useShellOutputStream.ts";
 import { useOpenSessionTabs, useSessionUnread } from "../hooks/useSessionSearch.ts";
 import { useActiveSessionID } from "../hooks/useActiveSessionID.ts";
+import { useProjectRename } from "../hooks/useProjectRename.ts";
+import { useProjectSync } from "../hooks/useProjectSync.ts";
 import SessionListSkeleton from "../components/SessionListSkeleton.tsx";
 import SessionRowMarkers from "../components/SessionRowMarkers.tsx";
 import SessionSearchOverlay from "../components/SessionSearchOverlay.tsx";
@@ -33,8 +38,14 @@ import {
   updateProjectName,
   type ProjectInfo,
   type ServerConfig,
+  type SessionInfo,
   type SessionRow,
 } from "../lib/opencode.ts";
+import {
+  buildProjectTree,
+  projectIconColor,
+  projectTreeLabel,
+} from "../lib/projectTree.ts";
 import { useServers } from "../state/servers.tsx";
 import { useLayoutMode } from "../state/layoutMode.tsx";
 import { useSessionTabs } from "../state/sessionTabs.tsx";
@@ -263,6 +274,12 @@ export default function ServerDetail() {
 
   const [ptyTickets, setPtyTickets] = useState<Record<string, string>>({});
   const [ptyTicketError, setPtyTicketError] = useState<string | null>(null);
+  // Wave 7: inline rename of one project row (name + icon color, optimistic)
+  // and the server folder picker that creates a project by starting a session
+  // in a chosen directory.
+  const [renamingProjectID, setRenamingProjectID] = useState<string | null>(null);
+  const [projectRowRenameBusy, setProjectRowRenameBusy] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Inline rename. The server entry itself is client-side only (updateServer
   // touches just the stored entry), but when the server has exactly one
@@ -329,6 +346,8 @@ export default function ServerDetail() {
     setRenameError(null);
     setProjectRename(null);
     setProjectRenameError(null);
+    setRenamingProjectID(null);
+    setPickerOpen(false);
     setConfirmDeleteServer(false);
     Promise.all([
       listSessionsPaged(server, { limit: SESSION_PAGE_LIMIT }),
@@ -390,6 +409,12 @@ export default function ServerDetail() {
   const listedSessionIDs = useMemo(() => sessions.map((row) => row.id), [sessions]);
   const unread = useSessionUnread(server, listedSessionIDs, activeSessionID);
 
+  // Wave 7: `project.updated` patches the list live (the event carries the full
+  // project), and a rename optimistically updates the row with rollback + toast.
+  useProjectSync(server, setProjects);
+  const renameProject = useProjectRename(server, setProjects);
+  const projectTree = useMemo(() => buildProjectTree(projects), [projects]);
+
   if (server === null) {
     return (
       <div className="flex flex-col gap-4">
@@ -415,6 +440,37 @@ export default function ServerDetail() {
   const canLoadMore = isActionEnabled(offline, "sessions-load-more");
   const canCreateShell = isActionEnabled(offline, "shell-create");
   const canPtyToken = isActionEnabled(offline, "pty-token");
+  const canRenameProject = isActionEnabled(offline, "project-rename");
+  const canCreateProject = isActionEnabled(offline, "session-create");
+
+  async function handleProjectRename(
+    project: ProjectInfo,
+    patch: { name: string; color?: string | null },
+  ) {
+    if (!canRenameProject) return;
+    setProjectRowRenameBusy(true);
+    try {
+      const saved = await renameProject(project, patch);
+      if (saved) setRenamingProjectID(null);
+    } finally {
+      setProjectRowRenameBusy(false);
+    }
+  }
+
+  /**
+   * The folder picker created a session in the chosen directory — that is how
+   * a project comes into existence (the server derives it from the session's
+   * `location.directory`; there is no project-create endpoint).
+   */
+  function handlePickerCreated(session: SessionInfo) {
+    setPickerOpen(false);
+    reload();
+    if (server === null) return;
+    openTab({ serverID: server.id, sessionID: session.id, title: session.id });
+    navigate(
+      `/sessions/${encodeURIComponent(session.id)}?server=${encodeURIComponent(server.id)}`,
+    );
+  }
 
   async function loadMoreSessions() {
     if (nextCursor === null || loadingMore || !canLoadMore) return;
@@ -701,25 +757,77 @@ export default function ServerDetail() {
         >
           <section className="card bg-base-200 shadow" data-testid="projects-card">
             <div className="card-body">
-              <h2 className="card-title">
+              <h2 className="card-title flex-wrap">
                 <Icon name="project" /> <Trans>Projekte ({projectCount})</Trans>
+                <button
+                  type="button"
+                  className="btn btn-xs btn-ghost ml-auto"
+                  disabled={!canCreateProject}
+                  title={t`Neues Projekt über die Server-Ordner anlegen`}
+                  data-testid="new-project-button"
+                  onClick={() => setPickerOpen(true)}
+                >
+                  <Icon name="plus" />
+                  <Trans>Neues Projekt</Trans>
+                </button>
               </h2>
               {projects.length === 0 ? (
                 <p className="opacity-70 text-sm">
                   <Trans>Keine Projekte.</Trans>
                 </p>
+              ) : projectTree.mode === "tree" ? (
+                <ProjectTree
+                  serverID={server.id}
+                  tree={projectTree}
+                  renamingID={renamingProjectID}
+                  renameBusy={projectRowRenameBusy}
+                  onStartRename={(project) => setRenamingProjectID(project.id)}
+                  onCancelRename={() => setRenamingProjectID(null)}
+                  onRename={(project, patch) => void handleProjectRename(project, patch)}
+                />
               ) : (
                 <ul className="menu gap-1">
-                  {projects.map((p) => (
+                  {projects.map((p) => {
+                    // Lingui-safe hoists: no member access inside the message.
+                    const projectLabel = p.name;
+                    return (
                     <li key={p.id} data-testid={`project-row-${p.id}`}>
-                      <Link
-                        to={`/servers/${server.id}/projects/${p.id}`}
-                        title={p.id}
-                      >
-                        {p.name}
-                      </Link>
+                      {renamingProjectID === p.id ? (
+                        <ProjectRenameForm
+                          key={p.id}
+                          initialName={p.name}
+                          initialColor={projectIconColor(p)}
+                          busy={projectRowRenameBusy}
+                          testId={`project-rename-${p.id}`}
+                          onSubmit={(patch) => void handleProjectRename(p, patch)}
+                          onCancel={() => setRenamingProjectID(null)}
+                        />
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <ProjectDot color={projectIconColor(p)} testId={`project-dot-${p.id}`} />
+                          <Link
+                            className="min-w-0 flex-1 truncate"
+                            to={`/servers/${server.id}/projects/${p.id}`}
+                            title={p.canonical ?? p.id}
+                          >
+                            {projectTreeLabel(p)}
+                          </Link>
+                          <button
+                            type="button"
+                            className="btn btn-xs btn-ghost shrink-0"
+                            disabled={!canRenameProject}
+                            aria-label={t`Projekt ${projectLabel} umbenennen`}
+                            title={t`Umbenennen`}
+                            data-testid={`project-rename-${p.id}`}
+                            onClick={() => setRenamingProjectID(p.id)}
+                          >
+                            <Icon name="edit" />
+                          </button>
+                        </div>
+                      )}
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -1063,6 +1171,12 @@ export default function ServerDetail() {
             setProjectRenameError(null);
           }
         }}
+      />
+      <ServerFolderPicker
+        server={activeServer}
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onCreated={handlePickerCreated}
       />
     </div>
   );
