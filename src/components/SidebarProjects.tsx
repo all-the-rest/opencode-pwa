@@ -1,9 +1,10 @@
 import { Trans } from "@lingui/react/macro";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink } from "react-router-dom";
 import ServerDot from "./ServerDot.tsx";
 import { ProjectDot } from "./ProjectTree.tsx";
 import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
+import { useShowEmptyProjects } from "../hooks/useShowEmptyProjects.ts";
 import {
   listProjects,
   listSessionsPaged,
@@ -11,7 +12,12 @@ import {
   type ServerConfig,
   type SessionRow,
 } from "../lib/opencode.ts";
-import { projectIconColor, projectTreeLabel } from "../lib/projectTree.ts";
+import {
+  filterProjectsBySessions,
+  projectIconColor,
+  projectTreeLabel,
+  sessionProjectKeys,
+} from "../lib/projectTree.ts";
 import { useServers } from "../state/servers.tsx";
 
 const SIDEBAR_SESSION_LIMIT = 15;
@@ -25,12 +31,23 @@ const SIDEBAR_SESSION_LIMIT = 15;
  *
  * Offline-tolerant: a failed fetch only renders an offline note; open tabs
  * (localStorage) keep working through the tab bar above the content.
+ *
+ * The project rows follow the SAME "leere Projekte" filter as the server page
+ * (see {@link useShowEmptyProjects}): one persisted flag, so the sidebar can
+ * never list a project the server page hides. The toggle itself stays on the
+ * server page — the sidebar only reads the flag, it renders no control.
  */
 export default function SidebarProjects() {
   const { selectedServer } = useServers();
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
+  // True once a sessions response resolved. "Zero sessions" is only the truth
+  // after that: on the first render (and after a failed fetch with no rows yet)
+  // it is merely what is KNOWN, and filtering on it would hide projects that
+  // may well have sessions.
+  const [sessionsLoaded, setSessionsLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [showEmptyProjects] = useShowEmptyProjects();
 
   const reload = useCallback(() => {
     if (selectedServer === null) return;
@@ -40,11 +57,14 @@ export default function SidebarProjects() {
       listSessionsPaged(active, { limit: SIDEBAR_SESSION_LIMIT }),
     ]).then(([projectsRes, sessionsRes]) => {
       if (projectsRes.error !== null || sessionsRes.error !== null) {
+        // Failed refresh: the rows already on screen stay (stale, exactly like
+        // the server page keeps its rows), so the filter keeps using them.
         setFailed(true);
         return;
       }
       if (projectsRes.data !== null) setProjects(projectsRes.data);
       if (sessionsRes.data !== null) setSessions(sessionsRes.data.rows);
+      setSessionsLoaded(sessionsRes.data !== null);
       setFailed(false);
     });
   }, [selectedServer]);
@@ -53,6 +73,7 @@ export default function SidebarProjects() {
     if (selectedServer === null) {
       setProjects([]);
       setSessions([]);
+      setSessionsLoaded(false);
       setFailed(false);
       return;
     }
@@ -64,11 +85,14 @@ export default function SidebarProjects() {
     ]).then(([projectsRes, sessionsRes]) => {
       if (cancelled) return;
       if (projectsRes.error !== null || sessionsRes.error !== null) {
+        // Nothing known about the sessions of a server that never answered:
+        // the filter stays off rather than hiding every project row.
         setFailed(true);
         return;
       }
       if (projectsRes.data !== null) setProjects(projectsRes.data);
       if (sessionsRes.data !== null) setSessions(sessionsRes.data.rows);
+      setSessionsLoaded(sessionsRes.data !== null);
       setFailed(false);
     });
     return () => {
@@ -77,6 +101,25 @@ export default function SidebarProjects() {
   }, [selectedServer]);
 
   useLiveRefresh(selectedServer, reload, LIVE_REFRESH_INTERVAL_MS);
+
+  // "Has sessions" comes from the rows the sidebar ALREADY holds for its
+  // "Neueste Sessions" list (`sessionProjectKeys` — no second request). While
+  // those rows have not resolved (`sessionsLoaded`) the filter is off and
+  // every project stays visible, so the list never flashes empty.
+  //
+  // Caveat, same shape as the server page: those rows are ONE page of the
+  // newest sessions, so a project whose only sessions are older looks
+  // sessionless. The sidebar has no other session data to read, and adding a
+  // fetch here would double the requests the page already makes.
+  const sessionProjectIDs = useMemo(() => sessionProjectKeys(sessions), [sessions]);
+  const visibleProjects = useMemo(
+    () =>
+      filterProjectsBySessions(projects, {
+        sessionProjectIDs,
+        hideEmptyProjects: !showEmptyProjects && sessionsLoaded,
+      }),
+    [projects, sessionProjectIDs, showEmptyProjects, sessionsLoaded],
+  );
 
   if (selectedServer === null) return null;
   const serverID = selectedServer.id;
@@ -98,8 +141,11 @@ export default function SidebarProjects() {
           <Trans>Keine Projekte.</Trans>
         </li>
       )}
+      {/* Filtered rows: same rule as the server page's projects card. No empty
+          note here — the card carries the wording and the toggle, the sidebar
+          stays compact. */}
       {!failed &&
-        projects.map((p) => (
+        visibleProjects.map((p) => (
           <li key={p.id}>
             <NavLink
               to={`/servers/${serverID}/projects/${p.id}`}

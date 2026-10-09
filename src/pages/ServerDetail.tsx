@@ -12,6 +12,7 @@ import ProjectRenameForm from "../components/ProjectRenameForm.tsx";
 import ProjectTree, { ProjectDot, ProjectEmptyFilter, ProjectTreeHint } from "../components/ProjectTree.tsx";
 import ServerFolderPicker from "../components/ServerFolderPicker.tsx";
 import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
+import { useShowEmptyProjects } from "../hooks/useShowEmptyProjects.ts";
 import { useShellOutputStream } from "../hooks/useShellOutputStream.ts";
 import { useOpenSessionTabs, useSessionUnread } from "../hooks/useSessionSearch.ts";
 import { useActiveSessionID } from "../hooks/useActiveSessionID.ts";
@@ -56,24 +57,6 @@ import { useSessionTabs } from "../state/sessionTabs.tsx";
 import { serverColor } from "../lib/serverColor.ts";
 
 const SESSION_PAGE_LIMIT = 50;
-
-/**
- * Owner ask ("Bastarde"): projects with zero sessions are hidden by default,
- * because a server lists every directory it ever saw as a project (10 of the
- * owner's 23 projects have no session at all). The toggle is a single boolean,
- * so persisting it is trivial — same localStorage convention as the layout mode
- * and the session tabs. Default is "hide"; only an explicit `"0"` (the user
- * turned the filter off) shows them again.
- */
-const EMPTY_PROJECTS_STORAGE_KEY = "opencode-pwa:projects-hide-empty";
-
-function loadShowEmptyProjects(): boolean {
-  try {
-    return localStorage.getItem(EMPTY_PROJECTS_STORAGE_KEY) === "0";
-  } catch {
-    return false;
-  }
-}
 
 interface Row {
   id: string;
@@ -250,9 +233,10 @@ export default function ServerDetail() {
   // refresh for filters and the "load more" button.
   const [hasPaged, setHasPaged] = useState(false);
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
-  // The "leere Projekte" filter: on by default, persisted (see the storage key
-  // above). Only a page-level view preference — it never changes what is loaded.
-  const [showEmptyProjects, setShowEmptyProjects] = useState(loadShowEmptyProjects);
+  // The "leere Projekte" filter: on by default, persisted in one shared flag
+  // (`useShowEmptyProjects`) so the sidebar follows the same rule. Only a
+  // page-level view preference — it never changes what is loaded.
+  const [showEmptyProjects, setShowEmptyProjects] = useShowEmptyProjects();
   const [shells, setShells] = useState<Row[]>([]);
   const [ptys, setPtys] = useState<Row[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -463,14 +447,6 @@ export default function ServerDetail() {
     () => filterProjectTree(buildProjectTree(projects), sessionFilter),
     [projects, sessionFilter],
   );
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(EMPTY_PROJECTS_STORAGE_KEY, showEmptyProjects ? "0" : "1");
-    } catch {
-      // Storage full or unavailable: the toggle stays session-local.
-    }
-  }, [showEmptyProjects]);
 
   if (server === null) {
     return (

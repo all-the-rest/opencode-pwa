@@ -84,3 +84,31 @@
   also resolves `location.directory` for the breadcrumb) and confirms with
   `session.create({ location: { directory } })` — the server derives the
   project from the session's directory, exactly like in the original GUI.
+
+## Hide Projects Without Sessions (Owner-Entscheidung Welle 9)
+
+- A server lists every directory it ever saw as a project (measured on the
+  owner's live server: 23 projects, 10 without a single session). Projects with
+  zero sessions are therefore hidden by default in EVERY project list.
+- **One persisted flag** (`src/hooks/useShowEmptyProjects.ts`):
+  `localStorage["opencode-pwa:projects-hide-empty"]`. Only an explicit `"0"`
+  (the user turned the filter off) shows them again; a missing or unreadable
+  value means "hide". The server page's projects card owns the toggle
+  (`ProjectEmptyFilter`, `data-testid="projects-empty-filter"`); every other
+  view only READS the flag and renders no control of its own.
+- **Rule**: `sessionProjectKeys(rows)` collects the project keys of the loaded
+  session rows; `filterProjectsBySessions` / `filterProjectTree`
+  (`src/lib/projectTree.ts`) drop everything else. No list issues a second
+  session request — each view uses the rows it already holds.
+- **Sidebar** (`src/components/SidebarProjects.tsx`) follows the same rule with
+  the rows of its own "Neueste Sessions" list (one page, 15 newest). While
+  those rows have not resolved the filter is NOT applied (zero sessions is then
+  what is known, not what is true), so no project row flashes away on load. A
+  failed fetch keeps the rows that are already on screen, exactly like the
+  server page.
+- Caveat (both views): "has sessions" is read from one cursor page of sessions,
+  so a project whose only sessions sit on a later page looks empty until more
+  rows are loaded.
+- Unit tests: `src/hooks/useShowEmptyProjects.test.tsx`,
+  `src/components/SidebarProjects.test.tsx`; the server page's cases (tree,
+  flat list, persistence, counter) live in `src/pages/ServerDetail.test.tsx`.
