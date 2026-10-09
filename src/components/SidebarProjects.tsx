@@ -4,6 +4,7 @@ import { NavLink } from "react-router-dom";
 import ServerDot from "./ServerDot.tsx";
 import { ProjectDot } from "./ProjectTree.tsx";
 import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
+import { useProjectsWithSessions } from "../hooks/useProjectsWithSessions.ts";
 import { useShowEmptyProjects } from "../hooks/useShowEmptyProjects.ts";
 import {
   listProjects,
@@ -16,7 +17,6 @@ import {
   filterProjectsBySessions,
   projectIconColor,
   projectTreeLabel,
-  sessionProjectKeys,
 } from "../lib/projectTree.ts";
 import { useServers } from "../state/servers.tsx";
 
@@ -41,11 +41,6 @@ export default function SidebarProjects() {
   const { selectedServer } = useServers();
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [sessions, setSessions] = useState<SessionRow[]>([]);
-  // True once a sessions response resolved. "Zero sessions" is only the truth
-  // after that: on the first render (and after a failed fetch with no rows yet)
-  // it is merely what is KNOWN, and filtering on it would hide projects that
-  // may well have sessions.
-  const [sessionsLoaded, setSessionsLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   const [showEmptyProjects] = useShowEmptyProjects();
 
@@ -64,7 +59,6 @@ export default function SidebarProjects() {
       }
       if (projectsRes.data !== null) setProjects(projectsRes.data);
       if (sessionsRes.data !== null) setSessions(sessionsRes.data.rows);
-      setSessionsLoaded(sessionsRes.data !== null);
       setFailed(false);
     });
   }, [selectedServer]);
@@ -73,7 +67,6 @@ export default function SidebarProjects() {
     if (selectedServer === null) {
       setProjects([]);
       setSessions([]);
-      setSessionsLoaded(false);
       setFailed(false);
       return;
     }
@@ -85,14 +78,14 @@ export default function SidebarProjects() {
     ]).then(([projectsRes, sessionsRes]) => {
       if (cancelled) return;
       if (projectsRes.error !== null || sessionsRes.error !== null) {
-        // Nothing known about the sessions of a server that never answered:
-        // the filter stays off rather than hiding every project row.
+        // A server that never answered leaves both lists unknown: the note
+        // below stands in for the rows. The projects filter reads the probe
+        // (which fails open) instead of guessing from no rows at all.
         setFailed(true);
         return;
       }
       if (projectsRes.data !== null) setProjects(projectsRes.data);
       if (sessionsRes.data !== null) setSessions(sessionsRes.data.rows);
-      setSessionsLoaded(sessionsRes.data !== null);
       setFailed(false);
     });
     return () => {
@@ -102,23 +95,24 @@ export default function SidebarProjects() {
 
   useLiveRefresh(selectedServer, reload, LIVE_REFRESH_INTERVAL_MS);
 
-  // "Has sessions" comes from the rows the sidebar ALREADY holds for its
-  // "Neueste Sessions" list (`sessionProjectKeys` — no second request). While
-  // those rows have not resolved (`sessionsLoaded`) the filter is off and
-  // every project stays visible, so the list never flashes empty.
+  // "Has sessions" comes from the SHARED probe (`useProjectsWithSessions`): the
+  // same wide row set the server page's projects card reads, one request per
+  // server instead of one rule per page size. The rows below are the sidebar's
+  // own 15 newest and deliberately do NOT feed the filter — a project whose
+  // only sessions are older than those 15 was hidden here while it stayed
+  // visible on the server page.
   //
-  // Caveat, same shape as the server page: those rows are ONE page of the
-  // newest sessions, so a project whose only sessions are older looks
-  // sessionless. The sidebar has no other session data to read, and adding a
-  // fetch here would double the requests the page already makes.
-  const sessionProjectIDs = useMemo(() => sessionProjectKeys(sessions), [sessions]);
+  // Fail open, same rule the probe applies: while it is in flight or failed
+  // (`loaded` false) every project stays visible, so the list never flashes
+  // away on load.
+  const sessionProbe = useProjectsWithSessions(selectedServer);
   const visibleProjects = useMemo(
     () =>
       filterProjectsBySessions(projects, {
-        sessionProjectIDs,
-        hideEmptyProjects: !showEmptyProjects && sessionsLoaded,
+        sessionProjectIDs: sessionProbe.sessionProjectIDs,
+        hideEmptyProjects: !showEmptyProjects && sessionProbe.loaded,
       }),
-    [projects, sessionProjectIDs, showEmptyProjects, sessionsLoaded],
+    [projects, sessionProbe.sessionProjectIDs, sessionProbe.loaded, showEmptyProjects],
   );
 
   if (selectedServer === null) return null;

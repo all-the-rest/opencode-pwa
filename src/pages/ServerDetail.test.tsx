@@ -9,6 +9,11 @@ import { SessionTabsProvider } from "../state/sessionTabs.tsx";
 import { LayoutModeProvider } from "../state/layoutMode.tsx";
 import { ToastProvider } from "../state/toast.tsx";
 import { listShells, listPtys, listProjects, listSessionsPaged } from "../lib/opencode.ts";
+import type { ApiResult, SessionPage, SessionListOptions } from "../lib/opencode.ts";
+import {
+  resetProjectSessionProbesForTests,
+  SESSION_PROBE_LIMIT,
+} from "../hooks/useProjectsWithSessions.ts";
 
 // No live polling / event stream in unit tests — the entry render is the focus.
 vi.mock("../hooks/useLiveRefresh.ts", () => ({
@@ -85,6 +90,8 @@ function renderServer() {
 describe("ServerDetail empty-state rendering (UI-review finding #3)", () => {
   beforeEach(() => {
     localStorage.clear();
+    // The probe is module state shared by both views; drop the last answer.
+    resetProjectSessionProbesForTests();
     listSessionsPagedMock.mockReset();
     listShellsMock.mockReset();
     listPtysMock.mockReset();
@@ -149,8 +156,9 @@ describe("ServerDetail empty-state rendering (UI-review finding #3)", () => {
 /**
  * The "leere Projekte" filter (owner ask): 10 of their 23 projects have zero
  * sessions and must be out of the tree by default, with a toggle to bring them
- * back. The signal is the rows the sessions card already holds — no second
- * request — so the fixtures below only shape `listSessionsPaged`.
+ * back. The signal is the SHARED probe (`useProjectsWithSessions`): one wide
+ * `session.list` request per server, the same one the sidebar reads. The page's
+ * own card rows stay exactly what they were — the fixtures below shape both.
  */
 describe("ServerDetail leere Projekte filter (owner ask)", () => {
   /** Two projects with a session, two without (one of them a parent folder). */
@@ -188,6 +196,8 @@ describe("ServerDetail leere Projekte filter (owner ask)", () => {
   beforeEach(() => {
     // The toggle persists in localStorage — every test starts from the default.
     localStorage.clear();
+    // The probe is module state shared by both views; drop the last answer.
+    resetProjectSessionProbesForTests();
     mockMix();
   });
 
@@ -281,5 +291,77 @@ describe("ServerDetail leere Projekte filter (owner ask)", () => {
     expect(screen.queryByTestId("server-empty")).toBeNull();
     expect(screen.getByText("Keine Projekte mit Sessions.")).toBeInTheDocument();
     expect(screen.getByTestId("projects-empty-filter")).toBeInTheDocument();
+  });
+
+  it("keeps a project whose only session sits beyond the card's own page 1", async () => {
+    // The measured case: the card loads 50 rows, the owner's live server holds
+    // 1000+ sessions and a cursor pointing at more, so those 50 rows cover a
+    // handful of projects while the same server's first 1000 rows cover 13. A
+    // project whose single session is older than page 1 used to look empty —
+    // the shared probe reads the wide window instead of the card's rows.
+    const MIX_WITH_LATE = [...MIX, { id: "p-late", name: "/srv/late", canonical: "/srv/late" }];
+    listProjectsMock.mockResolvedValue({ data: MIX_WITH_LATE, error: null });
+    listSessionsPagedMock.mockImplementation((_server, options?: SessionListOptions) =>
+      Promise.resolve(
+        options?.limit === SESSION_PROBE_LIMIT
+          ? ({
+              data: {
+                rows: [
+                  ...SESSIONS_OF_MIX.data.rows,
+                  {
+                    id: "ses-late",
+                    label: "Spät",
+                    projectKey: "p-late",
+                    agent: "build",
+                    created: null,
+                  },
+                ],
+                cursor: { next: null, previous: null },
+              },
+              error: null,
+            } satisfies ApiResult<SessionPage>)
+          : SESSIONS_OF_MIX,
+      ),
+    );
+    renderServer();
+
+    await waitFor(() => expect(screen.getByTestId("projects-card")).toBeInTheDocument());
+    // The card itself still lists only its own page-1 session.
+    expect(screen.queryByTestId("session-row-ses-late")).toBeNull();
+    // The project it belongs to keeps its row anyway.
+    expect(screen.getByTestId("project-row-p-late")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Projekte/ })).toHaveTextContent("Projekte (3)");
+    // The still-empty projects stay hidden, as before.
+    expect(screen.queryByTestId("project-row-p-empty-leaf")).toBeNull();
+    expect(screen.queryByTestId("project-row-p-parent")).toBeNull();
+  });
+
+  it("fails open while the probe is unknown: nothing is hidden", async () => {
+    // Probe unreachable (or still in flight): unknown is NOT empty, so the
+    // filter stays off and every project keeps its row.
+    listSessionsPagedMock.mockImplementation((_server, options?: SessionListOptions) =>
+      Promise.resolve(
+        options?.limit === SESSION_PROBE_LIMIT
+          ? ({ data: null, error: "offline" } satisfies ApiResult<SessionPage>)
+          : SESSIONS_OF_MIX,
+      ),
+    );
+    renderServer();
+
+    await waitFor(() => expect(screen.getByTestId("projects-card")).toBeInTheDocument());
+    expect(screen.getByTestId("project-row-p-empty-leaf")).toBeInTheDocument();
+    expect(screen.getByTestId("project-row-p-parent")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Projekte/ })).toHaveTextContent("Projekte (4)");
+    // Nothing hidden, so nothing to reveal.
+    expect(screen.queryByTestId("projects-empty-filter")).toBeNull();
+  });
+
+  it("asks the probe for the wide window, the card for its page 1 only", async () => {
+    renderServer();
+
+    await waitFor(() => expect(screen.getByTestId("projects-card")).toBeInTheDocument());
+    const limits = listSessionsPagedMock.mock.calls.map(([, options]) => options?.limit);
+    expect(limits).toContain(SESSION_PROBE_LIMIT);
+    expect(limits).toContain(50);
   });
 });

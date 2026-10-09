@@ -2661,6 +2661,10 @@ msgstr "Status:"
 msgid "Status: {permission}"
 msgstr "Status: {permission}"
 
+#: src/components/ChatMessageList.tsx
+msgid "Subagent"
+msgstr "Subagent"
+
 #: src/pages/Dashboard.tsx
 msgid "Subagenten-Aktivität"
 msgstr "Subagenten-Aktivität"

@@ -54,6 +54,11 @@ describe("getToolInfo labels and subtitles", () => {
     const task = getToolInfo("task", { subagent_type: "explore", description: "Suche Helper" });
     expect(task.labelKey).toBe("task");
     expect(task.subtitle).toBe("Suche Helper");
+    // Real payloads of the owner's server carry `subagent` tool calls.
+    const subagent = getToolInfo("subagent", { agent: "explore", description: "Quellen durchsuchen" });
+    expect(subagent.labelKey).toBe("subagent");
+    expect(subagent.icon).toBe("task");
+    expect(subagent.subtitle).toBe("Quellen durchsuchen");
 
     const skill = getToolInfo("skill", { name: "commit" });
     expect(skill.labelKey).toBe("skill");

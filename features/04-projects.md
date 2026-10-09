@@ -96,19 +96,29 @@
   value means "hide". The server page's projects card owns the toggle
   (`ProjectEmptyFilter`, `data-testid="projects-empty-filter"`); every other
   view only READS the flag and renders no control of its own.
-- **Rule**: `sessionProjectKeys(rows)` collects the project keys of the loaded
-  session rows; `filterProjectsBySessions` / `filterProjectTree`
-  (`src/lib/projectTree.ts`) drop everything else. No list issues a second
-  session request — each view uses the rows it already holds.
-- **Sidebar** (`src/components/SidebarProjects.tsx`) follows the same rule with
-  the rows of its own "Neueste Sessions" list (one page, 15 newest). While
-  those rows have not resolved the filter is NOT applied (zero sessions is then
-  what is known, not what is true), so no project row flashes away on load. A
-  failed fetch keeps the rows that are already on screen, exactly like the
-  server page.
-- Caveat (both views): "has sessions" is read from one cursor page of sessions,
-  so a project whose only sessions sit on a later page looks empty until more
-  rows are loaded.
+- **One shared probe** (`src/hooks/useProjectsWithSessions.ts`,
+  `SESSION_PROBE_LIMIT = 1000` rows of `GET /api/session`): `sessionProjectKeys`
+  (`src/lib/projectTree.ts`) reduces those rows to the set of project keys, and
+  `filterProjectsBySessions` / `filterProjectTree` drop everything else. The
+  server page and the sidebar both read this ONE request per server — a shared
+  store keyed by server id, so mounting both views does not double it.
+- **Why a probe** (measured on the owner's live server: 1000+ sessions, cursor
+  pointing at more): the signal used to be whatever rows each view happened to
+  hold — the server page's card 50 (`SESSION_PAGE_LIMIT`), the sidebar 15
+  (`SIDEBAR_SESSION_LIMIT`). Those 50 rows cover a handful of projects, the
+  same server's first 1000 rows cover 13 non-empty ones, so the very same
+  project could be visible in the sidebar and hidden on the server page. Both
+  views keep their own session lists (paging, search, the sidebar's newest 15)
+  exactly as they were; only the filter signal moved.
+- **Fail open**: while the probe is in flight or failed, the filter is NOT
+  applied (unknown ≠ empty) — no project row flashes away, and an unreachable
+  server hides nothing. Switching servers starts the new server from "unknown"
+  again. The probe refreshes on the same 5s/event-hub cadence
+  (`useLiveRefresh`) as the views' own lists.
+- Caveat: 1000 is not "everything". A server can hold more sessions, and the
+  probe then fails open instead of hiding what it cannot see.
 - Unit tests: `src/hooks/useShowEmptyProjects.test.tsx`,
+  `src/hooks/useProjectsWithSessions.test.tsx`,
   `src/components/SidebarProjects.test.tsx`; the server page's cases (tree,
-  flat list, persistence, counter) live in `src/pages/ServerDetail.test.tsx`.
+  flat list, persistence, counter, page-1 vs probe) live in
+  `src/pages/ServerDetail.test.tsx`.

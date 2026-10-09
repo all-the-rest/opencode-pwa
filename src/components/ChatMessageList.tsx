@@ -78,6 +78,8 @@ function ToolLabel({ info }: { info: ToolInfo }) {
       return <Trans>Web-Suche</Trans>;
     case "task":
       return <Trans>Aufgabe</Trans>;
+    case "subagent":
+      return <Trans>Subagent</Trans>;
     case "shell":
       return <Trans>Shell</Trans>;
     case "edit":

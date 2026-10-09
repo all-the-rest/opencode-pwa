@@ -22,6 +22,7 @@ export type ToolLabelKey =
   | "webfetch"
   | "websearch"
   | "task"
+  | "subagent"
   | "shell"
   | "edit"
   | "write"
@@ -101,6 +102,12 @@ export const TOOL_DEFINITIONS: Record<string, ToolDefinition> = {
     icon: "task",
     labelKey: "task",
     subtitleKeys: ["description", "prompt"],
+    argKeys: [],
+  },
+  subagent: {
+    icon: "task",
+    labelKey: "subagent",
+    subtitleKeys: ["description", "prompt", "agent", "task"],
     argKeys: [],
   },
   bash: {

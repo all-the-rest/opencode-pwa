@@ -19,8 +19,10 @@ import type { ProjectInfo, SessionRow } from "./opencode.ts";
  * A third refinement is the "leere Projekte" filter: `filterProjectTree` /
  * `filterProjectsBySessions` hide the projects that have no session at all,
  * because a server lists every directory it ever saw (the owner: 10 of 23
- * projects without a single session). The signal is the session list the page
- * already loaded — see {@link sessionProjectKeys}.
+ * projects without a single session). The signal is the set of project keys
+ * the shared probe in `hooks/useProjectsWithSessions.ts` fetches — one wide
+ * `session.list` request per server instead of the (differently sized) rows
+ * each view happens to hold — see {@link sessionProjectKeys}.
  */
 
 /** One directory of the project tree: holds projects and/or sub-directories. */
@@ -289,8 +291,9 @@ export function buildProjectTree(projects: ProjectInfo[]): ProjectTree {
  *
  * `SessionRow.projectKey` is what the server reported for a session
  * (`projectID`); a row without a key contributes nothing (those sessions are
- * grouped under "Ohne Projekt" in the list). Reading this costs no request —
- * the server page already holds the rows of its sessions card.
+ * grouped under "Ohne Projekt" in the list). The rows come from the shared
+ * "has sessions" probe (`hooks/useProjectsWithSessions.ts`), so every view
+ * that filters projects answers from the same wide row set.
  */
 export function sessionProjectKeys(rows: readonly SessionRow[]): ReadonlySet<string> {
   const keys = new Set<string>();
@@ -315,8 +318,10 @@ export function projectsWithoutSessions(
 /**
  * Which projects the "leere Projekte" filter keeps.
  *
- * `sessionProjectIDs` comes from the rows the page already loaded (see
- * {@link sessionProjectKeys}) — deliberately not from a second request.
+ * `sessionProjectIDs` is produced by the shared probe
+ * (`hooks/useProjectsWithSessions.ts`) and is `hideEmptyProjects` only once
+ * that probe has answered — while it is in flight or failed the caller keeps
+ * `hideEmptyProjects` false, because unknown is not empty.
  */
 export interface ProjectSessionFilter {
   /** Ids of the projects that have at least one session. */

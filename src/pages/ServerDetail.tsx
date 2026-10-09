@@ -18,6 +18,7 @@ import { useOpenSessionTabs, useSessionUnread } from "../hooks/useSessionSearch.
 import { useActiveSessionID } from "../hooks/useActiveSessionID.ts";
 import { useProjectRename } from "../hooks/useProjectRename.ts";
 import { useProjectSync } from "../hooks/useProjectSync.ts";
+import { useProjectsWithSessions } from "../hooks/useProjectsWithSessions.ts";
 import SessionListSkeleton from "../components/SessionListSkeleton.tsx";
 import SessionRowMarkers from "../components/SessionRowMarkers.tsx";
 import SessionSearchOverlay from "../components/SessionSearchOverlay.tsx";
@@ -48,7 +49,6 @@ import {
   filterProjectsBySessions,
   projectIconColor,
   projectTreeLabel,
-  sessionProjectKeys,
   type ProjectSessionFilter,
 } from "../lib/projectTree.ts";
 import { useServers } from "../state/servers.tsx";
@@ -423,20 +423,26 @@ export default function ServerDetail() {
   useProjectSync(server, setProjects);
   const renameProject = useProjectRename(server, setProjects);
 
-  // "Has sessions" is read from the rows the sessions card ALREADY holds — no
-  // second request. Caveat: that list is ONE cursor-paged page
-  // (`listSessionsPaged`, limit 50), so a project whose only sessions sit on a
-  // later page looks empty until the user clicks "Weitere Sessions laden"
-  // (appended pages land in the same state, so the filter catches up). The
-  // payload carries a cursor and no total, so the rows are all there is to
-  // read; the card's own counter ("Sessions (n)") is `filtered.length`, i.e.
-  // the same rows minus the active agent/project/search filter. That is why the
-  // UNFILTERED rows are used here — the projects filter must not flip when the
-  // session search changes.
-  const sessionProjectIDs = useMemo(() => sessionProjectKeys(sessions), [sessions]);
+  // "Has sessions" comes from the SHARED probe (`useProjectsWithSessions`): one
+  // wide request per server that the sidebar reads as well, so a project can
+  // never be visible in the sidebar and hidden here. The sessions card's own
+  // rows (one cursor page, limit 50) are NOT read for this — a project whose
+  // only sessions sit on a later page looked empty until the user paged, and
+  // on a server with 1000+ sessions the first 50 rows cover a handful of
+  // projects instead of the 13 that really have one.
+  //
+  // Fail open: while the probe is in flight or failed (`loaded` false) nothing
+  // is hidden — unknown ≠ empty. The card's own counter ("Sessions (n)") stays
+  // what it is: `filtered.length` over its own rows minus the active
+  // agent/project/search filter, so the projects filter never depends on the
+  // session search.
+  const sessionProbe = useProjectsWithSessions(server);
   const sessionFilter = useMemo<ProjectSessionFilter>(
-    () => ({ sessionProjectIDs, hideEmptyProjects: !showEmptyProjects }),
-    [sessionProjectIDs, showEmptyProjects],
+    () => ({
+      sessionProjectIDs: sessionProbe.sessionProjectIDs,
+      hideEmptyProjects: !showEmptyProjects && sessionProbe.loaded,
+    }),
+    [sessionProbe.sessionProjectIDs, sessionProbe.loaded, showEmptyProjects],
   );
   const visibleProjects = useMemo(
     () => filterProjectsBySessions(projects, sessionFilter),
