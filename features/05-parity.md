@@ -382,6 +382,60 @@ Server passwords are **never** in `localStorage` any more.
 - Covered by E2E `tests/e2e/server-tabs.spec.ts` (`@feature:server-tabs`:
   one-project confirm + PATCH, multi-project local-only).
 
+## Messenger Chat + Running Strip + Basic/Experte (Welle 6)
+
+Owner requirements covered here (UI-review findings #1, #2, #6, #7, #9):
+
+- **Messenger chat** (`src/components/ChatMessageList.tsx` +
+  `src/lib/chatGrouping.ts`): day separators („Heute"/„Gestern"/date,
+  `message-day-separator`), consecutive messages of the same role grouped
+  (tighter spacing, one meta line + timestamp per group, `data-group-start`),
+  daisyUI bubble tails only on the last bubble of a group (`.oc-tail-*`,
+  `.oc-chat` in `src/index.css`), assistant *text* as its own bubble while tool
+  cards stay cards. Quick actions (copy, revert-to-message) reveal on hover
+  (desktop) and long-press 450ms (touch, `message-actions-*`), the browser
+  context menu is suppressed for touch presses. Works at 360px (bubbles capped
+  at 85%).
+- **Running strip** (`src/components/SessionRunStrip.tsx` +
+  `src/hooks/useRunningWork.ts`): directly above the composer, lists the open
+  server's running shells (`shell.list`), live PTYs (`pty.list`) and its OTHER
+  executing sessions (`session.active` + `session.list`) — each with a ticking
+  elapsed runtime (`src/lib/runtimeFormat.ts`, `m:ss` / `h:mm:ss`, anchored on
+  `time.created`), a server-colour dot and a tap target that opens the session
+  through the tab mechanism. Desktop adds start time, agent · model and
+  project (`lg:`); mobile keeps the essentials. Renders nothing (and runs no
+  timer) while no work runs. The open session itself is excluded — its state
+  is the chat's own run state. Polled every 5s; a failed poll keeps the last
+  rows, an unreachable server stops the poll. Finished shells (terminal
+  statuses) are filtered out.
+- **Basic/Experte** (`src/state/sessionMode.tsx`, persisted under
+  `opencode-pwa:session-mode`, default `basic`): Einfach shows chat + composer
+  + running strip and hides the agent/model picks, the attachment extras and
+  the „Mehr…"-disclosure; Experte shows everything that exists today. Nothing
+  is unreachable — drag & drop keeps attaching, the mode toggle is one tap,
+  and the chat's revert quick action switches to Experte when used.
+- **Picker robustness** (finding #1): the load shows `Lädt…` in the selects
+  instead of the „Keiner"/„Keines" placeholders, a failure answers with a
+  toast (never a sticky banner), one automatic retry after 5s plus a manual
+  „Erneut laden" button. Root cause: the generated client unwraps `.data` off
+  the parsed body for `session.get`/`session.active`, so a server answering
+  WITHOUT the `{ data }` envelope resolves `undefined` instead of throwing —
+  the direct-fetch fallback never ran and the picker saw no session
+  (regression tests in `src/lib/opencode.test.ts`).
+- **Offline** (finding #2): one status line instead of two stacked alerts
+  (`cache-status`), and `session-prompt` joined the offline action set — the
+  composer blocks sending (button disabled, Enter explained by a toast) while
+  the server does not answer.
+- **Agent overview** (finding #6): the model resolves again (same root cause
+  as #1) and every row carries the runtime „läuft 4:12" plus desktop-only
+  start time and project.
+- Covered by `tests/e2e/w20-messenger-chat.spec.ts` (`@feature:messenger-chat`,
+  `@feature:running-strip`, `@feature:session-mode`,
+  `@feature:picker-loading`, `@feature:offline-send`), unit tests
+  `src/lib/chatGrouping.test.ts`, `src/lib/runtimeFormat.test.ts`,
+  `src/state/sessionMode.test.tsx` and the captures `chat-running`,
+  `chat-expert`, `agents`, `session-offline` in the screenshot manifest.
+
 ## App-Level
 
 - ✅ Multi-server with Basic Auth, offline-tolerant UI, local notifications.

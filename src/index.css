@@ -63,6 +63,26 @@
   }
 }
 
+/* --- Messenger chat (wave 6) --- */
+
+/* daisyUI draws a tail (`chat-bubble:before`, an SVG mask) on EVERY chat
+   bubble. In a messenger the tail belongs to the LAST bubble of a group only
+   (see `chatGrouping.ts`), so the default is hidden and the group-end bubble
+   gets its tail back. */
+.oc-chat .chat-bubble::before {
+  display: none;
+}
+
+.oc-chat .chat-bubble.oc-tail-other::before,
+.oc-chat .chat-bubble.oc-tail-own::before {
+  display: block;
+}
+
+/* Consecutive messages of one group sit tighter than new groups. */
+.oc-chat li[data-group-start="false"] {
+  margin-top: -0.25rem;
+}
+
 /* --- Tool cards (parity with the original's basic-tool look) --- */
 
 /* Title shimmer while a tool call runs (original: TextShimmer). */

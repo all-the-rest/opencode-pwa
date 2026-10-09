@@ -24,6 +24,9 @@ function json(route: Route, body: unknown, status = 200) {
 async function seedServer(page: Page) {
   await page.addInitScript((value) => {
     localStorage.setItem("opencode-pwa:servers", JSON.stringify([value]));
+    // Wave 6: the agent/model picks (and the attachment path field) hide in
+    // Einfach mode — this spec seeds Experte so they stay under test.
+    localStorage.setItem("opencode-pwa:session-mode", "expert");
   }, server);
 }
 

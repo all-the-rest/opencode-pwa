@@ -27,6 +27,12 @@ import {
  *     the data allows), plus the workspace-path chips (`file://…`);
  *   - a Stop button while a run is active, otherwise Send.
  *
+ * Wave 6 adds two guards: `expert` (the "Einfach/Experte" mode — simple hides
+ * the picker bar; drag & drop still attaches files and the mode toggle brings
+ * everything back, so nothing becomes unreachable) and `offline` (sending is
+ * blocked while the server does not answer). `pickerLoading` switches the
+ * selects to a "Lädt…" state instead of the "Keiner"/"Keines" placeholders.
+ *
  * All state (draft, attachments, pickers) stays with the caller: this
  * component is the view layer and keeps its DOM test ids stable.
  */
@@ -52,6 +58,14 @@ export interface PromptComposerProps {
   onAgentChange: (value: string) => void;
   onModelChange: (value: string) => void;
   switching: boolean;
+  /** "Experte" mode: reveals the picker bar (agent/model, attachments). */
+  expert: boolean;
+  /** True while the agent/model picker data is loading ("Lädt…"). */
+  pickerLoading: boolean;
+  /** The server does not answer: sending is blocked. */
+  offline: boolean;
+  /** Called when a send is attempted while offline (shows the toast). */
+  onOfflineSendAttempt: () => void;
 }
 
 export default function PromptComposer({
@@ -72,6 +86,10 @@ export default function PromptComposer({
   onAgentChange,
   onModelChange,
   switching,
+  expert,
+  pickerLoading,
+  offline,
+  onOfflineSendAttempt,
 }: PromptComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -89,11 +107,15 @@ export default function PromptComposer({
     node.style.overflowY = next >= COMPOSER_MAX_HEIGHT ? "auto" : "hidden";
   }, [draft]);
 
-  const canSend = !busy && draft.trim() !== "";
+  const canSend = !busy && !offline && draft.trim() !== "";
   // The primary action mirrors the button: Send while idle, never while the
   // Stop button is showing (Stop is a separate control, as in the original).
   const submit = (): void => {
-    if (runActive || !canSend) return;
+    if (runActive || !canSend) {
+      // Offline: explain once why nothing happened instead of failing silently.
+      if (offline && !runActive && !busy && draft.trim() !== "") onOfflineSendAttempt();
+      return;
+    }
     onSubmit();
   };
 
@@ -101,7 +123,10 @@ export default function PromptComposer({
     // Enter sends, Shift+Enter inserts a newline; IME composition must not
     // count as Enter (the reference guards on `isComposing` too).
     if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
-    if (!canSend) return;
+    if (!canSend) {
+      if (offline && !runActive && !busy && draft.trim() !== "") onOfflineSendAttempt();
+      return;
+    }
     event.preventDefault();
     submit();
   }
@@ -254,7 +279,11 @@ export default function PromptComposer({
             type="submit"
             disabled={!canSend}
             aria-label={t`Nachricht senden`}
-            title={t`Nachricht senden`}
+            title={
+              offline
+                ? t`Offline – Senden ist erst wieder möglich, wenn der Server antwortet`
+                : t`Nachricht senden`
+            }
             data-testid="prompt-send"
           >
             <Icon name="send" />
@@ -262,7 +291,10 @@ export default function PromptComposer({
         )}
       </form>
       {/* Composer bar: file picker, workspace-path attach, agent/model chips —
-          the pickers are the previous selects, only moved into the composer. */}
+          the pickers are the previous selects, only moved into the composer.
+          "Einfach" mode hides the bar: drag & drop still attaches files and the
+          mode toggle brings everything back, so nothing becomes unreachable. */}
+      {expert && (
       <div className="flex flex-wrap items-center gap-1 pt-1">
         <button
           type="button"
@@ -299,14 +331,20 @@ export default function PromptComposer({
           className="select select-ghost select-xs w-auto max-w-32"
           value={currentAgent ?? ""}
           onChange={(event) => onAgentChange(event.target.value)}
-          disabled={switching || agents.length === 0}
+          disabled={switching || agents.length === 0 || pickerLoading}
           aria-label={t`Agent der Session`}
           title={t`Agent wählen`}
           data-testid="session-agent-select"
         >
-          <option value="">
-            <Trans>Keiner</Trans>
-          </option>
+          {pickerLoading ? (
+            <option value="">
+              <Trans>Lädt…</Trans>
+            </option>
+          ) : (
+            <option value="">
+              <Trans>Keiner</Trans>
+            </option>
+          )}
           {agents.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name}
@@ -317,14 +355,20 @@ export default function PromptComposer({
           className="select select-ghost select-xs w-auto max-w-40"
           value={currentModelValue}
           onChange={(event) => onModelChange(event.target.value)}
-          disabled={switching || models.length === 0}
+          disabled={switching || models.length === 0 || pickerLoading}
           aria-label={t`Modell der Session`}
           title={t`Modell wählen`}
           data-testid="session-model-select"
         >
-          <option value="">
-            <Trans>Keines</Trans>
-          </option>
+          {pickerLoading ? (
+            <option value="">
+              <Trans>Lädt…</Trans>
+            </option>
+          ) : (
+            <option value="">
+              <Trans>Keines</Trans>
+            </option>
+          )}
           {models.map((m) => {
             const optionValue = modelOptionValue(m);
             return (
@@ -335,6 +379,7 @@ export default function PromptComposer({
           })}
         </select>
       </div>
+      )}
     </div>
   );
 }

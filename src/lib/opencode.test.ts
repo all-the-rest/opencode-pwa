@@ -20,6 +20,8 @@ import {
   extractSessionRename,
   extractSessionRows,
   extractSessionStats,
+  extractPtyRows,
+  extractShellRows,
   extractShellOutput,
   extractTokenUsage,
   extractVcsStatus,
@@ -28,9 +30,11 @@ import {
   forkSession,
   getAgentDetail,
   getSessionDiff,
+  getSessionInfo,
   getSessionStats,
   groupSessionsByProject,
   initVcs,
+  isRunningShellStatus,
   listAgents,
   listProviders,
   MAX_FILE_PREVIEW_CHARS,
@@ -48,9 +52,17 @@ import {
 } from "./opencode.ts";
 
 const agentListMock = vi.hoisted(() => vi.fn());
+// The generated client unwraps `.data` off the parsed body for `session.get` /
+// `session.active`, so a server that answers WITHOUT the envelope resolves
+// `undefined`. The mocks reproduce that behaviour for the fallback tests.
+const sessionGetMock = vi.hoisted(() => vi.fn());
+const sessionActiveMock = vi.hoisted(() => vi.fn());
 vi.mock("@opencode/client", () => ({
   OpenCode: {
-    make: () => ({ agent: { list: agentListMock } }),
+    make: () => ({
+      agent: { list: agentListMock },
+      session: { get: sessionGetMock, active: sessionActiveMock },
+    }),
   },
 }));
 
@@ -1090,5 +1102,112 @@ describe("renameSession", () => {
     fetchMock.mockResolvedValue(renameResponse(500));
     const result = await renameSession(renameServer, "ses-1", "Neuer Titel");
     expect(result.error).toContain("500");
+  });
+});
+
+describe("extractShellRows", () => {
+  it("reads the { location, data } shape the pinned client returns", () => {
+    expect(
+      extractShellRows({
+        location: {},
+        data: [{ id: "sh-1", command: "sleep 60", status: "running", time: { created: 1000 } }],
+      }),
+    ).toEqual([{ id: "sh-1", command: "sleep 60", status: "running", createdAt: 1000 }]);
+  });
+
+  it("reads a plain array and a { data } envelope", () => {
+    const row = { id: "sh-2", command: "pnpm test", status: "completed", time: { created: 5 } };
+    expect(extractShellRows([row])).toEqual([
+      { id: "sh-2", command: "pnpm test", status: "completed", createdAt: 5 },
+    ]);
+    expect(extractShellRows({ data: [row] })).toHaveLength(1);
+  });
+
+  it("falls back to the id as command and tolerates junk", () => {
+    expect(extractShellRows([{ id: "sh-3" }])).toEqual([
+      { id: "sh-3", command: "sh-3", status: "", createdAt: null },
+    ]);
+    expect(extractShellRows(null)).toEqual([]);
+    expect(extractShellRows({ data: [null, 5] })).toEqual([]);
+  });
+});
+
+describe("isRunningShellStatus", () => {
+  it("treats a missing status as running and settled states as done", () => {
+    expect(isRunningShellStatus("")).toBe(true);
+    expect(isRunningShellStatus("running")).toBe(true);
+    expect(isRunningShellStatus("Running")).toBe(true);
+    for (const status of ["completed", "exited", "error", "failed", "killed", "done"]) {
+      expect(isRunningShellStatus(status)).toBe(false);
+    }
+  });
+});
+
+describe("extractPtyRows", () => {
+  it("reads ids, titles and start times", () => {
+    expect(
+      extractPtyRows({ data: [{ id: "pty-1", title: "Terminal", time: { created: 42 } }] }),
+    ).toEqual([{ id: "pty-1", title: "Terminal", createdAt: 42 }]);
+  });
+
+  it("tolerates missing titles, id variants and junk", () => {
+    expect(extractPtyRows([{ ptyID: "pty-2" }])).toEqual([
+      { id: "pty-2", title: null, createdAt: null },
+    ]);
+    expect(extractPtyRows("nope")).toEqual([]);
+  });
+});
+
+describe("getSessionInfo (client unwrap fallback)", () => {
+  const infoServer: ServerConfig = {
+    id: "s1",
+    name: "Lokal",
+    baseUrl: "http://x.local/",
+    username: "",
+  };
+
+  function jsonResponse(payload: unknown, status = 200): Response {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      json: async () => payload,
+    } as unknown as Response;
+  }
+
+  beforeEach(() => {
+    sessionGetMock.mockReset();
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("uses the client result when the server sends the { data } envelope", async () => {
+    // The generated client already unwrapped `.data` for us.
+    sessionGetMock.mockResolvedValue({ id: "ses-1", agent: "build" });
+    const result = await getSessionInfo(infoServer, "ses-1");
+    expect(result.error).toBeNull();
+    expect(result.data?.agent).toBe("build");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the direct fetch when the client resolves undefined", async () => {
+    // A server that answers WITHOUT the envelope makes `session.get()` resolve
+    // undefined (regression: the picker used to stick on "Keiner").
+    sessionGetMock.mockResolvedValue(undefined);
+    fetchMock.mockResolvedValue(jsonResponse({ id: "ses-1", agent: "plan" }));
+    const result = await getSessionInfo(infoServer, "ses-1");
+    expect(result.error).toBeNull();
+    expect(result.data?.agent).toBe("plan");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to the direct fetch when the client throws", async () => {
+    sessionGetMock.mockRejectedValue(new Error("offline"));
+    fetchMock.mockResolvedValue(jsonResponse({ id: "ses-1", agent: "coder" }));
+    const result = await getSessionInfo(infoServer, "ses-1");
+    expect(result.data?.agent).toBe("coder");
   });
 });

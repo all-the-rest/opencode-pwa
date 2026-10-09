@@ -18,6 +18,9 @@ const sessionsByHost: Record<string, Array<{ id: string; title: string }>> = {
 async function seedServers(page: Page) {
   await page.addInitScript((value) => {
     localStorage.setItem("opencode-pwa:servers", JSON.stringify(value));
+    // Wave 6: the "Mehr…" disclosure lives behind the Experte mode (default is
+    // Einfach), so this spec seeds it — the panel behaviour stays under test.
+    localStorage.setItem("opencode-pwa:session-mode", "expert");
   }, [serverA]);
 }
 

@@ -26,11 +26,11 @@ describe("extractActiveSessionIDs", () => {
 
 describe("joinActiveSessions", () => {
   const rows: SessionRow[] = [
-    { id: "ses-1", label: "Alpha bauen", projectKey: null, agent: "coder" },
-    { id: "ses-2", label: "Beta prüfen", projectKey: null, agent: null },
+    { id: "ses-1", label: "Alpha bauen", projectKey: null, agent: "coder", created: 1000 },
+    { id: "ses-2", label: "Beta prüfen", projectKey: null, agent: null, created: null },
   ];
 
-  it("joins titles, agents and model labels", () => {
+  it("joins titles, agents, models and the runtime anchor", () => {
     const joined = joinActiveSessions("srv", rows, ["ses-1"], { "ses-1": "anthropic/sonnet" });
     expect(joined).toEqual([
       {
@@ -40,11 +40,13 @@ describe("joinActiveSessions", () => {
         agent: "coder",
         model: "anthropic/sonnet",
         status: "running",
+        startedAt: 1000,
+        projectKey: null,
       },
     ]);
   });
 
-  it("keeps unknown sessions with their ID as title and null model", () => {
+  it("keeps unknown sessions with their ID as title, null model, no start", () => {
     const joined = joinActiveSessions("srv", rows, ["ses-9"], {});
     expect(joined).toEqual([
       {
@@ -54,8 +56,15 @@ describe("joinActiveSessions", () => {
         agent: null,
         model: null,
         status: "running",
+        startedAt: null,
+        projectKey: null,
       },
     ]);
+  });
+
+  it("falls back to a null runtime anchor when the row has no timestamp", () => {
+    const joined = joinActiveSessions("srv", rows, ["ses-2"], {});
+    expect(joined[0]?.startedAt).toBeNull();
   });
 
   it("formats model labels and tolerates missing models", () => {

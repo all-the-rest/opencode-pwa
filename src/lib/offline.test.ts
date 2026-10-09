@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { blockedWhileOffline, isActionEnabled, reachability, type ServerAction } from "./offline.ts";
 
 const ALL_ACTIONS: ServerAction[] = [
+  "session-prompt",
   "session-interrupt",
   "session-delete",
   "sessions-load-more",

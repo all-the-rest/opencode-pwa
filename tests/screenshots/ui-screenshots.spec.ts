@@ -21,14 +21,18 @@ import {
 } from "./ui-review.config.ts";
 import {
   ACTIVE_SESSIONS,
+  AGENTS_SESSION_ROWS,
   CHAT_MESSAGES,
+  CHAT_RUNNING_ACTIVE,
   CHAT_RUNNING_MESSAGES,
+  CHAT_RUNNING_SESSION_ROWS,
   FILE_ENTRIES,
   FORM_ROWS,
   INBOX_ROWS,
   MCP_SERVERS,
   PERMISSIONS,
   PROJECTS,
+  RUNNING_PTYS,
   RUNNING_SHELLS,
   SESSION_DIFF_ROWS,
   SESSION_ROWS,
@@ -118,7 +122,9 @@ async function mockApi(page: Page, route: UiReviewRoute, state: UiReviewState) {
       return;
     }
     if (url.includes("/api/session/active")) {
-      await json(routeReq, mock === "agents" && filled ? ACTIVE_SESSIONS : {});
+      if (mock === "agents" && filled) await json(routeReq, ACTIVE_SESSIONS);
+      else if (mock === "chat-running" && filled) await json(routeReq, CHAT_RUNNING_ACTIVE);
+      else await json(routeReq, {});
       return;
     }
     // Single-session GET (`/api/session/<id>`, optional trailing slash): the
@@ -164,10 +170,16 @@ async function mockApi(page: Page, route: UiReviewRoute, state: UiReviewState) {
       return;
     }
     if (url.includes("/api/session") && routeReq.request().method() === "GET") {
+      // The running-strip and agents captures need recent start times for the
+      // elapsed runtime, everything else keeps the fixed `T0` anchors.
       const sessions =
-        filled && mock !== "session-empty" && mock !== "none" && mock !== "settings"
-          ? SESSION_ROWS
-          : [];
+        (mock === "chat-running" || mock === "agents") && filled
+          ? mock === "agents"
+            ? AGENTS_SESSION_ROWS
+            : CHAT_RUNNING_SESSION_ROWS
+          : filled && mock !== "session-empty" && mock !== "none" && mock !== "settings"
+            ? SESSION_ROWS
+            : [];
       await json(routeReq, { data: sessions, cursor: { next: null, previous: null } });
       return;
     }
@@ -175,7 +187,9 @@ async function mockApi(page: Page, route: UiReviewRoute, state: UiReviewState) {
     // --- server scoped --------------------------------------------------
     if (url.includes("/api/shell") && !url.includes("/output")) {
       const shells =
-        filled && (mock === "server" || mock === "dashboard" || mock === "tools") ? RUNNING_SHELLS : [];
+        filled && (mock === "server" || mock === "dashboard" || mock === "tools" || mock === "chat-running")
+          ? RUNNING_SHELLS
+          : [];
       await json(routeReq, { location: {}, data: shells });
       return;
     }
@@ -184,7 +198,8 @@ async function mockApi(page: Page, route: UiReviewRoute, state: UiReviewState) {
       return;
     }
     if (url.includes("/api/pty")) {
-      await json(routeReq, { location: {}, data: filled && mock === "tools" ? [] : [] });
+      const ptys = filled && mock === "chat-running" ? RUNNING_PTYS : [];
+      await json(routeReq, { location: {}, data: ptys });
       return;
     }
     if (url.includes("/api/project")) {

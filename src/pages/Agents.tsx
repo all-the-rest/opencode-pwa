@@ -3,15 +3,21 @@ import { Trans } from "@lingui/react/macro";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import ServerDot from "../components/ServerDot.tsx";
+import { useTickingNow } from "../hooks/useTickingNow.ts";
 import { loadActiveAgents, type ActiveAgentRow } from "../lib/activeAgents.ts";
+import { formatStartedAt, runtimeLabel } from "../lib/runtimeFormat.ts";
 import { useServers } from "../state/servers.tsx";
 import { useSessionTabs } from "../state/sessionTabs.tsx";
 
 /**
  * "Agenten" overview: every session with a live execution across all
- * configured servers (`GET /api/session/active` per server, joined with the
- * session list). Tapping a row opens the session (its tab registers, so this
- * is the mobile entry point — no side-by-side needed).
+ * configured servers (`GET /api/session/active` joined with the session list).
+ * Tapping a row opens the session (its tab registers, so this is the mobile
+ * entry point — no side-by-side needed).
+ *
+ * Wave 6 (UI-review finding #6): each row carries the model (resolved from the
+ * session info) and the elapsed runtime ("läuft 4:12"), with the start time
+ * and the project as desktop-only extras.
  */
 export default function Agents() {
   const { servers } = useServers();
@@ -22,6 +28,7 @@ export default function Agents() {
   const byID = new Map(servers.map((server) => [server.id, server]));
   // Lingui-safe hoist: no calls inside messages.
   const failedNames = failedServers.join(", ");
+  const now = useTickingNow(rows !== null && rows.length > 0);
 
   useEffect(() => {
     if (servers.length === 0) {
@@ -80,6 +87,8 @@ export default function Agents() {
             const agentLabel = row.agent ?? t`Unbekannt`;
             const modelLabel = row.model ?? t`Unbekannt`;
             const rowTitle = row.title;
+            const runtime = runtimeLabel(row.startedAt, now);
+            const startedAt = formatStartedAt(row.startedAt);
             return (
               <li key={`${row.serverID}/${row.sessionID}`}>
                 <Link
@@ -95,6 +104,14 @@ export default function Agents() {
                     <div className="flex items-center gap-2">
                       {server !== undefined && <ServerDot server={server} />}
                       <span className="font-semibold flex-1 break-all">{row.title}</span>
+                      {runtime !== null && (
+                        <span
+                          className="badge badge-info badge-sm oc-tabular"
+                          data-testid={`agent-runtime-${row.serverID}-${row.sessionID}`}
+                        >
+                          <Trans>läuft {runtime}</Trans>
+                        </span>
+                      )}
                       <span className="badge badge-info badge-sm">
                         <Trans>Läuft</Trans>
                       </span>
@@ -104,9 +121,20 @@ export default function Agents() {
                         {agentLabel} · {modelLabel}
                       </Trans>
                     </p>
-                    {server !== undefined && (
-                      <p className="text-xs opacity-70">{server.name}</p>
-                    )}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0 text-xs opacity-70">
+                      {startedAt !== null && (
+                        <span
+                          className="oc-tabular hidden lg:inline"
+                          data-testid={`agent-started-${row.serverID}-${row.sessionID}`}
+                        >
+                          <Trans>seit {startedAt}</Trans>
+                        </span>
+                      )}
+                      {row.projectKey !== null && row.projectKey !== "" && (
+                        <span className="hidden lg:inline break-all">{row.projectKey}</span>
+                      )}
+                      {server !== undefined && <span>{server.name}</span>}
+                    </div>
                   </div>
                 </Link>
               </li>

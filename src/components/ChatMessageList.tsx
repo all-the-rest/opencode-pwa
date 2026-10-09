@@ -1,5 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
+import { useRef, useState } from "react";
 import CopyButton from "./CopyButton.tsx";
 import Icon from "./Icon.tsx";
 import Markdown from "./Markdown.tsx";
@@ -10,6 +11,11 @@ import {
   type ChatPart,
   type ChatToolPart,
 } from "../lib/sessionMessages.ts";
+import {
+  groupChatMessages,
+  type ChatBubbleRow,
+  type ChatDayLabelKind,
+} from "../lib/chatGrouping.ts";
 import {
   getToolInfo,
   isContextGroupTool,
@@ -25,10 +31,13 @@ import type { CachedMessage } from "../lib/messageCache.ts";
  * as bubbles and never as raw JSON. Unknown future part types degrade to a
  * small "unbekannter Inhalt" note.
  *
- * Tool parts render as original-quality tool cards (icon + German label +
- * subtitle, argument chips, status, error variant, +/- change badges, title
- * shimmer while running); consecutive read/glob/grep/list calls collapse into
- * one expanded context summary row and hidden tools (`todowrite`) never show.
+ * Messenger layout (wave 6, parity with the original's `session-turn` /
+ * `message-timeline`): day separators ("Heute"/"Gestern"/date) between days,
+ * consecutive messages of the same role grouped (tighter spacing, one meta
+ * line and timestamp per group, a bubble tail on the last message of a group),
+ * and quick actions (copy, revert-to-message) revealed on hover (desktop) and
+ * long-press (touch). Assistant *text* becomes its own bubble while tool cards
+ * stay cards. Timestamps stay subtle, and everything fits 360px.
  */
 
 function NoteHeadline({ kind, detail }: { kind: ChatNoteKind; detail: string | null }) {
@@ -460,154 +469,320 @@ function metaHead(
   return items.length === 0 ? null : items.join(" · ");
 }
 
-function isNote(message: CachedMessage): boolean {
-  return message.role !== "user" && message.role !== "assistant";
+/** Legacy cache rows carry no parts: fall back to the plain stored text
+ *  (already scrubbed of JSON dumps on read), else an unknown note. */
+function messageParts(message: CachedMessage): ChatPart[] {
+  const storedParts = message.parts ?? [];
+  if (storedParts.length > 0) return storedParts;
+  if (message.text !== "") return [{ kind: "text", text: message.text } as const];
+  return [{ kind: "unknown" } as const];
+}
+
+/** Day separator between days ("Heute" / "Gestern" / date). */
+function DaySeparator({ label, date }: { label: ChatDayLabelKind; date: string }) {
+  return (
+    <li
+      className="flex items-center gap-2 my-1"
+      data-testid="message-day-separator"
+      data-day={label}
+      role="separator"
+    >
+      <span className="h-px flex-1 bg-base-300" aria-hidden="true" />
+      <span className="oc-micro uppercase tracking-wide opacity-60 shrink-0">
+        {label === "today" ? (
+          <Trans>Heute</Trans>
+        ) : label === "yesterday" ? (
+          <Trans>Gestern</Trans>
+        ) : (
+          date
+        )}
+      </span>
+      <span className="h-px flex-1 bg-base-300" aria-hidden="true" />
+    </li>
+  );
+}
+
+const LONG_PRESS_MS = 450;
+
+/**
+ * Quick actions of one message (copy, revert-to-message). Revealed on
+ * hover/focus (desktop, pure CSS) and on long-press (touch, state below); the
+ * buttons always exist in the DOM so keyboard users reach them via Tab.
+ */
+function MessageActions({
+  messageID,
+  copyText,
+  revertable,
+  onRevert,
+  shown,
+}: {
+  messageID: string;
+  copyText: string;
+  revertable: boolean;
+  onRevert?: (messageID: string) => void;
+  shown: boolean;
+}) {
+  if (copyText === "" && !revertable) return null;
+  return (
+    <div
+      className={`absolute bottom-0 translate-y-full pt-1 flex items-center gap-1 ${
+        shown ? "opacity-100" : "opacity-0 group-hover/msg:opacity-100 group-focus-within/msg:opacity-100"
+      } transition-opacity`}
+      data-testid={`message-actions-${messageID}`}
+      data-shown={shown ? "true" : "false"}
+    >
+      {copyText !== "" && (
+        <CopyButton text={copyText} testid={`message-copy-${messageID}`} className="opacity-70" />
+      )}
+      {revertable && onRevert !== undefined && (
+        <button
+          type="button"
+          className="btn btn-ghost btn-xs opacity-70 hover:opacity-100"
+          title={t`Auf diesen Stand zurücksetzen`}
+          aria-label={t`Auf diesen Stand zurücksetzen`}
+          data-testid={`message-revert-${messageID}`}
+          onClick={() => onRevert(messageID)}
+        >
+          <Icon name="refresh" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * One chat message. `own` aligns right and paints one primary bubble (text +
+ * attachments together); assistant messages give every text part its own
+ * neutral bubble while tool cards stay cards. Quick actions (copy, revert)
+ * reveal on hover (desktop) and long-press (touch).
+ */
+function MessageBubble({
+  row,
+  modelNames,
+  onRevert,
+}: {
+  row: ChatBubbleRow;
+  modelNames: Readonly<Record<string, string>>;
+  onRevert?: (messageID: string) => void;
+}) {
+  const { message, own, groupStart, groupEnd } = row;
+  const [actionsShown, setActionsShown] = useState(false);
+  const longPressTimer = useRef<number | null>(null);
+  const touchPress = useRef(false);
+  const parts = messageParts(message);
+  const time = formatChatTime(message.created);
+  const head = metaHead(message.agent, message.model, modelNames);
+  const duration =
+    message.durationMs !== null && message.durationMs > 0
+      ? turnDurationLabel(message.durationMs)
+      : null;
+  const copyText = parts
+    .filter((part): part is Extract<ChatPart, { kind: "text" }> => part.kind === "text")
+    .map((part) => part.text)
+    .join("\n\n");
+
+  function cancelLongPress(): void {
+    if (longPressTimer.current !== null) {
+      window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }
+
+  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>): void {
+    if (event.pointerType !== "touch") return;
+    touchPress.current = true;
+    cancelLongPress();
+    longPressTimer.current = window.setTimeout(() => {
+      longPressTimer.current = null;
+      setActionsShown(true);
+    }, LONG_PRESS_MS);
+  }
+
+  function handlePointerEnd(): void {
+    touchPress.current = false;
+    cancelLongPress();
+  }
+
+  // A long-press must not open the browser's context menu instead.
+  function handleContextMenu(event: React.MouseEvent<HTMLDivElement>): void {
+    if (touchPress.current || actionsShown) event.preventDefault();
+  }
+
+  const tailClass = groupEnd ? (own ? " oc-tail-own" : " oc-tail-other") : "";
+  const body = own ? (
+    <div className={`chat-bubble chat-bubble-primary break-words${tailClass}`}>
+      {parts.map((part, partIndex) => (
+        <PartView
+          key={partIndex}
+          messageID={message.messageID}
+          part={part}
+          partIndex={partIndex}
+        />
+      ))}
+    </div>
+  ) : (
+    <div className="flex flex-col gap-1 items-start min-w-0 max-w-full">
+      {renderRows(parts).map((rowItem) =>
+        rowItem.kind === "group" ? (
+          <ContextToolGroup
+            key={`group-${rowItem.partIndex}`}
+            messageID={message.messageID}
+            partIndex={rowItem.partIndex}
+            parts={rowItem.parts}
+          />
+        ) : rowItem.part.kind === "text" ? (
+          <div
+            key={rowItem.partIndex}
+            className={`chat-bubble chat-bubble-neutral break-words${tailClass}`}
+          >
+            <Markdown text={rowItem.part.text} />
+          </div>
+        ) : (
+          <PartView
+            key={rowItem.partIndex}
+            messageID={message.messageID}
+            part={rowItem.part}
+            partIndex={rowItem.partIndex}
+          />
+        ),
+      )}
+    </div>
+  );
+
+  return (
+    <li
+      data-testid="message-item"
+      data-role={message.role}
+      data-group-start={groupStart ? "true" : "false"}
+      className={own ? "chat chat-end" : "chat chat-start"}
+    >
+      <div
+        className="group/msg relative max-w-[85%] min-w-0"
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        onPointerLeave={handlePointerEnd}
+        onContextMenu={handleContextMenu}
+      >
+        {groupStart && (
+          <div className="chat-header oc-micro opacity-60 mb-1 flex flex-wrap items-center gap-x-1">
+            <span>{own ? <Trans>Du</Trans> : <Trans>Assistent</Trans>}</span>
+            {head !== null && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="font-mono truncate" data-testid={`message-meta-${message.messageID}`}>
+                  {head}
+                </span>
+              </>
+            )}
+            {duration !== null && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="oc-tabular">{duration}</span>
+              </>
+            )}
+            {time !== "" && (
+              <>
+                <span aria-hidden="true">·</span>
+                <time
+                  dateTime={new Date(message.created).toISOString()}
+                  className="oc-tabular"
+                  data-testid={`message-time-${message.messageID}`}
+                >
+                  {time}
+                </time>
+              </>
+            )}
+          </div>
+        )}
+        {body}
+        <MessageActions
+          messageID={message.messageID}
+          copyText={copyText}
+          revertable={!own && onRevert !== undefined}
+          onRevert={onRevert}
+          shown={actionsShown}
+        />
+      </div>
+    </li>
+  );
+}
+
+/** Bare centered status line for notes (idle, compaction, switches, …). */
+function NoteRow({ message }: { message: CachedMessage }) {
+  const parts = messageParts(message);
+  // Known status notes (idle, contentless compaction, …) render as a bare
+  // centered status line: stray `unknown` parts (e.g. from legacy cache rows)
+  // are dropped. Only truly foreign types (`unknown` kind) keep the "unknown
+  // content" fallback.
+  const noteParts =
+    message.noteKind !== null && message.noteKind !== "unknown"
+      ? parts.filter((part) => part.kind !== "unknown")
+      : parts;
+  const time = formatChatTime(message.created);
+  return (
+    <li data-testid="message-item" data-role="note">
+      <div
+        className="text-center text-xs opacity-70 mx-auto max-w-prose"
+        data-testid={`message-note-${message.messageID}`}
+      >
+        <p>
+          <strong>
+            <NoteHeadline kind={message.noteKind ?? "unknown"} detail={message.noteDetail} />
+          </strong>
+        </p>
+        {noteParts.map((part, partIndex) =>
+          part.kind === "text" ? (
+            <div key={partIndex} className="whitespace-pre-wrap break-words mt-1 text-left">
+              <Markdown text={part.text} />
+            </div>
+          ) : (
+            <PartView
+              key={partIndex}
+              messageID={message.messageID}
+              part={part}
+              partIndex={partIndex}
+            />
+          ),
+        )}
+        {time !== "" && (
+          <p className="mt-1 text-[11px] opacity-60">
+            <time dateTime={new Date(message.created).toISOString()} className="oc-tabular">{time}</time>
+          </p>
+        )}
+      </div>
+    </li>
+  );
 }
 
 export default function ChatMessageList({
   messages,
   modelNames = {},
+  onRevertToMessage,
 }: {
   messages: CachedMessage[];
   /** `provider/model` → display name, so the chrome shows the model's name. */
   modelNames?: Readonly<Record<string, string>>;
+  /** Quick action "revert to this message" (stages a revert from here). */
+  onRevertToMessage?: (messageID: string) => void;
 }) {
+  const rows = groupChatMessages(messages);
   return (
-    <ul className="oc-dense flex flex-col gap-2" data-testid="message-list">
-      {messages.map((message) => {
-        const time = formatChatTime(message.created);
-        // Legacy cache rows carry no parts: fall back to the plain stored
-        // text (already scrubbed of JSON dumps on read), else an unknown note.
-        const storedParts = message.parts ?? [];
-        const parts: ChatPart[] =
-          storedParts.length > 0
-            ? storedParts
-            : message.text !== ""
-              ? [{ kind: "text", text: message.text } as const]
-              : [{ kind: "unknown" } as const];
-        if (isNote(message)) {
-          // Known status notes (idle, contentless compaction, …) render as a
-          // bare centered status line: stray `unknown` parts (e.g. from legacy
-          // cache rows) are dropped. Only truly foreign types (`unknown` kind)
-          // keep the "unknown content" fallback.
-          const noteParts =
-            message.noteKind !== null && message.noteKind !== "unknown"
-              ? parts.filter((part) => part.kind !== "unknown")
-              : parts;
-          return (
-            <li key={message.messageID} data-testid="message-item" data-role="note">
-              <div
-                className="text-center text-xs opacity-70 mx-auto max-w-prose"
-                data-testid={`message-note-${message.messageID}`}
-              >
-                <p>
-                  <strong>
-                    <NoteHeadline
-                      kind={message.noteKind ?? "unknown"}
-                      detail={message.noteDetail}
-                    />
-                  </strong>
-                </p>
-                {noteParts.map((part, partIndex) =>
-                  part.kind === "text" ? (
-                    <div
-                      key={partIndex}
-                      className="whitespace-pre-wrap break-words mt-1 text-left"
-                    >
-                      <Markdown text={part.text} />
-                    </div>
-                  ) : (
-                    <PartView
-                      key={partIndex}
-                      messageID={message.messageID}
-                      part={part}
-                      partIndex={partIndex}
-                    />
-                  ),
-                )}
-                {time !== "" && (
-                  <p className="mt-1 text-[11px] opacity-60">
-                    <time dateTime={new Date(message.created).toISOString()} className="oc-tabular">{time}</time>
-                  </p>
-                )}
-              </div>
-            </li>
-          );
+    <ul className="oc-dense oc-chat flex flex-col gap-2" data-testid="message-list">
+      {rows.map((row, index) => {
+        if (row.kind === "day") {
+          return <DaySeparator key={`day-${row.key}-${index}`} label={row.label} date={row.date} />;
         }
-        const own = message.role === "user";
-        const copyText = parts
-          .filter((part): part is Extract<ChatPart, { kind: "text" }> => part.kind === "text")
-          .map((part) => part.text)
-          .join("\n\n");
-        const showCopy = !own && copyText !== "";
-        const head = metaHead(message.agent, message.model, modelNames);
-        const duration =
-          message.durationMs !== null && message.durationMs > 0
-            ? turnDurationLabel(message.durationMs)
-            : null;
+        if (row.kind === "note") {
+          return <NoteRow key={row.message.messageID} message={row.message} />;
+        }
         return (
-          <li
-            key={message.messageID}
-            data-testid="message-item"
-            data-role={message.role}
-            className={own ? "chat chat-end" : "chat chat-start"}
-          >
-            <div className="chat-header oc-micro opacity-60 mb-1">
-              {own ? <Trans>Du</Trans> : <Trans>Assistent</Trans>}
-              {head !== null && (
-                <>
-                  {" · "}
-                  <span className="font-mono" data-testid={`message-meta-${message.messageID}`}>
-                    {head}
-                  </span>
-                </>
-              )}
-              {duration !== null && (
-                <>
-                  {" · "}
-                  <span className="oc-tabular">{duration}</span>
-                </>
-              )}
-              {time !== "" && (
-                <>
-                  {" · "}
-                  <time dateTime={new Date(message.created).toISOString()} className="oc-tabular">{time}</time>
-                </>
-              )}
-            </div>
-            <div
-              className={
-                own
-                  ? "chat-bubble chat-bubble-primary break-words relative"
-                  : `chat-bubble chat-bubble-neutral break-words relative${showCopy ? " pr-8" : ""}`
-              }
-            >
-              {showCopy && (
-                <CopyButton
-                  text={copyText}
-                  testid={`message-copy-${message.messageID}`}
-                  className="absolute right-1 top-1 z-10"
-                />
-              )}
-              {renderRows(parts).map((row) =>
-                row.kind === "group" ? (
-                  <ContextToolGroup
-                    key={`group-${row.partIndex}`}
-                    messageID={message.messageID}
-                    partIndex={row.partIndex}
-                    parts={row.parts}
-                  />
-                ) : (
-                  <PartView
-                    key={row.partIndex}
-                    messageID={message.messageID}
-                    part={row.part}
-                    partIndex={row.partIndex}
-                  />
-                ),
-              )}
-            </div>
-          </li>
+          <MessageBubble
+            key={row.message.messageID}
+            row={row}
+            modelNames={modelNames}
+            onRevert={onRevertToMessage}
+          />
         );
       })}
     </ul>

@@ -30,6 +30,9 @@ function json(route: Route, body: unknown, status = 200) {
 async function seedServer(page: Page) {
   await page.addInitScript((value) => {
     localStorage.setItem("opencode-pwa:servers", JSON.stringify([value]));
+    // Wave 6: the "Mehr…" panels live behind the Experte mode (default is
+    // Einfach), so this spec seeds it — the panels stay under test.
+    localStorage.setItem("opencode-pwa:session-mode", "expert");
   }, server);
 }
 

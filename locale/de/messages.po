@@ -40,6 +40,10 @@ msgstr "{base} (offline aus Zwischenspeicher)"
 msgid "{connectionCount} Verbindungen"
 msgstr "{connectionCount} Verbindungen"
 
+#: src/components/SessionRunStrip.tsx
+msgid "{count} Ausführungen"
+msgstr "{count} Ausführungen"
+
 #: src/components/SessionDiffView.tsx
 msgid "{count} Kontextzeilen anzeigen"
 msgstr "{count} Kontextzeilen anzeigen"
@@ -91,6 +95,10 @@ msgstr "← Server"
 #: src/components/SessionTabBar.tsx
 msgid "+ Neu"
 msgstr "+ Neu"
+
+#: src/components/SessionRunStrip.tsx
+msgid "1 Ausführung"
+msgstr "1 Ausführung"
 
 #: src/components/SessionDiffView.tsx
 msgid "1 Datei"
@@ -159,13 +167,25 @@ msgstr "Agent konnte nicht geladen werden."
 msgid "Agent wählen"
 msgstr "Agent wählen"
 
+#: src/pages/SessionDetail.tsx
+msgid "Agent- und Modelliste erneut laden"
+msgstr "Agent- und Modelliste erneut laden"
+
 #: src/pages/AgentDetail.tsx
 msgid "Agent: {agentName}"
 msgstr "Agent: {agentName}"
 
 #: src/pages/SessionDetail.tsx
-msgid "Agent/Modell konnte nicht gewechselt werden: {pickerError}"
-msgstr "Agent/Modell konnte nicht gewechselt werden: {pickerError}"
+msgid "Agent/Modell konnte nicht geladen werden: {loadError}"
+msgstr "Agent/Modell konnte nicht geladen werden: {loadError}"
+
+#: src/pages/SessionDetail.tsx
+#~ msgid "Agent/Modell konnte nicht gewechselt werden: {pickerError}"
+#~ msgstr "Agent/Modell konnte nicht gewechselt werden: {pickerError}"
+
+#: src/pages/SessionDetail.tsx
+msgid "Agent/Modell nicht geladen: {pickerError}"
+msgstr "Agent/Modell nicht geladen: {pickerError}"
 
 #: src/components/Layout.tsx
 #: src/pages/Dashboard.tsx
@@ -346,6 +366,10 @@ msgstr "Anmeldung nötig"
 msgid "Anmeldung starten"
 msgstr "Anmeldung starten"
 
+#: src/pages/SessionDetail.tsx
+msgid "Ansichtsmodus"
+msgstr "Ansichtsmodus"
+
 #: src/components/SessionDocks.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Antwort als JSON"
@@ -402,6 +426,10 @@ msgstr "API-Schlüssel …"
 #: src/pages/SessionDetail.tsx
 msgid "Assistent"
 msgstr "Assistent"
+
+#: src/components/ChatMessageList.tsx
+msgid "Auf diesen Stand zurücksetzen"
+msgstr "Auf diesen Stand zurücksetzen"
 
 #: src/components/ChatMessageList.tsx
 msgid "Aufgabe"
@@ -868,6 +896,14 @@ msgid "Eine Aktion wartet auf Freigabe{suffix}."
 msgstr "Eine Aktion wartet auf Freigabe{suffix}."
 
 #: src/pages/SessionDetail.tsx
+msgid "Einfach"
+msgstr "Einfach"
+
+#: src/pages/SessionDetail.tsx
+msgid "Einfach: Chat, Composer und laufende Ausführungen"
+msgstr "Einfach: Chat, Composer und laufende Ausführungen"
+
+#: src/pages/SessionDetail.tsx
 msgid "Eingabe:"
 msgstr "Eingabe:"
 
@@ -967,12 +1003,24 @@ msgid "Erkundung abgeschlossen"
 msgstr "Erkundung abgeschlossen"
 
 #: src/pages/SessionDetail.tsx
+msgid "Erneut laden"
+msgstr "Erneut laden"
+
+#: src/pages/SessionDetail.tsx
 msgid "Erst staging starten (ab einer Nachricht), dann übernehmen oder verwerfen. Das Übernehmen ändert Nachrichten und Dateien unwiderruflich."
 msgstr "Erst staging starten (ab einer Nachricht), dann übernehmen oder verwerfen. Das Übernehmen ändert Nachrichten und Dateien unwiderruflich."
 
 #: src/pages/SessionDetail.tsx
 msgid "Erstellen"
 msgstr "Erstellen"
+
+#: src/pages/SessionDetail.tsx
+msgid "Experte"
+msgstr "Experte"
+
+#: src/pages/SessionDetail.tsx
+msgid "Experte: Agent, Modell, Anhänge und alle Werkzeuge"
+msgstr "Experte: Agent, Modell, Anhänge und alle Werkzeuge"
 
 #: src/pages/SessionDetail.tsx
 msgid "Export als Datei laden"
@@ -1131,6 +1179,10 @@ msgstr "Gesamt (alle Sessions): {totalPrompts} Prompts, {totalSteps} Schritte, {
 msgid "Gespeicherte Server ({serverCount})"
 msgstr "Gespeicherte Server ({serverCount})"
 
+#: src/components/ChatMessageList.tsx
+msgid "Gestern"
+msgstr "Gestern"
+
 #: src/components/SessionDiffView.tsx
 msgid "Geteilt"
 msgstr "Geteilt"
@@ -1183,6 +1235,10 @@ msgstr "Grep"
 #: src/components/Layout.tsx
 msgid "Hauptnavigation"
 msgstr "Hauptnavigation"
+
+#: src/components/ChatMessageList.tsx
+msgid "Heute"
+msgstr "Heute"
 
 #: src/components/ChatMessageList.tsx
 msgid "Hinweis"
@@ -1519,6 +1575,11 @@ msgstr "Lädt"
 msgid "Lädt …"
 msgstr "Lädt …"
 
+#: src/components/PromptComposer.tsx
+#: src/pages/SessionDetail.tsx
+msgid "Lädt…"
+msgstr "Lädt…"
+
 #: src/pages/Agents.tsx
 msgid "Laufende Agenten"
 msgstr "Laufende Agenten"
@@ -1526,6 +1587,10 @@ msgstr "Laufende Agenten"
 #: src/pages/SessionDetail.tsx
 msgid "Laufende Ausführung unterbrechen"
 msgstr "Laufende Ausführung unterbrechen"
+
+#: src/components/SessionRunStrip.tsx
+msgid "Laufende Ausführungen"
+msgstr "Laufende Ausführungen"
 
 #: src/pages/Dashboard.tsx
 msgid "Laufende Sessions"
@@ -1540,9 +1605,14 @@ msgid "läuft"
 msgstr "läuft"
 
 #: src/components/ChatMessageList.tsx
+#: src/components/SessionRunStrip.tsx
 #: src/pages/Agents.tsx
 msgid "Läuft"
 msgstr "Läuft"
+
+#: src/pages/Agents.tsx
+msgid "läuft {runtime}"
+msgstr "läuft {runtime}"
 
 #: src/pages/Settings.tsx
 msgid "Leer lassen, um das gespeicherte Passwort zu behalten"
@@ -1673,8 +1743,8 @@ msgid "Nachricht wählen …"
 msgstr "Nachricht wählen …"
 
 #: src/pages/SessionDetail.tsx
-msgid "Nachrichten konnten nicht geladen werden (offline?): {error}"
-msgstr "Nachrichten konnten nicht geladen werden (offline?): {error}"
+#~ msgid "Nachrichten konnten nicht geladen werden (offline?): {error}"
+#~ msgstr "Nachrichten konnten nicht geladen werden (offline?): {error}"
 
 #: src/pages/SessionDetail.tsx
 msgid "Nachrichten werden geladen …"
@@ -1865,17 +1935,33 @@ msgstr "Offene Tabs ({tabCount})"
 msgid "Offline"
 msgstr "Offline"
 
+#: src/pages/SessionDetail.tsx
+msgid "Offline – keine zwischengespeicherte Nachrichten ({error})"
+msgstr "Offline – keine zwischengespeicherte Nachrichten ({error})"
+
 #: src/components/SidebarProjects.tsx
 msgid "Offline – Projekte nicht ladbar"
 msgstr "Offline – Projekte nicht ladbar"
+
+#: src/components/PromptComposer.tsx
+msgid "Offline – Senden ist erst wieder möglich, wenn der Server antwortet"
+msgstr "Offline – Senden ist erst wieder möglich, wenn der Server antwortet"
+
+#: src/pages/SessionDetail.tsx
+msgid "Offline – Senden ist erst wieder möglich, wenn der Server antwortet."
+msgstr "Offline – Senden ist erst wieder möglich, wenn der Server antwortet."
 
 #: src/components/SidebarProjects.tsx
 msgid "Offline – Sessions nicht ladbar"
 msgstr "Offline – Sessions nicht ladbar"
 
 #: src/pages/SessionDetail.tsx
-msgid "Offline: zwischengespeicherte Nachrichten werden angezeigt ({error})."
-msgstr "Offline: zwischengespeicherte Nachrichten werden angezeigt ({error})."
+msgid "Offline: {error}"
+msgstr "Offline: {error}"
+
+#: src/pages/SessionDetail.tsx
+#~ msgid "Offline: zwischengespeicherte Nachrichten werden angezeigt ({error})."
+#~ msgstr "Offline: zwischengespeicherte Nachrichten werden angezeigt ({error})."
 
 #: src/pages/ServerTools.tsx
 msgid "Öffnen"
@@ -1967,6 +2053,10 @@ msgid "Revert"
 msgstr "Revert"
 
 #: src/pages/SessionDetail.tsx
+msgid "Revert ab dieser Nachricht – Staging starten bestätigt den Stand."
+msgstr "Revert ab dieser Nachricht – Staging starten bestätigt den Stand."
+
+#: src/pages/SessionDetail.tsx
 #~ msgid "Revert anzeigen"
 #~ msgstr "Revert anzeigen"
 
@@ -2012,6 +2102,11 @@ msgstr "Schlüssel speichern"
 #: src/components/ChatMessageList.tsx
 msgid "Schreiben"
 msgstr "Schreiben"
+
+#: src/components/SessionRunStrip.tsx
+#: src/pages/Agents.tsx
+msgid "seit {startedAt}"
+msgstr "seit {startedAt}"
 
 #: src/pages/SessionDetail.tsx
 #~ msgid "Senden"
@@ -2179,6 +2274,10 @@ msgstr "Session"
 #: src/pages/ServerDetail.tsx
 #~ msgid "Session {0} unterbrechen"
 #~ msgstr "Session {0} unterbrechen"
+
+#: src/components/SessionRunStrip.tsx
+msgid "Session {agentTitle} öffnen"
+msgstr "Session {agentTitle} öffnen"
 
 #: src/pages/ServerDetail.tsx
 msgid "Session {label} löschen"
@@ -2478,6 +2577,7 @@ msgstr "Teilen (Export / Import)"
 #~ msgstr "Teilen ausblenden"
 
 #: src/components/ChatMessageList.tsx
+#: src/components/SessionRunStrip.tsx
 #: src/pages/SessionDetail.tsx
 msgid "Terminal"
 msgstr "Terminal"

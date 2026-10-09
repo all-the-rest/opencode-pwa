@@ -149,7 +149,10 @@ test(
     online.current = false;
     await page.reload();
     await expect(page.getByTestId("cache-status")).toContainText("offline aus Zwischenspeicher");
-    await expect(page.getByText("Offline: zwischengespeicherte Nachrichten")).toBeVisible();
+    // Wave 6 (UI-review finding #2): the two stacked offline alerts became one
+    // status line — cache label plus the reason, single line.
+    await expect(page.getByTestId("cache-status")).toContainText("Offline:");
+    await expect(page.locator(".alert-warning, .alert-error")).toHaveCount(0);
     await expect(items.first()).toContainText("Nachricht 36");
     await expect(items.last()).toContainText("Nachricht 60");
 

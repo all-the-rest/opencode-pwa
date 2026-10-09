@@ -151,6 +151,87 @@ export function listPtys(server: ServerConfig) {
   return guarded(async () => (await makeClient(server)).pty.list());
 }
 
+/** One running shell of the server (`shell.list` row). */
+export interface ShellRow {
+  id: string;
+  /** Command line of the shell, or the id when the server sent none. */
+  command: string;
+  /** Raw status string (`running`, `completed`, …) as sent; "" when absent. */
+  status: string;
+  /** `time.created` (ms) — the anchor for the elapsed runtime. */
+  createdAt: number | null;
+}
+
+/** One PTY of the server (`pty.list` row). */
+export interface PtyRow {
+  id: string;
+  /** PTY title when the server sent one. */
+  title: string | null;
+  /** `time.created` (ms) — the anchor for the elapsed runtime. */
+  createdAt: number | null;
+}
+
+/** Statuses that mean "this shell is no longer running". */
+const TERMINAL_SHELL_STATUSES: ReadonlySet<string> = new Set([
+  "completed",
+  "complete",
+  "done",
+  "exited",
+  "exit",
+  "failed",
+  "error",
+  "aborted",
+  "killed",
+]);
+
+/** True while a shell status does not mark a settled (non-running) outcome. */
+export function isRunningShellStatus(status: string): boolean {
+  if (status === "") return true;
+  return !TERMINAL_SHELL_STATUSES.has(status.toLowerCase());
+}
+
+/**
+ * Normalize a `shell.list` payload into rows. Accepts the raw array, the
+ * `{ data: [...] }` envelope and the `{ location, data }` shape the pinned
+ * client returns (it does not unwrap `data` for `shell.list`); anything else
+ * yields no rows.
+ */
+export function extractShellRows(value: unknown): ShellRow[] {
+  return extractListRows(value).flatMap((entry, index) => {
+    if (entry === null || typeof entry !== "object") return [];
+    const record = entry as Record<string, unknown>;
+    const id = readString(record, ["id"]) ?? `shell-${index}`;
+    return [
+      {
+        id,
+        command: readString(record, ["command", "cmd", "title"]) ?? id,
+        status: readString(record, ["status", "state"]) ?? "",
+        createdAt: readTimeCreatedMs(record),
+      },
+    ];
+  });
+}
+
+/**
+ * Normalize a `pty.list` payload into rows (same tolerant shapes as
+ * {@link extractShellRows}). PTYs exist only while they live, so no status
+ * filter applies.
+ */
+export function extractPtyRows(value: unknown): PtyRow[] {
+  return extractListRows(value).flatMap((entry, index) => {
+    if (entry === null || typeof entry !== "object") return [];
+    const record = entry as Record<string, unknown>;
+    const id = readString(record, ["id", "ptyID", "ptyId"]) ?? `pty-${index}`;
+    return [
+      {
+        id,
+        title: readString(record, ["title", "name"]),
+        createdAt: readTimeCreatedMs(record),
+      },
+    ];
+  });
+}
+
 /** GET /api/agent — normalized to `AgentOption[]` (see `extractAgents`). */
 export function listAgents(server: ServerConfig): Promise<ApiResult<AgentOption[]>> {
   return guarded(async () => {
@@ -388,6 +469,8 @@ export interface SessionRow {
   label: string;
   projectKey: string | null;
   agent: string | null;
+  /** `time.created` of the row (ms), null when the server sent none. */
+  created: number | null;
 }
 
 /**
@@ -432,6 +515,14 @@ export function sessionAgentKey(entry: unknown): string | null {
   return readString(entry as Record<string, unknown>, ["agent", "agentID", "agentId"]);
 }
 
+function readTimeCreatedMs(entry: unknown): number | null {
+  if (entry === null || typeof entry !== "object") return null;
+  const time: unknown = (entry as Record<string, unknown>)["time"];
+  if (time === null || typeof time !== "object") return null;
+  const created: unknown = (time as Record<string, unknown>)["created"];
+  return typeof created === "number" && Number.isFinite(created) ? created : null;
+}
+
 export function extractSessionRows(value: unknown): SessionRow[] {
   if (value === null || typeof value !== "object") return [];
   const data = (value as { data?: unknown }).data;
@@ -446,9 +537,10 @@ export function extractSessionRows(value: unknown): SessionRow[] {
         label,
         projectKey: sessionProjectKey(entry),
         agent: sessionAgentKey(entry),
+        created: readTimeCreatedMs(entry),
       };
     }
-    return { id: `eintrag-${index}`, label: String(entry), projectKey: null, agent: null };
+    return { id: `eintrag-${index}`, label: String(entry), projectKey: null, agent: null, created: null };
   });
 }
 
@@ -680,19 +772,28 @@ export function extractSessionInfo(value: unknown): SessionInfo | null {
 async function fetchSessionInfoRaw(server: ServerConfig, sessionID: string): Promise<unknown> {
   try {
     // Verified against the installed package: `session.get()` exists
-    // (node_modules/@opencode/client `session: { ..., get, ... }`).
-    return await (await makeClient(server)).session.get({ sessionID });
+    // (`node_modules/@opencode/client` `session: { ..., get, ... }`).
+    //
+    // The generated client unwraps `.data` off the parsed body
+    // (`.then((value) => value.data)`), so a server that answers WITHOUT the
+    // `{ data: … }` envelope resolves `undefined` instead of throwing — the
+    // picker then never saw a session and stuck on the "Keiner" placeholder.
+    // A nullish client result therefore falls through to the direct fetch,
+    // which reads the raw body and accepts both shapes.
+    const data = await (await makeClient(server)).session.get({ sessionID });
+    if (data !== null && data !== undefined) return data;
   } catch {
-    const baseUrl = server.baseUrl.replace(/\/$/, "");
-    const response = await fetch(
-      `${baseUrl}/api/session/${encodeURIComponent(sessionID)}`,
-      { headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) } },
-    );
-    if (!response.ok) {
-      throw new Error(`GET /api/session/${sessionID} failed with status ${response.status}`);
-    }
-    return response.json();
+    // transport/client failure: the direct fetch below is the fallback
   }
+  const baseUrl = server.baseUrl.replace(/\/$/, "");
+  const response = await fetch(
+    `${baseUrl}/api/session/${encodeURIComponent(sessionID)}`,
+    { headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) } },
+  );
+  if (!response.ok) {
+    throw new Error(`GET /api/session/${sessionID} failed with status ${response.status}`);
+  }
+  return response.json();
 }
 
 /** GET /api/session/{sessionID} — current agent/model of one session. */
@@ -733,17 +834,24 @@ async function fetchActiveSessionIDsRaw(server: ServerConfig): Promise<unknown> 
   try {
     // Verified against the installed package: `session.active()` exists and
     // resolves `{ [sessionID]: SessionActive }` (GET /api/session/active).
-    return await (await makeClient(server)).session.active();
+    //
+    // Same unwrap trap as `session.get()`: the client reads `.data` off the
+    // parsed body, so a server without the `{ data: … }` envelope resolves
+    // `undefined` (which would silently read as "nothing runs"). Fall through
+    // to the direct fetch, which sees the raw body.
+    const data = await (await makeClient(server)).session.active();
+    if (data !== null && data !== undefined) return data;
   } catch {
-    const baseUrl = server.baseUrl.replace(/\/$/, "");
-    const response = await fetch(`${baseUrl}/api/session/active`, {
-      headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) },
-    });
-    if (!response.ok) {
-      throw new Error(`GET /api/session/active failed with status ${response.status}`);
-    }
-    return response.json();
+    // transport/client failure: the direct fetch below is the fallback
   }
+  const baseUrl = server.baseUrl.replace(/\/$/, "");
+  const response = await fetch(`${baseUrl}/api/session/active`, {
+    headers: { accept: "application/json", ...(await fetchAuthHeaders(server)) },
+  });
+  if (!response.ok) {
+    throw new Error(`GET /api/session/active failed with status ${response.status}`);
+  }
+  return response.json();
 }
 
 /** GET /api/session/active — IDs of sessions with a live execution. */

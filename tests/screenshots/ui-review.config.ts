@@ -59,7 +59,8 @@ export const routes: UiReviewRoute[] = [
     states: ["filled"],
     mock: "session-diff",
     seedServer: true,
-    steps: ["session-more-toggle", "session-more-tab-diff"],
+    // The "Mehr…" disclosure lives behind the Experte mode (wave 6).
+    steps: ["session-mode-expert", "session-more-toggle", "session-more-tab-diff"],
   },
   {
     name: "session-inbox",
@@ -67,7 +68,7 @@ export const routes: UiReviewRoute[] = [
     states: ["filled"],
     mock: "chat-steps",
     seedServer: true,
-    steps: ["session-more-toggle", "session-more-tab-inbox"],
+    steps: ["session-mode-expert", "session-more-toggle", "session-more-tab-inbox"],
   },
   {
     name: "session-forms",
@@ -75,7 +76,7 @@ export const routes: UiReviewRoute[] = [
     states: ["filled"],
     mock: "chat-steps",
     seedServer: true,
-    steps: ["session-more-toggle", "session-more-tab-forms"],
+    steps: ["session-mode-expert", "session-more-toggle", "session-more-tab-forms"],
   },
   {
     name: "session-offline",
@@ -84,6 +85,15 @@ export const routes: UiReviewRoute[] = [
     mock: "chat-steps",
     seedServer: true,
     failUrls: ["/api/session/ses-1/message"],
+  },
+  // Wave 6: the expert surface of a running session (picker bar + "Mehr…").
+  {
+    name: "chat-expert",
+    path: "/sessions/ses-1?server=e2e-server",
+    states: ["filled"],
+    mock: "chat-running",
+    seedServer: true,
+    steps: ["session-mode-expert"],
   },
   { name: "agents", path: "/agents", states: ["filled", "empty"], mock: "agents", seedServer: true },
   {

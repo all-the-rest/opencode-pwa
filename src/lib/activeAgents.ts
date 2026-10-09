@@ -23,6 +23,10 @@ export interface ActiveAgentRow {
   agent: string | null;
   model: string | null;
   status: string;
+  /** `time.created` of the session (ms) — anchor for the elapsed runtime. */
+  startedAt: number | null;
+  /** Project key of the session (desktop detail), null when unknown. */
+  projectKey: string | null;
 }
 
 export function activeModelLabel(model: { id: string; providerID: string } | null): string | null {
@@ -46,6 +50,8 @@ export function joinActiveSessions(
       agent: row?.agent ?? null,
       model: models[sessionID] ?? null,
       status: "running",
+      startedAt: row?.created ?? null,
+      projectKey: row?.projectKey ?? null,
     };
   });
 }

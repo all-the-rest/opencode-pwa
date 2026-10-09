@@ -288,6 +288,28 @@ export const SESSION_DIFF_ROWS = [
   },
 ];
 
+/**
+ * Session rows for the "Agenten" overview (UI-review finding #6): the runtime
+ * badge reads naturally ("läuft 4:12"), so the starts are anchored on the real
+ * now instead of the fixed `T0`.
+ */
+export const AGENTS_SESSION_ROWS = [
+  {
+    id: "ses-1",
+    title: "Diff-Ansicht rendern",
+    agent: "build",
+    projectID: "p1",
+    time: { created: Date.now() - 252_000, updated: Date.now() - 60_000 },
+  },
+  {
+    id: "ses-2",
+    title: "Migration planen",
+    agent: "plan",
+    projectID: "p2",
+    time: { created: Date.now() - 96_000, updated: Date.now() - 45_000 },
+  },
+];
+
 /** `GET /api/session/active` payload — two running agents.
  *  Shape follows the proven E2E mock (w12): a `{ data: { [id]: { type } } }`
  *  envelope whose values mark the execution state. */
@@ -298,10 +320,52 @@ export const ACTIVE_SESSIONS = {
   },
 };
 
-/** Shells and PTYs the app lists per server (shape of `shell.list`/`pty.list`). */
+/**
+ * Active sessions while a chat turn runs (wave 6 running strip). The open
+ * session (`ses-1`) is in there — the strip excludes it and shows `ses-2`.
+ */
+export const CHAT_RUNNING_ACTIVE = {
+  data: {
+    "ses-1": { type: "running" },
+    "ses-2": { type: "running" },
+  },
+};
+
+/**
+ * Shells and PTYs the app lists per server (shape of `shell.list`/`pty.list`).
+ * Anchored on the *real* now (not the fixed `T0`): the strip's elapsed runtime
+ * must read naturally ("3:00"), so the start times stay relative to the
+ * capture moment.
+ */
 export const RUNNING_SHELLS = [
-  { id: "sh-1", command: "sleep 60", status: "running", time: { created: minutes(-3) } },
-  { id: "sh-2", command: "pnpm test:e2e", status: "running", time: { created: minutes(-12) } },
+  { id: "sh-1", command: "sleep 60", status: "running", time: { created: Date.now() - 3 * 60_000 } },
+  { id: "sh-2", command: "pnpm test:e2e", status: "running", time: { created: Date.now() - 12 * 60_000 } },
+];
+
+/** One live PTY of the server (`pty.list` shape, recent start). */
+export const RUNNING_PTYS = [
+  { id: "pty-1", title: "Hauptterminal", time: { created: Date.now() - 5 * 60_000 } },
+];
+
+/**
+ * Session rows for the running-strip captures: `ses-2` started minutes ago,
+ * so its runtime ("läuft 4:12") reads naturally next to the shells.
+ */
+export const CHAT_RUNNING_SESSION_ROWS = [
+  {
+    id: "ses-1",
+    title: "Diff-Ansicht rendern",
+    agent: "build",
+    projectID: "p1",
+    time: { created: Date.now() - 30 * 60_000, updated: Date.now() - 60_000 },
+  },
+  {
+    id: "ses-2",
+    title: "Migration planen",
+    agent: "plan",
+    projectID: "p2",
+    time: { created: Date.now() - 4 * 60_000, updated: Date.now() - 60_000 },
+  },
 ];
 
 export const PROJECTS = [

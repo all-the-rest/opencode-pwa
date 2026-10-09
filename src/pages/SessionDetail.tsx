@@ -6,11 +6,13 @@ import ConfirmDialog from "../components/ConfirmDialog.tsx";
 import ChatMessageList from "../components/ChatMessageList.tsx";
 import PromptComposer from "../components/PromptComposer.tsx";
 import SessionRunIndicators from "../components/SessionRunIndicators.tsx";
+import SessionRunStrip from "../components/SessionRunStrip.tsx";
 import SessionDiffView from "../components/SessionDiffView.tsx";
 import Icon from "../components/Icon.tsx";
 import { SESSION_PAGE_SIZE, useSessionMessages, type SessionMessageSource } from "../hooks/useSessionMessages.ts";
 import { useSessionRunState } from "../hooks/useSessionRunState.ts";
 import { useSessionDocks } from "../hooks/useSessionDocks.ts";
+import { useRunningWork, type RunningAgent } from "../hooks/useRunningWork.ts";
 import SessionDocks, { type DockPermissionDecision } from "../components/SessionDocks.tsx";
 import {
   cancelSessionForm,
@@ -78,6 +80,7 @@ import { subscribeServerEvents } from "../lib/eventHub.ts";
 import { useServers } from "../state/servers.tsx";
 import { useToast } from "../state/toast.tsx";
 import { useSessionTabs } from "../state/sessionTabs.tsx";
+import { useSessionMode } from "../state/sessionMode.tsx";
 
 function countLabel(total: number, source: SessionMessageSource): string {
   const base = total === 1 ? t`1 Nachricht` : t`${total} Nachrichten`;
@@ -95,7 +98,10 @@ export default function SessionDetail() {
   // error) instead of an inline alert box — the same pattern as the rename
   // rollback above. Destructive *questions* stay in the ConfirmDialog.
   const { notify } = useToast();
-  const { ensureTab, retitleTab, tabs } = useSessionTabs();
+  const { ensureTab, retitleTab, tabs, openTab } = useSessionTabs();
+  // Wave 6: the persisted "Einfach/Experte" mode decides how much of the
+  // session surface shows. Simple = chat + composer + running strip.
+  const { expert, setMode } = useSessionMode();
   const serverId = searchParams.get("server") ?? selectedServer?.id ?? null;
   const server = servers.find((s) => s.id === serverId) ?? selectedServer;
 
@@ -239,6 +245,11 @@ export default function SessionDetail() {
   const stickAfterSendRef = useRef(false);
   const prevVisibleLengthRef = useRef(0);
 
+  function openRunningSession(agent: RunningAgent) {
+    openTab({ serverID: agent.serverID, sessionID: agent.sessionID, title: agent.title });
+    navigate(`/sessions/${agent.sessionID}?server=${agent.serverID}`);
+  }
+
   function scrollToBottom() {
     window.scrollTo(0, document.documentElement.scrollHeight);
   }
@@ -298,7 +309,15 @@ export default function SessionDetail() {
   const [models, setModels] = useState<ModelOption[]>([]);
   const [currentAgent, setCurrentAgent] = useState<string | null>(null);
   const [currentModelValue, setCurrentModelValue] = useState<string>("");
+  // Picker robustness (UI-review finding #1): the failed first load used to
+  // leave a sticky red banner and the selects stuck on "Keiner"/"Keines".
+  // Now the load has a visible loading state, a failure answers with a toast,
+  // and `pickerAttempt` re-runs the load on demand ("Erneut laden").
+  const [pickerLoading, setPickerLoading] = useState(true);
   const [pickerError, setPickerError] = useState<string | null>(null);
+  const [pickerAttempt, setPickerAttempt] = useState(0);
+  /** One automatic picker retry per session mount (see the effect below). */
+  const autoRetryDoneRef = useRef(false);
   const [switching, setSwitching] = useState(false);
   // Composer attachments: workspace-path chips (`file://…`) plus picked or
   // dropped files (base64, sent inline). The mapping to the client's
@@ -308,6 +327,10 @@ export default function SessionDetail() {
   const modelLabels = useMemo(() => modelLabelLookup(models), [models]);
 
   useEffect(() => {
+    setPickerLoading(true);
+    setPickerError(null);
+    setPickerAttempt(0);
+    autoRetryDoneRef.current = false;
     initialScrollDoneRef.current = false;
     prevVisibleLengthRef.current = 0;
     preserveOffsetRef.current = null;
@@ -362,6 +385,7 @@ export default function SessionDetail() {
     const activeSession: string = id;
     let cancelled = false;
     setPickerError(null);
+    setPickerLoading(true);
     void Promise.all([
       listAgents(activeServer),
       listModels(activeServer),
@@ -370,9 +394,21 @@ export default function SessionDetail() {
       listCommands(activeServer),
     ]).then(([agentsRes, modelsRes, infoRes, statsRes, commandsRes]) => {
       if (cancelled) return;
+      setPickerLoading(false);
       const firstError = agentsRes.error ?? modelsRes.error ?? infoRes.error;
       if (firstError !== null) {
         setPickerError(firstError);
+        const loadError = firstError;
+        notify(t`Agent/Modell konnte nicht geladen werden: ${loadError}`, "error");
+        // One automatic retry after a short delay: a transient blip (a server
+        // still starting, a dropped first request) must not force a click. A
+        // server that stays unreachable keeps the retry button.
+        if (!autoRetryDoneRef.current) {
+          autoRetryDoneRef.current = true;
+          window.setTimeout(() => {
+            if (!cancelled) setPickerAttempt((attempt) => attempt + 1);
+          }, 5000);
+        }
         return;
       }
       setAgents(agentsRes.data ?? []);
@@ -398,7 +434,7 @@ export default function SessionDetail() {
     return () => {
       cancelled = true;
     };
-  }, [server, id]);
+  }, [server, id, pickerAttempt, notify]);
 
   const showInitialSpinner = loading && total === 0;
   const showEmpty = !loading && error === null && total === 0;
@@ -426,6 +462,16 @@ export default function SessionDetail() {
   const canTerminal = isActionEnabled(offline, "terminal-read");
   const canReplyPermission = isActionEnabled(offline, "permission-reply");
   const canVcsInit = isActionEnabled(offline, "vcs-init");
+  // Sending a prompt needs a round-trip: the composer blocks it while offline.
+  const canSendPrompt = isActionEnabled(offline, "session-prompt");
+  // Wave 6: everything running on the open server (shells, PTYs, the server's
+  // other live sessions) with elapsed runtime, shown directly above the
+  // composer. The open session itself is excluded — its state is the chat's
+  // own run state. Polling pauses while the server is unreachable.
+  const runningWork = useRunningWork(server, {
+    currentSessionID: id ?? null,
+    enabled: server !== null && server !== undefined && !offline,
+  });
   // Lingui messages take plain variables only — no member access or calls —
   // so every formatted stat is hoisted here (see `lingui/no-expression-in-message`).
   const statInput = (sessionTokens?.input ?? 0).toLocaleString("de");
@@ -678,6 +724,20 @@ export default function SessionDetail() {
   }
 
   // --- Parity batch 3: staged revert (stage → commit with confirm / clear) ---
+
+  /**
+   * Quick action "revert to this message" from the chat (wave 6). It opens the
+   * Revert panel — which lives in the Experte surface, so a basic-mode user
+   * who asks for it gets switched over (the action stays one tap away, it is
+   * never silently dropped).
+   */
+  function handleRevertToMessage(messageID: string) {
+    setRevertMessageID(messageID);
+    setMoreTab("revert");
+    setMoreOpen(true);
+    setMode("expert");
+    notify(t`Revert ab dieser Nachricht – Staging starten bestätigt den Stand.`, "info");
+  }
 
   async function handleStageRevert() {
     if (server === null || server === undefined || id === undefined) return;
@@ -1007,6 +1067,30 @@ export default function SessionDetail() {
         <h1 className="text-2xl font-bold flex-1 min-w-48 break-all">
           {displayTitle === null ? <Trans>Session</Trans> : displayTitle}
         </h1>
+        {/* Wave 6: the persisted Basic/Experte mode. Simple keeps chat +
+            composer + running strip; Experte reveals every surface. */}
+        <div className="join" role="group" aria-label={t`Ansichtsmodus`} data-testid="session-mode-toggle">
+          <button
+            type="button"
+            className={`btn btn-sm join-item ${expert ? "btn-ghost" : "btn-active"}`}
+            aria-pressed={!expert}
+            title={t`Einfach: Chat, Composer und laufende Ausführungen`}
+            data-testid="session-mode-basic"
+            onClick={() => setMode("basic")}
+          >
+            <Trans>Einfach</Trans>
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm join-item ${expert ? "btn-active" : "btn-ghost"}`}
+            aria-pressed={expert}
+            title={t`Experte: Agent, Modell, Anhänge und alle Werkzeuge`}
+            data-testid="session-mode-expert"
+            onClick={() => setMode("expert")}
+          >
+            <Trans>Experte</Trans>
+          </button>
+        </div>
         {server !== null && server !== undefined && id !== undefined && (
           <>
             <button
@@ -1126,13 +1210,6 @@ export default function SessionDetail() {
           <p className="text-sm opacity-70">
             <Trans>Server: {serverName}</Trans>
           </p>
-          {pickerError !== null && (
-            <div className="alert alert-error">
-              <span>
-                <Trans>Agent/Modell konnte nicht gewechselt werden: {pickerError}</Trans>
-              </span>
-            </div>
-          )}
           {attachmentError !== null && (
             <div className="alert alert-warning">
               <span>
@@ -1140,9 +1217,21 @@ export default function SessionDetail() {
               </span>
             </div>
           )}
+          {/* One status line (UI-review finding #2): offline answers here
+              instead of stacking a second alert above the chat. */}
           <p className="text-sm opacity-70" data-testid="cache-status">
             {loading && total === 0 ? (
               <Trans>Nachrichten werden geladen …</Trans>
+            ) : error !== null ? (
+              total > 0 ? (
+                <>
+                  {countLabel(total, source)}
+                  {" – "}
+                  <Trans>Offline: {error}</Trans>
+                </>
+              ) : (
+                <Trans>Offline – keine zwischengespeicherte Nachrichten ({error})</Trans>
+              )
             ) : (
               <>
                 {countLabel(total, source)}
@@ -1162,20 +1251,6 @@ export default function SessionDetail() {
             )}
           </p>
           {showInitialSpinner && <span className="loading loading-spinner loading-md" aria-label={t`Lädt`} />}
-          {error !== null && total === 0 && !loading && (
-            <div className="alert alert-warning">
-              <span>
-                <Trans>Nachrichten konnten nicht geladen werden (offline?): {error}</Trans>
-              </span>
-            </div>
-          )}
-          {error !== null && total > 0 && (
-            <div className="alert alert-warning">
-              <span>
-                <Trans>Offline: zwischengespeicherte Nachrichten werden angezeigt ({error}).</Trans>
-              </span>
-            </div>
-          )}
           {sendError !== null && (
             <div className="alert alert-error">
               <span>
@@ -1201,7 +1276,11 @@ export default function SessionDetail() {
                   <Trans>Ältere Nachrichten laden ({remaining} weitere)</Trans>
                 </button>
               )}
-              <ChatMessageList messages={visible} modelNames={modelLabels} />
+              <ChatMessageList
+                messages={visible}
+                modelNames={modelLabels}
+                onRevertToMessage={canRevert ? handleRevertToMessage : undefined}
+              />
               <SessionRunIndicators run={run} showWorking={showWorking} />
             </>
           )}
@@ -1242,6 +1321,33 @@ export default function SessionDetail() {
               (attachments + autogrowing editor + agent/model chips + send/stop);
               the secondary panels follow as a collapsed accordion and never
               push the composer down. */}
+          {/* Picker recovery (UI-review finding #1): a failed load answers
+              with a toast plus this one-tap retry — never a sticky banner. */}
+          {pickerError !== null && (
+            <div className="flex flex-wrap items-center gap-2 text-sm" data-testid="session-picker-retry">
+              <span className="opacity-80">
+                <Trans>Agent/Modell nicht geladen: {pickerError}</Trans>
+              </span>
+              <button
+                type="button"
+                className="btn btn-xs btn-ghost"
+                disabled={pickerLoading}
+                aria-label={t`Agent- und Modelliste erneut laden`}
+                data-testid="session-picker-retry-button"
+                onClick={() => setPickerAttempt((attempt) => attempt + 1)}
+              >
+                {pickerLoading ? <Trans>Lädt…</Trans> : <Trans>Erneut laden</Trans>}
+              </button>
+            </div>
+          )}
+          {/* Wave 6: the running strip sits directly above the composer and
+              renders nothing while no work runs. */}
+          <SessionRunStrip
+            server={server}
+            work={runningWork}
+            modelNames={modelLabels}
+            onOpenSession={openRunningSession}
+          />
           <PromptComposer
             draft={draft}
             onDraftChange={setDraft}
@@ -1260,10 +1366,18 @@ export default function SessionDetail() {
             onAgentChange={(value) => void handleAgentChange(value)}
             onModelChange={(value) => void handleModelChange(value)}
             switching={switching}
+            expert={expert}
+            pickerLoading={pickerLoading}
+            offline={!canSendPrompt}
+            onOfflineSendAttempt={() =>
+              notify(t`Offline – Senden ist erst wieder möglich, wenn der Server antwortet.`, "error")
+            }
           />
           {/* Secondary panels behind one "Mehr…" disclosure: chat + composer
-              dominate, everything else is one tap away (one tab at a time). */}
-          <div data-testid="session-panels">
+              dominate, everything else is one tap away (one tab at a time).
+              "Einfach" mode hides the disclosure completely — switching to
+              "Experte" brings every tab back, so nothing is unreachable. */}
+          {expert && <div data-testid="session-panels">
             <section className="card bg-base-200 shadow" data-testid="session-more">
               <div className="card-body py-3">
                 <div className="flex items-center gap-2">
@@ -1874,7 +1988,7 @@ export default function SessionDetail() {
                 )}
               </div>
             </section>
-          </div>
+          </div>}
         </>
       )}
       <ConfirmDialog

@@ -39,10 +39,16 @@ function sseBody(frames: unknown[]): string {
   return frames.map((frame) => `data: ${JSON.stringify(frame)}\n\n`).join("");
 }
 
-async function seedServer(page: Page) {
-  await page.addInitScript((value) => {
-    localStorage.setItem("opencode-pwa:servers", JSON.stringify([value]));
-  }, server);
+async function seedServer(page: Page, mode?: "expert") {
+  await page.addInitScript(
+    ({ value, sessionMode }) => {
+      localStorage.setItem("opencode-pwa:servers", JSON.stringify([value]));
+      // Wave 6: the agent/model picks live behind the Experte mode (default is
+      // Einfach); specs that exercise them seed it.
+      if (sessionMode !== null) localStorage.setItem("opencode-pwa:session-mode", sessionMode);
+    },
+    { value: server, sessionMode: mode ?? null },
+  );
 }
 
 const singleUserMessages = {
@@ -126,8 +132,13 @@ async function mockApi(page: Page, log: CallLog, framesFor: () => unknown[]) {
   });
 }
 
-async function openSession(page: Page, log: CallLog, framesFor: () => unknown[] = () => [{ type: "session.idle" }]) {
-  await seedServer(page);
+async function openSession(
+  page: Page,
+  log: CallLog,
+  framesFor: () => unknown[] = () => [{ type: "session.idle" }],
+  mode?: "expert",
+) {
+  await seedServer(page, mode);
   await mockApi(page, log, framesFor);
   await page.goto(`/sessions/${SESSION}?server=${server.id}`);
   await expect(page.getByTestId("session-composer")).toBeVisible();
@@ -221,7 +232,8 @@ test.describe("composer", () => {
   test("agent and model picks are reachable inside the composer", { tag: ["@feature", "@feature:composer"] }, async ({
     page,
   }) => {
-    await openSession(page, { prompts: [], interrupts: [] });
+    // Wave 6: the picks hide in Einfach mode — this spec runs in Experte.
+    await openSession(page, { prompts: [], interrupts: [] }, undefined, "expert");
     const composer = page.getByTestId("session-composer");
     const agent = composer.getByTestId("session-agent-select");
     const model = composer.getByTestId("session-model-select");
@@ -304,7 +316,8 @@ test.describe("composer", () => {
     page,
   }) => {
     const log: CallLog = { prompts: [], interrupts: [] };
-    await openSession(page, log);
+    // Wave 6: the path-attach field hides in Einfach mode — run in Experte.
+    await openSession(page, log, undefined, "expert");
 
     await page.getByTestId("prompt-attachment-input").fill("src/app.ts");
     await page.getByRole("button", { name: "Datei anhängen" }).click();
@@ -343,7 +356,9 @@ test.describe("composer at 360px", () => {
         jump: rect('[data-testid="jump-to-newest"]'),
         composer: rect('[data-testid="session-composer"]'),
         draft: rect('[data-testid="prompt-draft-input"]'),
-        controls: rect('[data-testid="session-agent-select"]'),
+        // Wave 6: the agent/model picks hide in Einfach mode, so the layout
+        // check uses the send button (always present) as the control row.
+        controls: rect('[data-testid="prompt-send"]'),
         viewportWidth: window.innerWidth,
       };
     });
