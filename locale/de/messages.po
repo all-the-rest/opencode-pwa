@@ -429,6 +429,10 @@ msgstr "Anzeigen"
 msgid "Anzeigename und Farbe des Projekts ändern"
 msgstr "Anzeigename und Farbe des Projekts ändern"
 
+#: src/components/ProjectRenameForm.tsx
+msgid "Anzeigenamen zurücksetzen – das Projekt zeigt wieder seinen Pfad."
+msgstr "Anzeigenamen zurücksetzen – das Projekt zeigt wieder seinen Pfad."
+
 #: src/components/IntegrationsCard.tsx
 msgid "API-Schlüssel"
 msgstr "API-Schlüssel"
@@ -1835,6 +1839,10 @@ msgstr "Name darf nicht leer sein."
 msgid "Name und Basis-URL sind Pflichtfelder."
 msgstr "Name und Basis-URL sind Pflichtfelder."
 
+#: src/components/ProjectRenameForm.tsx
+msgid "Namen zurücksetzen"
+msgstr "Namen zurücksetzen"
+
 #: src/pages/AgentDetail.tsx
 msgid "Nein"
 msgstr "Nein"
@@ -3073,6 +3081,10 @@ msgstr "Zurück zu den Serverdetails"
 #: src/pages/ServerTools.tsx
 msgid "Zurück zur Übersicht"
 msgstr "Zurück zur Übersicht"
+
+#: src/components/ProjectRenameForm.tsx
+msgid "Zurücksetzen"
+msgstr "Zurücksetzen"
 
 #: src/pages/SessionDetail.tsx
 msgid "Zurücksetzen (Revert)"

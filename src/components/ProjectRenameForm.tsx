@@ -1,6 +1,7 @@
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
 import { useState } from "react";
+import { isPathLike } from "../lib/projectTree.ts";
 
 /** Icon colors the rename dialog offers (`Project.icon.color`). */
 export const PROJECT_COLOR_PALETTE: readonly string[] = [
@@ -16,7 +17,11 @@ export interface ProjectRenameFormProps {
   initialName: string;
   /** Color the project currently carries on the server, when known. */
   initialColor?: string;
-  /** Called with the trimmed name and the color when it changed. */
+  /**
+   * Called with the trimmed name and the color when it changed. The
+   * "Zurücksetzen" action calls it with `{ name: "" }` (the display name
+   * then falls back to the path-derived label on the server).
+   */
   onSubmit: (patch: { name: string; color?: string | null }) => void;
   onCancel: () => void;
   /** Disables the inputs while the PATCH is in flight. */
@@ -30,6 +35,10 @@ export interface ProjectRenameFormProps {
  * color. Presentational on purpose — the caller owns the optimistic update,
  * the PATCH and the toasts (`useProjectRename`), exactly like the session
  * rename in `SessionTabBar`/`SessionDetail`.
+ *
+ * A project that already carries a custom display name also offers
+ * "Zurücksetzen": it submits `{ name: "" }` and the server falls back to the
+ * path-derived name (live-verified 200, unlike the session title reset).
  */
 export default function ProjectRenameForm({
   initialName,
@@ -41,6 +50,15 @@ export default function ProjectRenameForm({
 }: ProjectRenameFormProps) {
   const [name, setName] = useState(initialName);
   const [color, setColor] = useState<string | null>(initialColor ?? null);
+
+  // The reset only exists where it changes something: a project whose name is
+  // empty or still reads like its path is already showing the path-derived
+  // label (`projectTreeLabel`/`isPathLike`) — the server default, not a name
+  // the user chose. Verified live: `PATCH /api/project/{id}` with `name: ""`
+  // answers 200 and clears the name, so the display name falls back to the
+  // path. Unlike sessions (their empty title is silently dropped), projects
+  // have a real reset path.
+  const hasCustomName = initialName.trim() !== "" && !isPathLike(initialName);
 
   function submit() {
     const trimmed = name.trim();
@@ -94,6 +112,22 @@ export default function ProjectRenameForm({
         >
           <Trans>Abbrechen</Trans>
         </button>
+        {/* Reset the display name back to the path-derived default. Sends
+            `{ name: "" }` through the same hook (optimistic + rollback +
+            toast); the page handler closes the form once the PATCH saved. */}
+        {hasCustomName && (
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            disabled={busy}
+            title={t`Anzeigenamen zurücksetzen – das Projekt zeigt wieder seinen Pfad.`}
+            aria-label={t`Namen zurücksetzen`}
+            data-testid={`${testId}-reset`}
+            onClick={() => onSubmit({ name: "" })}
+          >
+            <Trans>Zurücksetzen</Trans>
+          </button>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-1" role="group" aria-label={t`Projektfarbe`}>
         <span className="text-xs opacity-70 mr-1">

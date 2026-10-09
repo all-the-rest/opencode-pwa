@@ -114,13 +114,19 @@ function projects(vcs: string | null) {
   ];
 }
 
+/** First diff row of the fixture — the one that starts expanded now. */
+const FIRST_DIFF_FILE = "src/app.ts";
+
 async function openDiff(page: Page, openFile?: string) {
   await page.getByTestId("session-more-toggle").click();
   await page.getByTestId("session-more-tab-diff").click();
   await expect(page.getByTestId("session-diff-section")).toBeVisible();
   // The per-file rows live behind a `<details>` (unchanged navigation), so the
   // rendered-line assertions need one open file.
-  if (openFile !== undefined) {
+  // The first file now starts expanded (the rendered diff is the default
+  // view), so only a NON-first file still needs an explicit click —
+  // clicking the first one would collapse it again.
+  if (openFile !== undefined && openFile !== FIRST_DIFF_FILE) {
     await page.getByTestId(`session-diff-${openFile}`).locator("summary").click();
   }
 }

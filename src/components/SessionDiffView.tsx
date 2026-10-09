@@ -464,10 +464,16 @@ export default function SessionDiffView({
       </div>
 
       <ul className="flex flex-col gap-2" data-testid="session-diff">
-        {parsed.map((item) => (
+        {parsed.map((item, index) => (
             <li key={item.file} data-testid={`session-diff-${item.file}`}>
               <details
                 className="card bg-base-300/40 rounded"
+                // The first file starts expanded — the reference shows its diff
+                // inline instead of hiding every patch behind a click. Later
+                // files stay collapsed until prev/next opens them (`showFile`),
+                // and a manual toggle is never overridden: React only re-applies
+                // the attribute when its value changes between renders.
+                open={index === 0}
                 data-file={item.file}
                 data-status={item.status}
                 ref={(element) => {
