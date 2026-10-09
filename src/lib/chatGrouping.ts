@@ -6,20 +6,18 @@
  *     day changes between two messages.
  *   - **Consecutive messages of the same role** collapse into one visual
  *     group: tighter spacing, one meta line (and timestamp) per group, the
- *     bubble tail on the last message of the group.
+ *     bubble tail on the last message of the group. Grouping never splits by
+ *     time — only the day separator and a status note break a run (WhatsApp
+ *     parity): a long silence keeps one group, per owner decision ("Ohne
+ *     Lücke", the former 30-minute gap rule was removed).
  *   - Status **notes never group** — they stay bare centered lines and break a
  *     run of bubbles, exactly like the original's `MessageDivider`.
- *   - A long silence (> {@link CHAT_GROUP_GAP_MS}) starts a new group even
- *     within the same day, so a stale hour cannot read as one burst.
  *
  * The day *labels* stay structural kinds here ("today" | "yesterday" |
  * "date"); the German wording is wrapped with Lingui in the component.
  */
 
 import type { CachedMessage } from "./messageCache.ts";
-
-/** Silence after which consecutive messages of the same role split groups. */
-export const CHAT_GROUP_GAP_MS = 30 * 60 * 1000;
 
 export type ChatDayLabelKind = "today" | "yesterday" | "date";
 
@@ -103,7 +101,6 @@ export function groupChatMessages(
   let lastDayKey = "";
   let lastBubbleIndex = -1;
   let lastRole = "";
-  let lastCreated = 0;
 
   const closeGroup = (): void => {
     if (lastBubbleIndex < 0) return;
@@ -131,10 +128,7 @@ export function groupChatMessages(
       lastRole = "";
       continue;
     }
-    const continuesGroup =
-      lastBubbleIndex >= 0 &&
-      lastRole === message.role &&
-      message.created - lastCreated <= CHAT_GROUP_GAP_MS;
+    const continuesGroup = lastBubbleIndex >= 0 && lastRole === message.role;
     if (continuesGroup) {
       const previous = rows[lastBubbleIndex];
       if (previous !== undefined && previous.kind === "bubble") previous.groupEnd = false;
@@ -150,7 +144,6 @@ export function groupChatMessages(
     });
     lastBubbleIndex = rows.length - 1;
     lastRole = message.role;
-    lastCreated = message.created;
   }
   closeGroup();
   return rows;

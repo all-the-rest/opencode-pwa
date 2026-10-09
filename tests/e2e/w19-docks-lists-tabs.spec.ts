@@ -119,14 +119,46 @@ const sessionList = {
 };
 
 /**
+ * Default dock feeds for the session view (overridable per test). The
+ * permission collapse test passes three rows, the narrow-viewport inbox test a
+ * long one — the rest keep exactly these shapes.
+ */
+const DEFAULT_PERMISSIONS = [
+  {
+    id: "per-1",
+    sessionID: "ses-1",
+    action: "bash",
+    resources: ["ls -la"],
+    message: "Shell ausführen?",
+  },
+  { id: "per-2", sessionID: "ses-1", action: "read", resources: ["src/app.ts"], message: null },
+];
+
+const DEFAULT_INBOX = [
+  {
+    id: "in-1",
+    sessionID: "ses-1",
+    type: "user",
+    payload: { text: "Bitte auch die Tests prüfen" },
+    delivery: "queue",
+  },
+];
+
+/**
  * Mock API for the session view. Every dock endpoint is one branch:
  *   - GET  /api/session/ses-1/permission   → pending requests of ONE session
  *   - GET  /api/session/ses-1/form         → pending form with native fields
  *   - GET  /api/session/ses-1/inbox        → queued follow-up
  * `pending` toggles the per-session permission answer (the dock drops the row
- * optimistically, the mock keeps serving the rest).
+ * optimistically, the mock keeps serving the rest). `permissions`/`inbox`
+ * override the default dock feeds for the cap / narrow-viewport tests.
  */
-async function mockSessionApi(page: Page, log: CallLog) {
+async function mockSessionApi(
+  page: Page,
+  log: CallLog,
+  permissions: Array<{ id: string; sessionID: string; action: string; resources: string[]; message: string | null }> = DEFAULT_PERMISSIONS,
+  inbox: Array<{ id: string; sessionID: string; type: string; payload: { text: string }; delivery: string }> = DEFAULT_INBOX,
+) {
   await page.route("**/api/**", async (route: Route) => {
     const request = route.request();
     const url = request.url();
@@ -159,16 +191,7 @@ async function mockSessionApi(page: Page, log: CallLog) {
     // generated client unwraps — so the mock carries the envelope.
     if (/\/api\/session\/[^/]+\/permission$/.test(url) && method === "GET") {
       const answered = log.permissionReplies.map((row) => row.requestID);
-      const rows = [
-        {
-          id: "per-1",
-          sessionID: "ses-1",
-          action: "bash",
-          resources: ["ls -la"],
-          message: "Shell ausführen?",
-        },
-        { id: "per-2", sessionID: "ses-1", action: "read", resources: ["src/app.ts"], message: null },
-      ].filter((row) => !answered.includes(row.id));
+      const rows = permissions.filter((row) => !answered.includes(row.id));
       await json(route, { location: {}, data: rows });
       return;
     }
@@ -196,17 +219,7 @@ async function mockSessionApi(page: Page, log: CallLog) {
     if (inboxMatch !== null) {
       const inboxID = inboxMatch[2] ?? "";
       if (method === "GET") {
-        await json(route, {
-          data: [
-            {
-              id: "in-1",
-              sessionID: "ses-1",
-              type: "user",
-              payload: { text: "Bitte auch die Tests prüfen" },
-              delivery: "queue",
-            },
-          ],
-        });
+        await json(route, { data: inbox });
         return;
       }
       if (method === "PATCH") {
@@ -706,5 +719,90 @@ test(
     await page.keyboard.press("Meta+2");
     await expect(page).toHaveURL(/\/sessions\/ses-2\?server=/, { timeout: 10_000 });
     await expect(page.getByTestId("session-tab-ses-2")).toHaveAttribute("aria-selected", "true");
+  },
+);
+
+test(
+  "dock stack caps a permission kind at two and expands the rest in place",
+  { tag: ["@feature", "@feature:dock-collapse"] },
+  async ({ page }) => {
+    const log = freshLog();
+    await seedServer(page);
+    // Three pending requests of one session → the cap shows the newest two.
+    await mockSessionApi(page, log, [
+      { id: "per-1", sessionID: "ses-1", action: "bash", resources: ["ls -la"], message: "Shell ausführen?" },
+      { id: "per-2", sessionID: "ses-1", action: "read", resources: ["src/app.ts"], message: null },
+      { id: "per-3", sessionID: "ses-1", action: "write", resources: ["src/new.ts"], message: "Datei schreiben?" },
+    ]);
+    await page.goto(`/sessions/ses-1?server=${server.id}`);
+
+    // The two newest requests show; the oldest collapses.
+    await expect(page.getByTestId("session-dock-permission-per-2")).toBeVisible();
+    await expect(page.getByTestId("session-dock-permission-per-3")).toBeVisible();
+    await expect(page.getByTestId("session-dock-permission-per-1")).toHaveCount(0);
+
+    // … behind a "1 weitere anzeigen" row (collapsed first) …
+    const more = page.getByTestId("session-docks-more-permissions");
+    await expect(more).toBeVisible();
+    await expect(more).toHaveAttribute("aria-expanded", "false");
+    await expect(more).toContainText("1 weitere anzeigen");
+
+    // … which expands in place (oldest reappears) and collapses back.
+    await more.click();
+    await expect(page.getByTestId("session-dock-permission-per-1")).toBeVisible();
+    await expect(more).toHaveAttribute("aria-expanded", "true");
+    await expect(more).toContainText("Weniger anzeigen");
+    await more.click();
+    await expect(page.getByTestId("session-dock-permission-per-1")).toHaveCount(0);
+    await expect(more).toContainText("1 weitere anzeigen");
+  },
+);
+
+test(
+  "inbox dock rows read as wrapped text at 360px (no horizontal overflow)",
+  { tag: ["@feature", "@feature:narrow-viewport"] },
+  async ({ page }) => {
+    // A small Android phone in portrait: the narrowest supported width.
+    await page.setViewportSize({ width: 360, height: 900 });
+    await seedServer(page);
+    // A long queued follow-up: the old fixed-column layout broke it one word
+    // per line; now the summary must take the row width and wrap normally.
+    await mockSessionApi(page, freshLog(), undefined, [
+      {
+        id: "in-long",
+        sessionID: "ses-1",
+        type: "user",
+        payload: { text: "Danach bitte auch die Tests mitlaufen lassen und die Diff-Ansicht prüfen." },
+        delivery: "queue",
+      },
+    ]);
+    await page.goto(`/sessions/ses-1?server=${server.id}`);
+
+    await expect(page.getByTestId("session-dock-inbox-in-long")).toBeVisible();
+    await expect(page.getByTestId("session-dock-inbox-summary-in-long")).toContainText(
+      "Danach bitte auch die Tests mitlaufen lassen",
+    );
+
+    const layout = await page.evaluate(() => {
+      const list = document.querySelector('[data-testid="session-dock-inbox-list"]');
+      const summary = document.querySelector('[data-testid="session-dock-inbox-summary-in-long"]');
+      const rowEl = document.querySelector('[data-testid="session-dock-inbox-in-long"]');
+      if (list === null || summary === null || rowEl === null) return null;
+      return {
+        listOverflow: list.scrollWidth - list.clientWidth,
+        rowOverflow: rowEl.scrollWidth - rowEl.clientWidth,
+        summaryWidth: summary.getBoundingClientRect().width,
+        rowWidth: rowEl.getBoundingClientRect().width,
+      };
+    });
+    if (layout === null) throw new Error("inbox layout not measurable at 360px");
+    // Neither the list nor the row scrolls sideways.
+    expect(layout.listOverflow).toBeLessThanOrEqual(1);
+    expect(layout.rowOverflow).toBeLessThanOrEqual(1);
+    // The summary fills most of the row — the old fixed-column bug squeezed it
+    // (and its bold action buttons) onto one flex line and starved the text to a
+    // ~40px sliver (≈13% of the row, one word per line). A real text column is
+    // comfortably past 30% even next to the wide "Warteschlange" delivery badge.
+    expect(layout.summaryWidth).toBeGreaterThan(layout.rowWidth * 0.3);
   },
 );

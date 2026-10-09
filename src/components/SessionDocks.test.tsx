@@ -168,4 +168,63 @@ describe("SessionDocks", () => {
     expect(screen.getByTestId("session-dock-inbox")).toBeInTheDocument();
     expect(screen.queryByTestId("session-dock-revert")).toBeNull();
   });
+
+  it("renders the inbox kind badge inline with a full-width summary", () => {
+    renderDocks(props({ inbox }));
+    // The kind badge is inline with the text, never a fixed narrow column …
+    expect(screen.getByTestId("session-dock-inbox-kind-in-1")).toBeInTheDocument();
+    const summary = screen.getByTestId("session-dock-inbox-summary-in-1");
+    expect(summary).toHaveTextContent("Bitte auch die Tests prüfen");
+    expect(summary.className).toContain("flex-1");
+    expect(summary.className).toContain("min-w-0");
+    // … and the action buttons sit in their own row, not squeezed onto the
+    // summary's flex line (which is what broke it one word per line at 360px).
+    const steer = screen.getByTestId("session-dock-inbox-steer-in-1");
+    expect(summary.parentElement).not.toBe(steer.parentElement);
+  });
+
+  it("caps a permission kind at two and expands the rest in place", () => {
+    const per2: DockPermission = { id: "per-2", action: "read", resources: [], message: null };
+    const per3: DockPermission = { id: "per-3", action: "write", resources: [], message: "schreiben?" };
+    renderDocks(props({ permissions: [permission, per2, per3] }));
+
+    // The two newest show; the oldest collapses behind the "N weitere" row.
+    expect(screen.getByTestId("session-dock-permission-per-2")).toBeInTheDocument();
+    expect(screen.getByTestId("session-dock-permission-per-3")).toBeInTheDocument();
+    expect(screen.queryByTestId("session-dock-permission-per-1")).toBeNull();
+
+    const more = screen.getByTestId("session-docks-more-permissions");
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    expect(more).toHaveTextContent("1 weitere anzeigen");
+
+    // Expand in place, then collapse again.
+    fireEvent.click(more);
+    expect(screen.getByTestId("session-dock-permission-per-1")).toBeInTheDocument();
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    expect(more).toHaveTextContent("Weniger anzeigen");
+    fireEvent.click(more);
+    expect(screen.queryByTestId("session-dock-permission-per-1")).toBeNull();
+  });
+
+  it("caps inbox rows at two and keeps every other dock intact", () => {
+    const many: DockInboxItem[] = [
+      { id: "in-1", kind: "user", summary: "erste", delivery: "queue" },
+      { id: "in-2", kind: "synthetic", summary: "zweite", delivery: null },
+      { id: "in-3", kind: "user", summary: "dritte", delivery: "steer" },
+    ];
+    renderDocks(props({ inbox: many, permissions: [permission] }));
+
+    // Newest two rows show; the oldest collapses. The single permission (≤ two)
+    // is untouched — the cap is per kind.
+    expect(screen.getByTestId("session-dock-inbox-in-2")).toBeInTheDocument();
+    expect(screen.getByTestId("session-dock-inbox-in-3")).toBeInTheDocument();
+    expect(screen.queryByTestId("session-dock-inbox-in-1")).toBeNull();
+    expect(screen.getByTestId("session-dock-permission-per-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("session-docks-more-permissions")).toBeNull();
+
+    const more = screen.getByTestId("session-docks-more-inbox");
+    expect(more).toHaveTextContent("1 weitere anzeigen");
+    fireEvent.click(more);
+    expect(screen.getByTestId("session-dock-inbox-in-1")).toBeInTheDocument();
+  });
 });

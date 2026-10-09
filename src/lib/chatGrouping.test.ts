@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  CHAT_GROUP_GAP_MS,
   chatDayKey,
   chatDayLabel,
   formatChatDate,
@@ -12,6 +11,11 @@ import type { CachedMessage } from "./messageCache.ts";
 /**
  * Messenger grouping (day separators, consecutive-message groups). Fake
  * timestamps anchor on a fixed "now" so the day labels stay deterministic.
+ *
+ * Grouping is gap-free (owner decision "Ohne Lücke"): consecutive messages of
+ * the same role always share one group — the former 30-minute silence rule that
+ * split a group after a long pause was removed. Only a day change or a status
+ * note breaks a run.
  */
 
 const NOW = new Date(2026, 9, 8, 12, 0, 0).getTime();
@@ -97,25 +101,46 @@ describe("groupChatMessages", () => {
     expect(bubbles[2]?.own).toBe(false);
   });
 
-  it("keeps messages within the group gap inside one group", () => {
+  it("keeps consecutive same-role messages in one group regardless of the pause", () => {
+    // Two user messages a full hour apart — the 30-minute silence rule is gone
+    // (owner decision "Ohne Lücke"), so a long pause keeps one WhatsApp-style
+    // group: only one group start, one group end.
     const result = rows(
-      message("u1", "user", NOW - 2 * CHAT_GROUP_GAP_MS),
-      message("u2", "user", NOW - CHAT_GROUP_GAP_MS),
+      message("u1", "user", NOW - 2 * 60 * 60 * 1000),
+      message("u2", "user", NOW - 60 * 60 * 1000),
     );
     const bubbles = result.flatMap((row) => (row.kind === "bubble" ? [row] : []));
     expect(bubbles.map((row) => row.groupStart)).toEqual([true, false]);
+    expect(bubbles.map((row) => row.groupEnd)).toEqual([false, true]);
   });
 
-  it("starts a new group after a long silence", () => {
+  it("no longer starts a new group after a long silence", () => {
+    // Three user messages spread over hours: they used to split into three
+    // groups (one per >30-minute gap); now they read as a single burst.
     const result = rows(
-      message("u1", "user", NOW - 3 * CHAT_GROUP_GAP_MS - 1000),
-      message("u2", "user", NOW - 2 * CHAT_GROUP_GAP_MS - 500),
+      message("u1", "user", NOW - 3 * 60 * 60 * 1000 - 1000),
+      message("u2", "user", NOW - 2 * 60 * 60 * 1000 - 500),
       message("u3", "user", NOW),
     );
     const starts = result.flatMap((row) =>
       row.kind === "bubble" && row.groupStart ? [row.message.messageID] : [],
     );
-    expect(starts).toEqual(["u1", "u2", "u3"]);
+    expect(starts).toEqual(["u1"]);
+  });
+
+  it("still breaks a run on a role change and on a new day", () => {
+    // Gap-free grouping only removes the TIME split; the structural breaks
+    // (day separator, role change, status note) stay.
+    const result = rows(
+      message("u1", "user", NOW - 2 * 60 * 60 * 1000),
+      message("a1", "assistant", NOW - 90 * 60 * 1000),
+      message("u2", "user", NOW - 86_400_000),
+    );
+    expect(result.filter((row) => row.kind === "day")).toHaveLength(2);
+    const starts = result.flatMap((row) =>
+      row.kind === "bubble" && row.groupStart ? [row.message.messageID] : [],
+    );
+    expect(starts).toEqual(["u1", "a1", "u2"]);
   });
 
   it("keeps notes standalone and breaks the surrounding group", () => {

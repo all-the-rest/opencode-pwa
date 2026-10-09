@@ -213,6 +213,40 @@ export function dockStackHasContent(state: DockStackState): boolean {
   return visibleDocks(state).length > 0;
 }
 
+/**
+ * How many entries of one dock kind stay visible before the rest collapse
+ * behind a "N weitere anzeigen" row. A busy stack (a handful of permission
+ * cards, several open forms) must not push the composer off-screen, so every
+ * kind is capped at its newest {@link DOCK_KIND_LIMIT} entries — those are the
+ * ones still most likely to need an answer.
+ */
+export const DOCK_KIND_LIMIT = 2;
+
+/** One dock kind split into the visible head and its hidden tail count. */
+export interface DockKindSplit<T> {
+  /** The newest entries (oldest-first); all of them when at/below the limit. */
+  visible: T[];
+  /** How many older entries hide behind the "N weitere anzeigen" row. */
+  hidden: number;
+}
+
+/**
+ * Split one dock kind's entries at {@link DOCK_KIND_LIMIT}: the newest `limit`
+ * stay visible, the older ones collapse. `visible` is always a fresh array, so
+ * at or below the limit nothing collapses (`hidden === 0`) and every entry
+ * stays. Pure and total.
+ */
+export function splitDockKind<T>(
+  rows: readonly T[],
+  limit: number = DOCK_KIND_LIMIT,
+): DockKindSplit<T> {
+  if (limit <= 0 || rows.length <= limit) {
+    return { visible: [...rows], hidden: 0 };
+  }
+  // Newest = end of the array (events append), so keep the last `limit`.
+  return { visible: rows.slice(rows.length - limit), hidden: rows.length - limit };
+}
+
 function replaceById<T extends { id: string }>(rows: readonly T[], row: T): T[] {
   const without = rows.filter((entry) => entry.id !== row.id);
   return [...without, row];

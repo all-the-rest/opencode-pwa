@@ -467,4 +467,7 @@ export const INBOX_ROWS = [
 export const FORM_ROWS = [
   { id: "form-1", sessionID: "ses-1", title: "Zustimmung zur Migration" },
   { id: "form-2", sessionID: "ses-1", title: "Zielverzeichnis bestaetigen" },
+  // A third open form: pushes the question dock past the two-entry cap so the
+  // captures show the "1 weitere anzeigen" collapse in `chat-steps`/`chat-running`.
+  { id: "form-3", sessionID: "ses-1", title: "Abschluss bestaetigen" },
 ];

@@ -53,6 +53,7 @@ msgid "{fileCount} Dateien"
 msgstr "{fileCount} Dateien"
 
 #: src/components/ChatMessageList.tsx
+#: src/components/SessionDocks.tsx
 msgid "{hiddenCount} weitere anzeigen"
 msgstr "{hiddenCount} weitere anzeigen"
 
@@ -1197,6 +1198,10 @@ msgstr "Freigabe beantwortet"
 msgid "Freigabe erforderlich"
 msgstr "Freigabe erforderlich"
 
+#: src/components/SessionStarter.tsx
+msgid "Für ein neues Projekt wird ein Server benötigt — wähle oder lege unten einen an."
+msgstr "Für ein neues Projekt wird ein Server benötigt — wähle oder lege unten einen an."
+
 #: src/components/SessionDiffView.tsx
 msgid "Geändert"
 msgstr "Geändert"
@@ -1374,6 +1379,10 @@ msgstr "Kein Projekt ausgewählt."
 #: src/components/Layout.tsx
 msgid "Kein Server"
 msgstr "Kein Server"
+
+#: src/components/SessionStarter.tsx
+msgid "Kein Server ausgewählt – neues Projekt nicht möglich."
+msgstr "Kein Server ausgewählt – neues Projekt nicht möglich."
 
 #: src/hooks/useProjectRename.ts
 msgid "Kein Server ausgewählt."
@@ -1871,6 +1880,7 @@ msgstr "Neuer Versuch"
 msgid "Neues Passwort (Basic Auth)"
 msgstr "Neues Passwort (Basic Auth)"
 
+#: src/components/SessionStarter.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Neues Projekt"
 msgstr "Neues Projekt"
@@ -1879,6 +1889,7 @@ msgstr "Neues Projekt"
 msgid "Neues Projekt – Ordner wählen"
 msgstr "Neues Projekt – Ordner wählen"
 
+#: src/components/SessionStarter.tsx
 #: src/pages/ServerDetail.tsx
 msgid "Neues Projekt über die Server-Ordner anlegen"
 msgstr "Neues Projekt über die Server-Ordner anlegen"
@@ -2962,6 +2973,10 @@ msgstr "Websuche starten"
 #: src/pages/ServerDetail.tsx
 msgid "Weitere Sessions laden"
 msgstr "Weitere Sessions laden"
+
+#: src/components/SessionDocks.tsx
+msgid "Weniger anzeigen"
+msgstr "Weniger anzeigen"
 
 #: src/components/ChatMessageList.tsx
 #~ msgid "Werkzeug"

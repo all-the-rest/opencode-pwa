@@ -92,6 +92,8 @@ interface MockOptions {
   offlineMessages?: boolean;
   /** Running work the strip lists. */
   runningWork?: boolean;
+  /** Override the `/message` payload (grouping specs craft their own timeline). */
+  messages?: { data: unknown[]; cursor?: Record<string, unknown> };
 }
 
 async function mockApi(page: Page, options: MockOptions = {}) {
@@ -111,7 +113,7 @@ async function mockApi(page: Page, options: MockOptions = {}) {
         await route.abort("internetdisconnected");
         return;
       }
-      await json(route, messagePayload(now));
+      await json(route, options.messages ?? messagePayload(now));
       return;
     }
     if (url.includes("/api/agent")) {
@@ -244,6 +246,43 @@ test.describe("messenger chat", () => {
   );
 
   test(
+    "gap-free grouping keeps two far-apart messages of the same role in one group",
+    { tag: ["@feature", "@feature:messenger-chat"] },
+    async ({ page }) => {
+      // Owner decision "Ohne Lücke": grouping never splits by time. Two user
+      // messages on the same day, ~2.5h apart, still form ONE group (the old
+      // 30-minute silence rule would have split them into two).
+      const now = Date.now();
+      const startOfDay = new Date(now);
+      startOfDay.setHours(0, 0, 0, 0);
+      const at = (hour: number, minute: number) => {
+        const date = new Date(startOfDay.getTime());
+        date.setHours(hour, minute, 0, 0);
+        return date.getTime();
+      };
+      await openSession(page, {
+        messages: {
+          data: [
+            { type: "user", id: "g1", text: "Erste Frage", time: { created: at(9, 0) } },
+            { type: "user", id: "g2", text: "Viel später am selben Tag", time: { created: at(11, 30) } },
+          ],
+          cursor: {},
+        },
+      });
+
+      const userRows = page.locator('[data-role="user"]');
+      await expect(userRows).toHaveCount(2);
+      // Both on the same day → a single day separator.
+      await expect(page.getByTestId("message-day-separator")).toHaveCount(1);
+      // Still one group: g1 carries the header + timestamp, g2 continues it.
+      await expect(userRows.nth(0)).toHaveAttribute("data-group-start", "true");
+      await expect(userRows.nth(1)).toHaveAttribute("data-group-start", "false");
+      await expect(page.getByTestId("message-time-g1")).toHaveCount(1);
+      await expect(page.getByTestId("message-time-g2")).toHaveCount(0);
+    },
+  );
+
+  test(
     "quick actions reveal on hover (desktop)",
     { tag: ["@feature", "@feature:messenger-chat"] },
     async ({ page, isMobile }) => {
@@ -365,12 +404,16 @@ test.describe("basic/expert mode", () => {
     async ({ page }) => {
       await openSession(page);
 
-      // Simple: pickers, attachment extras and the Mehr… disclosure are hidden.
+      // Simple: the agent/model picks, the attachment EXTRAS (workspace-path
+      // field) and the Mehr… disclosure stay hidden — but the file picker
+      // itself stays reachable at the start of the input row (owner decision).
       await expect(page.getByTestId("session-mode-basic")).toHaveAttribute("aria-pressed", "true");
       await expect(page.getByTestId("session-agent-select")).toHaveCount(0);
       await expect(page.getByTestId("session-model-select")).toHaveCount(0);
-      await expect(page.getByTestId("prompt-attachment-picker")).toHaveCount(0);
+      await expect(page.getByTestId("prompt-attachment-input")).toHaveCount(0);
       await expect(page.getByTestId("session-more-toggle")).toHaveCount(0);
+      // The attachment button is visible in Einfach (icon only on mobile) …
+      await expect(page.getByTestId("prompt-attachment-picker")).toBeVisible();
       // The chat itself stays fully usable.
       await expect(page.getByTestId("prompt-draft-input")).toBeVisible();
       await expect(page.getByTestId("prompt-send")).toBeVisible();
@@ -380,6 +423,7 @@ test.describe("basic/expert mode", () => {
       await page.getByTestId("session-mode-expert").click();
       await expect(page.getByTestId("session-agent-select")).toBeVisible();
       await expect(page.getByTestId("session-model-select")).toBeVisible();
+      await expect(page.getByTestId("prompt-attachment-input")).toBeVisible();
       await expect(page.getByTestId("prompt-attachment-picker")).toBeVisible();
       await expect(page.getByTestId("session-more-toggle")).toBeVisible();
       expect(await page.evaluate(() => localStorage.getItem("opencode-pwa:session-mode"))).toBe("expert");
@@ -394,6 +438,47 @@ test.describe("basic/expert mode", () => {
       await page.getByTestId("session-mode-basic").click();
       await expect(page.getByTestId("session-more-toggle")).toHaveCount(0);
       await expect(page.getByTestId("session-agent-select")).toHaveCount(0);
+    },
+  );
+
+  test(
+    "the EINFACH attachment button stays reachable at the start of the input row",
+    { tag: ["@feature", "@feature:session-mode"] },
+    async ({ page }) => {
+      // Einfach mode (default): the picker BAR is hidden, but the file picker
+      // trigger stays visible at the START of the input row (icon only on
+      // mobile), while Send stays on the right.
+      await openSession(page);
+
+      const picker = page.getByTestId("prompt-attachment-picker");
+      await expect(picker).toBeVisible();
+      // Its accessible name is German and stable.
+      await expect(picker).toHaveAttribute("aria-label", "Dateien auswählen");
+      // Sending stays on the right and reachable.
+      await expect(page.getByTestId("prompt-send")).toBeVisible();
+
+      // The picker sits to the left of the draft input (start of the row).
+      const order = await page.evaluate(() => {
+        const row = document.querySelector('[data-testid="prompt-draft-input"]')?.parentElement;
+        if (row === null || row === undefined) return null;
+        const children = [...row.children].map((node) => node.getAttribute("data-testid") ?? node.tagName);
+        return children;
+      });
+      expect(order?.[0]).toBe("prompt-attachment-picker");
+      expect(order?.[order.length - 1]).toBe("prompt-send");
+
+      // Tapping it opens the (hidden) file chooser and attaches the chosen file.
+      const [chooser] = await Promise.all([
+        page.waitForEvent("filechooser"),
+        picker.click(),
+      ]);
+      expect(chooser.isMultiple()).toBe(true);
+      await chooser.setFiles({
+        name: "anhang.txt",
+        mimeType: "text/plain",
+        buffer: Buffer.from("hallo welt"),
+      });
+      await expect(page.getByTestId("prompt-attachments")).toContainText("anhang.txt");
     },
   );
 });

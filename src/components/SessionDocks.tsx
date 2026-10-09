@@ -1,6 +1,6 @@
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import Icon from "./Icon.tsx";
 import {
   formAnswerFromValues,
@@ -8,7 +8,15 @@ import {
   toggleMultiselect,
   type FormFieldValue,
 } from "../lib/formFields.ts";
-import type { DockForm, DockInboxItem, DockPermission, DockRevert, DockTodo } from "../lib/dockStack.ts";
+import {
+  DOCK_KIND_LIMIT,
+  splitDockKind,
+  type DockForm,
+  type DockInboxItem,
+  type DockPermission,
+  type DockRevert,
+  type DockTodo,
+} from "../lib/dockStack.ts";
 
 /**
  * The answer that the dock is waiting for. Mirrors the reply endpoint of the
@@ -67,6 +75,75 @@ function Dock({
         {children}
       </div>
     </section>
+  );
+}
+
+/**
+ * The "N weitere anzeigen" / "Weniger anzeigen" row that caps one dock kind at
+ * {@link DOCK_KIND_LIMIT} entries. It expands or collapses the hidden tail in
+ * place — the newest entries never move. Rendered only when a kind actually
+ * overflows the limit.
+ */
+function DockMoreRow({
+  hidden,
+  expanded,
+  onToggle,
+  testId,
+}: {
+  hidden: number;
+  expanded: boolean;
+  onToggle: () => void;
+  testId: string;
+}) {
+  // Lingui-safe hoist: no member access inside a message.
+  const hiddenCount = hidden;
+  return (
+    <button
+      type="button"
+      className="btn btn-xs btn-ghost w-full justify-start gap-1 text-xs opacity-70"
+      aria-expanded={expanded}
+      data-testid={testId}
+      onClick={onToggle}
+    >
+      <Icon name="chevron" className={`size-3 transition-transform ${expanded ? "rotate-90" : ""}`} />
+      {expanded ? <Trans>Weniger anzeigen</Trans> : <Trans>{hiddenCount} weitere anzeigen</Trans>}
+    </button>
+  );
+}
+
+/**
+ * Renders one dock kind's cards: the newest {@link DOCK_KIND_LIMIT} first, the
+ * older ones collapsed behind a {@link DockMoreRow} until it is expanded in
+ * place. Each dock type keeps its own card — this only governs how many show at
+ * once so a busy stack cannot push the composer off-screen. A kind at or below
+ * the limit renders every entry with no toggle.
+ */
+function DockEntryGroup<T extends { id: string }>({
+  testId,
+  entries,
+  children,
+}: {
+  testId: string;
+  entries: readonly T[];
+  children: (entry: T) => ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const { visible, hidden } = splitDockKind(entries);
+  const shown = expanded ? entries : visible;
+  return (
+    <>
+      {shown.map((entry) => (
+        <Fragment key={entry.id}>{children(entry)}</Fragment>
+      ))}
+      {entries.length > DOCK_KIND_LIMIT && (
+        <DockMoreRow
+          hidden={hidden}
+          expanded={expanded}
+          onToggle={() => setExpanded((value) => !value)}
+          testId={testId}
+        />
+      )}
+    </>
   );
 }
 
@@ -396,6 +473,11 @@ function InboxDock({
   onEdit: (item: DockInboxItem) => void;
 }) {
   const disabled = busy || offline;
+  const [expanded, setExpanded] = useState(false);
+  // Cap the queued rows per kind (newest {@link DOCK_KIND_LIMIT} show), so a
+  // long queue does not dominate the stack; the rest expand in place.
+  const { visible, hidden } = splitDockKind(items);
+  const shown = expanded ? items : visible;
   const total = items.length;
   return (
     <Dock
@@ -406,59 +488,89 @@ function InboxDock({
       }
     >
       <ul className="flex flex-col gap-2" data-testid="session-dock-inbox-list">
-        {items.map((item) => {
+        {shown.map((item) => {
           // Lingui-safe hoists: no member access inside a message.
           const itemID = item.id;
           const steerLabel = t`Eintrag ${itemID} sofort ausführen`;
           const queueLabel = t`Eintrag ${itemID} in die Warteschlange legen`;
           const editLabel = t`Eintrag ${itemID} zum Bearbeiten laden`;
           return (
-          <li
-            key={item.id}
-            className="flex flex-wrap items-center gap-2 min-w-0"
-            data-testid={`session-dock-inbox-${itemID}`}
-          >
-            <span className="badge badge-ghost badge-sm">{item.kind}</span>
-            <span className="flex-1 min-w-0 text-sm break-words">{item.summary}</span>
-            {item.delivery !== null && (
-              <span className="badge badge-info badge-sm" data-testid={`session-dock-inbox-delivery-${itemID}`}>
-                {item.delivery === "steer" ? <Trans>sofort</Trans> : <Trans>Warteschlange</Trans>}
-              </span>
-            )}
-            <button
-              type="button"
-              className="btn btn-xs btn-primary"
-              disabled={disabled}
-              aria-label={steerLabel}
-              data-testid={`session-dock-inbox-steer-${itemID}`}
-              onClick={() => onDeliver(itemID, "steer")}
+            <li
+              key={item.id}
+              className="flex flex-col gap-2 min-w-0"
+              data-testid={`session-dock-inbox-${itemID}`}
             >
-              <Trans>Sofort</Trans>
-            </button>
-            <button
-              type="button"
-              className="btn btn-xs btn-ghost"
-              disabled={disabled}
-              aria-label={queueLabel}
-              data-testid={`session-dock-inbox-queue-${itemID}`}
-              onClick={() => onDeliver(itemID, "queue")}
-            >
-              <Trans>Warten</Trans>
-            </button>
-            <button
-              type="button"
-              className="btn btn-xs btn-ghost"
-              disabled={disabled}
-              aria-label={editLabel}
-              data-testid={`session-dock-inbox-edit-${itemID}`}
-              onClick={() => onEdit(item)}
-            >
-              <Icon name="edit" className="size-3" /> <Trans>Bearbeiten</Trans>
-            </button>
-          </li>
+              {/* Text row: the kind badge sits inline with the summary (never a
+                  fixed narrow column), the summary takes the full remaining
+                  width and wraps normally — no per-word break at 360px. The
+                  action buttons move to their own row below so they cannot
+                  squeeze the text into a sliver. */}
+              <div className="flex items-start gap-2 min-w-0">
+                <span
+                  className="badge badge-ghost badge-sm shrink-0"
+                  data-testid={`session-dock-inbox-kind-${itemID}`}
+                >
+                  {item.kind}
+                </span>
+                <span
+                  className="flex-1 min-w-0 text-sm break-words"
+                  data-testid={`session-dock-inbox-summary-${itemID}`}
+                >
+                  {item.summary}
+                </span>
+                {item.delivery !== null && (
+                  <span
+                    className="badge badge-info badge-sm shrink-0"
+                    data-testid={`session-dock-inbox-delivery-${itemID}`}
+                  >
+                    {item.delivery === "steer" ? <Trans>sofort</Trans> : <Trans>Warteschlange</Trans>}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn btn-xs btn-primary"
+                  disabled={disabled}
+                  aria-label={steerLabel}
+                  data-testid={`session-dock-inbox-steer-${itemID}`}
+                  onClick={() => onDeliver(itemID, "steer")}
+                >
+                  <Trans>Sofort</Trans>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-xs btn-ghost"
+                  disabled={disabled}
+                  aria-label={queueLabel}
+                  data-testid={`session-dock-inbox-queue-${itemID}`}
+                  onClick={() => onDeliver(itemID, "queue")}
+                >
+                  <Trans>Warten</Trans>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-xs btn-ghost"
+                  disabled={disabled}
+                  aria-label={editLabel}
+                  data-testid={`session-dock-inbox-edit-${itemID}`}
+                  onClick={() => onEdit(item)}
+                >
+                  <Icon name="edit" className="size-3" /> <Trans>Bearbeiten</Trans>
+                </button>
+              </div>
+            </li>
           );
         })}
       </ul>
+      {total > DOCK_KIND_LIMIT && (
+        <DockMoreRow
+          hidden={hidden}
+          expanded={expanded}
+          onToggle={() => setExpanded((value) => !value)}
+          testId="session-docks-more-inbox"
+        />
+      )}
     </Dock>
   );
 }
@@ -584,6 +696,11 @@ function TodoDock({ todos }: { todos: DockTodo[] }) {
  * the queued follow-ups. Every dock stacks vertically at 360px — the stack is a
  * plain flex column, so nothing is ever cut off or scrolled sideways.
  *
+ * A kind with more than {@link DOCK_KIND_LIMIT} entries is capped: its newest
+ * {@link DOCK_KIND_LIMIT} show and the rest collapse behind a "N weitere
+ * anzeigen" row that expands in place (see {@link DockEntryGroup} /
+ * {@link InboxDock}). Revert and todo stay single docks.
+ *
  * A dock with no content renders nothing at all.
  */
 export default function SessionDocks({
@@ -611,25 +728,31 @@ export default function SessionDocks({
   if (!hasAnything) return null;
   return (
     <div className="flex flex-col gap-2 w-full min-w-0" data-testid="session-docks">
-      {forms.map((form) => (
-        <QuestionDock
-          key={form.id}
-          form={form}
-          busy={busy}
-          offline={offline}
-          onSubmit={(answer) => onFormSubmit(form.id, answer)}
-          onCancel={() => onFormCancel(form.id)}
-        />
-      ))}
-      {permissions.map((request) => (
-        <PermissionDock
-          key={request.id}
-          request={request}
-          busy={busy}
-          offline={offline}
-          onReply={(decision) => onPermissionReply(request.id, decision)}
-        />
-      ))}
+      {forms.length > 0 && (
+        <DockEntryGroup testId="session-docks-more-forms" entries={forms}>
+          {(form) => (
+            <QuestionDock
+              form={form}
+              busy={busy}
+              offline={offline}
+              onSubmit={(answer) => onFormSubmit(form.id, answer)}
+              onCancel={() => onFormCancel(form.id)}
+            />
+          )}
+        </DockEntryGroup>
+      )}
+      {permissions.length > 0 && (
+        <DockEntryGroup testId="session-docks-more-permissions" entries={permissions}>
+          {(request) => (
+            <PermissionDock
+              request={request}
+              busy={busy}
+              offline={offline}
+              onReply={(decision) => onPermissionReply(request.id, decision)}
+            />
+          )}
+        </DockEntryGroup>
+      )}
       {revert !== null && (
         <RevertDock
           revert={revert}

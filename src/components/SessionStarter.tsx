@@ -1,9 +1,11 @@
 import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import Icon from "./Icon.tsx";
 import ServerDot from "./ServerDot.tsx";
 import ServerErrorBanner from "./ServerErrorBanner.tsx";
+import ServerFolderPicker from "./ServerFolderPicker.tsx";
 import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
 import { reachability } from "../lib/offline.ts";
 import {
@@ -12,6 +14,7 @@ import {
   projectDisplayName,
   type ProjectInfo,
   type ServerConfig,
+  type SessionInfo,
   type SessionRow,
 } from "../lib/opencode.ts";
 import { useServers } from "../state/servers.tsx";
@@ -30,10 +33,14 @@ const STARTER_VISIBLE = 10;
 export default function SessionStarter() {
   const { servers, selectedServer } = useServers();
   const { tabs, openTab } = useSessionTabs();
+  const navigate = useNavigate();
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [projects, setProjects] = useState<ProjectInfo[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Wave 7 parity: the folder picker ("Neues Projekt") is reachable from the
+  // dashboard starter too, not only from the server detail page.
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const reload = useCallback(() => {
     if (selectedServer === null) return;
@@ -97,12 +104,50 @@ export default function SessionStarter() {
   const selectedServerName = selectedServer?.name ?? "";
   const tabCount = tabs.length;
 
+  /**
+   * The folder picker created a session in the chosen directory — that is how
+   * a project comes into existence (the server derives it from the session's
+   * `location.directory`). Same behaviour as the server detail page: refresh
+   * the starter list, open the session in a tab and navigate to it.
+   */
+  function handlePickerCreated(session: SessionInfo) {
+    setPickerOpen(false);
+    reload();
+    if (selectedServer === null) return;
+    openTab({ serverID: selectedServer.id, sessionID: session.id, title: session.id });
+    navigate(
+      `/sessions/${encodeURIComponent(session.id)}?server=${encodeURIComponent(selectedServer.id)}`,
+    );
+  }
+
   return (
     <section className="card bg-base-200 shadow" data-testid="session-starter">
       <div className="card-body">
-        <h2 className="card-title">
+        <h2 className="card-title flex-wrap">
           <Trans>Session starten</Trans>
+          <button
+            type="button"
+            className="btn btn-xs btn-ghost ml-auto"
+            disabled={selectedServer === null}
+            title={
+              selectedServer === null
+                ? t`Kein Server ausgewählt – neues Projekt nicht möglich.`
+                : t`Neues Projekt über die Server-Ordner anlegen`
+            }
+            data-testid="starter-new-project-button"
+            onClick={() => setPickerOpen(true)}
+          >
+            <Icon name="plus" />
+            <Trans>Neues Projekt</Trans>
+          </button>
         </h2>
+        {selectedServer === null && (
+          <p className="text-sm opacity-70" data-testid="starter-new-project-hint">
+            <Trans>
+              Für ein neues Projekt wird ein Server benötigt — wähle oder lege unten einen an.
+            </Trans>
+          </p>
+        )}
         {servers.length === 0 && (
           <p className="text-sm opacity-70">
             <Trans>
@@ -188,6 +233,14 @@ export default function SessionStarter() {
           </div>
         )}
       </div>
+      {selectedServer !== null && (
+        <ServerFolderPicker
+          server={selectedServer}
+          open={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          onCreated={handlePickerCreated}
+        />
+      )}
     </section>
   );
 }

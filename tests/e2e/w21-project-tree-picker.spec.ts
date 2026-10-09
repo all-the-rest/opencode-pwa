@@ -289,6 +289,40 @@ test(
 );
 
 test(
+  "the dashboard starter opens the folder picker and starts a project session",
+  { tag: ["@feature", "@feature:folder-picker"] },
+  async ({ page }) => {
+    const log = newLog();
+    await seedServer(page);
+    await mockApi(page, log);
+    // "Auch Starter": the folder picker is reachable from the dashboard starter,
+    // not only from the server detail page.
+    await page.goto(`/`);
+    await expect(page.getByTestId("session-starter")).toBeVisible();
+    await page.getByTestId("starter-new-project-button").click();
+    await expect(page.getByTestId("folder-picker")).toBeVisible();
+
+    // Same behaviour as on the server page: the location loads, then navigate.
+    await expect(page.getByTestId("folder-picker-path")).toHaveText("/");
+    await expect(page.getByTestId("folder-picker-entry-srv")).toBeVisible();
+
+    await page.getByTestId("folder-picker-entry-srv").click();
+    await expect(page.getByTestId("folder-picker-path")).toHaveText("/srv");
+    await page.getByTestId("folder-picker-entry-app").click();
+    await expect(page.getByTestId("folder-picker-path")).toHaveText("/srv/app");
+    await page.getByTestId("folder-picker-confirm").click();
+
+    // Confirm creates the session in the chosen directory …
+    await expect.poll(() => log.creates, { timeout: 10_000 }).toEqual([
+      { body: { location: { directory: "/srv/app" } } },
+    ]);
+    // … and opens it in a tab on the selected server.
+    await expect(page).toHaveURL(`/sessions/ses-brandnew?server=${server.id}`);
+    await expect(page.getByTestId("session-tab-ses-brandnew")).toBeVisible();
+  },
+);
+
+test(
   "the folder picker reports a load failure without losing the dialog",
   { tag: ["@feature", "@feature:folder-picker"] },
   async ({ page }) => {

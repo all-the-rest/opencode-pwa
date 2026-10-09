@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  DOCK_KIND_LIMIT,
   dockReducer,
   dockStackHasContent,
   dropDockForm,
@@ -7,6 +8,7 @@ import {
   dropDockPermission,
   EMPTY_DOCK_STACK,
   setDockInboxDelivery,
+  splitDockKind,
   toDockInboxItem,
   toDockPermission,
   toDockRevert,
@@ -84,6 +86,39 @@ describe("visibleDocks", () => {
     expect(
       visibleDocks(state({ todos: [{ id: "t1", content: "x", status: "pending" }] })),
     ).toEqual(["todo"]);
+  });
+});
+
+describe("splitDockKind — per-kind cap", () => {
+  it("keeps every entry when at or below the limit", () => {
+    expect(splitDockKind([])).toEqual({ visible: [], hidden: 0 });
+    const two = [{ id: "a" }, { id: "b" }];
+    expect(splitDockKind(two)).toEqual({ visible: two, hidden: 0 });
+    // A fresh array is always returned (never the input reference).
+    expect(splitDockKind(two).visible).not.toBe(two);
+  });
+
+  it("shows the newest entries and counts the hidden tail", () => {
+    const rows = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }];
+    // Newest = end of the array: the last two stay, the older two collapse.
+    expect(splitDockKind(rows)).toEqual({ visible: [{ id: "c" }, { id: "d" }], hidden: 2 });
+  });
+
+  it("hides exactly one entry for limit+1 (three) entries", () => {
+    const rows = [{ id: "a" }, { id: "b" }, { id: "c" }];
+    expect(splitDockKind(rows)).toEqual({ visible: [{ id: "b" }, { id: "c" }], hidden: 1 });
+  });
+
+  it("honours a custom limit and never collapses a non-positive one", () => {
+    const rows = [{ id: "a" }, { id: "b" }, { id: "c" }];
+    expect(splitDockKind(rows, 1)).toEqual({ visible: [{ id: "c" }], hidden: 2 });
+    expect(splitDockKind(rows, 5)).toEqual({ visible: rows, hidden: 0 });
+    // A limit of 0 (or less) means "no cap": everything shows.
+    expect(splitDockKind(rows, 0)).toEqual({ visible: rows, hidden: 0 });
+  });
+
+  it("defaults the limit to DOCK_KIND_LIMIT (2)", () => {
+    expect(DOCK_KIND_LIMIT).toBe(2);
   });
 });
 

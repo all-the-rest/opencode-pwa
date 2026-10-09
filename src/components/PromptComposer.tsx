@@ -250,6 +250,25 @@ export default function PromptComposer({
           submit();
         }}
       >
+        {/* EINFACH mode: the picker bar below is hidden, but the file picker
+            stays reachable at the START of the input row (icon only on mobile,
+            short label from ≥sm). Sending stays on the right. Drag & drop is
+            untouched and attaches files in both modes. */}
+        {!expert && (
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost shrink-0"
+            aria-label={t`Dateien auswählen`}
+            title={t`Dateien auswählen`}
+            data-testid="prompt-attachment-picker"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Icon name="plus" />
+            <span className="hidden sm:inline">
+              <Trans>Dateien</Trans>
+            </span>
+          </button>
+        )}
         <textarea
           ref={textareaRef}
           rows={1}
