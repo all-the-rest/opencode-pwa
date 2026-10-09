@@ -23,6 +23,8 @@ interface Project {
   name: string;
   canonical: string;
   icon?: { color?: string };
+  /** Timestamps (`Project.time`) — the duplicate-row tie-break reads them. */
+  time?: { created?: number; updated?: number; active?: number };
 }
 
 interface Log {
@@ -216,25 +218,17 @@ test(
     await mockApi(page, log);
     await page.goto(`/servers/${server.id}`);
 
-    // Three roots/branches: /srv/app (with a nested project) and /home/dev/web.
-    await expect(page.getByTestId("project-node-/srv")).toBeVisible();
+    // Three branches: a nested project under /srv/app and /home/dev/web.
     await expect(page.getByTestId("project-node-/srv/app")).toBeVisible();
-    await expect(page.getByTestId("project-node-/srv/app/services")).toBeVisible();
+    await expect(page.getByTestId("project-node-/home/dev/web")).toBeVisible();
     await expect(page.getByTestId("project-row-proj-api")).toBeVisible();
 
-    // Collapsing the /srv branch hides its projects; the other root stays.
-    await page.getByTestId("project-toggle-/srv").click();
-    await expect(page.getByTestId("project-row-proj-api")).toHaveCount(0);
-    await expect(page.getByTestId("project-row-proj-app")).toHaveCount(0);
-    await expect(page.getByTestId("project-row-proj-web")).toBeVisible();
-
-    // Collapsing only the app node keeps the app row but drops the nested one.
-    await page.getByTestId("project-toggle-/srv").click();
-    await expect(page.getByTestId("project-row-proj-app")).toBeVisible();
+    // Collapsing the /srv hidden its nested project; the other root stays.
+    // (/srv itself folded into /srv/app, so the toggle lives on that row.)
     await page.getByTestId("project-toggle-/srv/app").click();
     await expect(page.getByTestId("project-row-proj-api")).toHaveCount(0);
     await expect(page.getByTestId("project-row-proj-app")).toBeVisible();
-
+    await expect(page.getByTestId("project-row-proj-web")).toBeVisible();
     await page.getByTestId("project-toggle-/srv/app").click();
     await expect(page.getByTestId("project-row-proj-api")).toBeVisible();
 
@@ -243,6 +237,81 @@ test(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );
     expect(overflow).toBeLessThanOrEqual(1);
+  },
+);
+
+/**
+ * The owner's live `project.list()` (they see every path below on their own
+ * server, `/projects/LuminaRust` twice): long project-less chains, a real
+ * branch under `/tmp/opencode`, a renamed project and a duplicate path.
+ */
+const LIVE_PROJECTS: Project[] = [
+  { id: "live-users", name: "/Users/florianreisinger", canonical: "/Users/florianreisinger" },
+  { id: "live-de", name: "/de", canonical: "/de" },
+  { id: "live-home-dev", name: "/home/dev", canonical: "/home/dev" },
+  { id: "live-octest-live", name: "/home/dev/.cache/octest/live", canonical: "/home/dev/.cache/octest/live" },
+  { id: "live-octest-lab", name: "/home/dev/octest-lab/work", canonical: "/home/dev/octest-lab/work" },
+  { id: "live-root", name: "Root", canonical: "/projects" },
+  // The duplicate row: an older `time.active` than its twin below.
+  {
+    id: "live-lumina-old",
+    name: "/projects/LuminaRust",
+    canonical: "/projects/LuminaRust",
+    time: { created: 10, updated: 10, active: 10 },
+  },
+  {
+    id: "live-lumina",
+    name: "/projects/LuminaRust",
+    canonical: "/projects/LuminaRust",
+    time: { created: 10, updated: 99, active: 99 },
+  },
+  { id: "live-ebcont", name: "/projects/ebcont-seo-test", canonical: "/projects/ebcont-seo-test" },
+  { id: "live-ebcont-images", name: "/projects/ebcont-seo-test/images/dl", canonical: "/projects/ebcont-seo-test/images/dl" },
+  { id: "live-tmp", name: "/tmp/opencode", canonical: "/tmp/opencode" },
+  { id: "live-instr", name: "/tmp/opencode/instr-check", canonical: "/tmp/opencode/instr-check" },
+  { id: "live-event", name: "Event Test", canonical: "/tmp/opencode/proj-smoke" },
+];
+
+test(
+  "compresses project-less folder chains into one auto-expanded row",
+  { tag: ["@feature", "@feature:project-tree"] },
+  async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 780 });
+    const log = newLog();
+    await seedServer(page);
+    await mockApi(page, log, { projects: LIVE_PROJECTS });
+    await page.goto(`/servers/${server.id}`);
+
+    // Three folders of the owner's payload are one row, and the project
+    // underneath is visible without a single click (auto-expanded).
+    const live = page.getByTestId("project-node-/home/dev/.cache/octest/live");
+    await expect(live).toBeVisible();
+    await expect(live).toHaveAttribute("data-chain", "true");
+    await expect(page.getByTestId("project-row-live-octest-live")).toHaveText(".cache/octest/live");
+    // A leaf project stays a plain row: no chevron, nothing to toggle.
+    await expect(page.getByTestId("project-toggle-/home/dev/.cache/octest/live")).toHaveCount(0);
+
+    // `/tmp/opencode` is a compressed chain that keeps branching below it.
+    await expect(page.getByTestId("project-node-/tmp/opencode")).toContainText("tmp/opencode");
+    await expect(page.getByTestId("project-row-live-instr")).toBeVisible();
+    await expect(page.getByTestId("project-row-live-event")).toBeVisible();
+    // The branch point stays collapsible …
+    await expect(page.getByTestId("project-toggle-/tmp/opencode")).toBeVisible();
+    // … while the leaf under it never gains one.
+    await expect(page.getByTestId("project-toggle-/tmp/opencode/proj-smoke")).toHaveCount(0);
+
+    // A folder with its own project is a real branch point, no compression.
+    await expect(page.getByTestId("project-row-live-root")).toHaveText("Root");
+    await expect(page.getByTestId("project-node-/projects")).not.toHaveAttribute("data-chain", "true");
+    // `images` folded into the leaf project's row.
+    await expect(page.getByTestId("project-row-live-ebcont-images")).toHaveText("images/dl");
+
+    // The duplicate LuminaRust path collapses to one row.
+    await expect(page.getByTestId("project-row-live-lumina")).toHaveCount(1);
+    await expect(page.getByTestId("project-row-live-lumina-old")).toHaveCount(0);
+
+    // 13 rows in, 12 rows out — one row per surviving directory.
+    await expect(page.locator('[data-testid^="project-row-"]')).toHaveCount(12);
   },
 );
 

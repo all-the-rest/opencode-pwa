@@ -452,6 +452,25 @@ tree (`unpathed`), never invented directories. Rendering:
 collapse set, every project keeps the `project-row-<id>` testid of the flat list,
 labels truncate at 360px.
 
+**2b — Ordnerketten komprimieren + doppelte Pfade (Welle 8).** Der
+Original-Baum zeigte am echten Server drei Zeilen für
+`/home/dev/.cache/octest/live`, weil nur die letzte Ebene ein Projekt hält.
+`compressChain` (`src/lib/projectTree.ts`) faltet deshalb jeden Ordner ohne
+eigenes Projekt und mit genau einem Kind in dieses Kind: die Zeile wird ein
+„komprimierter Pfad" (`.cache/octest/live`, `data-chain="true"` auf der Zeile,
+Label via `projectTreeLabel`… korrekt: `projectTreeNodeLabel` →
+`projectChainLabel`, die `chain`-Segmente mit `/` verbindet). Die Kette endet,
+wo etwas zu entscheiden ist: ein eigenes Projekt oder echte Verzweigung
+(≥ 2 Kinder) — dort bleibt der einklappbare Baumknoten mit seinem Chevron.
+Blatt-Projekte ohne Kinder bleiben flache Zeilen (kein sinnloser Chevron), und
+alles startet aufgeklappt, damit das Projekt unter der Kette ohne Klick
+sichtbar ist. Doppelte `canonical`-Pfade (ihr Server liefert
+`/projects/LuminaRust` wirklich doppelt) fällt `dedupeProjectPaths` auf eine
+Zeile zusammen, gewonnen hat der frischere `time.active`/`time.updated`
+(`projectRecency`; `Project.time` wird in `toProjectInfo` mitgelesen). Der
+`mode`-Entscheid (Baum vs. flach) bleibt unverändert — Kompression ändert
+nicht, *ob* gruppiert wird, nur *wie* eine Gruppe aussieht.
+
 **3 — Projekt anlegen über den Server-Ordner-Picker.** `ServerFolderPicker`
 (`src/components/`) opens on „Neues Projekt" in the projects card of
 `/servers/:id`: it loads the server location with `listDirectory`, shows the

@@ -2107,8 +2107,12 @@ msgid "Pfad öffnen"
 msgstr "Pfad öffnen"
 
 #: src/components/ProjectTree.tsx
-msgid "Pfade als Baum gruppiert – gemeinsame Ordner nur einmal."
-msgstr "Pfade als Baum gruppiert – gemeinsame Ordner nur einmal."
+msgid "Pfade als Baum gruppiert – gemeinsame Ordner nur einmal, projektlose Ordnerketten in einer Zeile."
+msgstr "Pfade als Baum gruppiert – gemeinsame Ordner nur einmal, projektlose Ordnerketten in einer Zeile."
+
+#: src/components/ProjectTree.tsx
+#~ msgid "Pfade als Baum gruppiert – gemeinsame Ordner nur einmal."
+#~ msgstr "Pfade als Baum gruppiert – gemeinsame Ordner nur einmal."
 
 #: src/pages/ProjectDetail.tsx
 #: src/pages/ServerDetail.tsx

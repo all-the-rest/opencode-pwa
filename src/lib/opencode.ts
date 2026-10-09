@@ -404,6 +404,17 @@ export interface ProjectIconInfo {
   url?: string;
 }
 
+/**
+ * Timestamps of a project (`ProjectTime`, `types.d.ts:508`): when it was
+ * created, last updated and last active. All optional in our shape — a server
+ * (or a mocked payload) may send any subset.
+ */
+export interface ProjectTimeInfo {
+  created?: number;
+  updated?: number;
+  active?: number;
+}
+
 export interface ProjectInfo {
   id: string;
   name: string;
@@ -413,6 +424,27 @@ export interface ProjectInfo {
   vcs?: ProjectVcs;
   /** Icon hints (`Project.icon`); absent when the server sends none. */
   icon?: ProjectIconInfo;
+  /** Timestamps (`Project.time`); absent when the server sends none. */
+  time?: ProjectTimeInfo;
+}
+
+/** Read the finite timestamps of a `ProjectTime`-shaped value, else null. */
+function readProjectTime(value: unknown): ProjectTimeInfo | null {
+  if (value === null || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const read = (key: string): number | undefined => {
+    const raw: unknown = record[key];
+    return typeof raw === "number" && Number.isFinite(raw) ? raw : undefined;
+  };
+  const created = read("created");
+  const updated = read("updated");
+  const active = read("active");
+  if (created === undefined && updated === undefined && active === undefined) return null;
+  return {
+    ...(created !== undefined ? { created } : {}),
+    ...(updated !== undefined ? { updated } : {}),
+    ...(active !== undefined ? { active } : {}),
+  };
 }
 
 function readProjectIcon(value: unknown): ProjectIconInfo | null {
@@ -446,6 +478,7 @@ function toProjectInfo(entry: unknown, index: number): ProjectInfo {
     const name = readString(record, ["name", "canonical"]) ?? id;
     const canonical = readString(record, ["canonical"]);
     const icon = readProjectIcon(record["icon"]);
+    const time = readProjectTime(record["time"]);
     const rawVcs: unknown = record["vcs"];
     const vcs: ProjectVcs | undefined =
       typeof rawVcs === "string"
@@ -458,6 +491,7 @@ function toProjectInfo(entry: unknown, index: number): ProjectInfo {
       name,
       ...(canonical !== null ? { canonical } : {}),
       ...(icon !== null ? { icon } : {}),
+      ...(time !== null ? { time } : {}),
       ...(vcs !== undefined ? { vcs } : {}),
     };
   }

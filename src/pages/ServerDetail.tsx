@@ -9,7 +9,7 @@ import ServerDot from "../components/ServerDot.tsx";
 import ServerErrorBanner from "../components/ServerErrorBanner.tsx";
 import ServerStatusBadge from "../components/ServerStatusBadge.tsx";
 import ProjectRenameForm from "../components/ProjectRenameForm.tsx";
-import ProjectTree, { ProjectDot } from "../components/ProjectTree.tsx";
+import ProjectTree, { ProjectDot, ProjectTreeHint } from "../components/ProjectTree.tsx";
 import ServerFolderPicker from "../components/ServerFolderPicker.tsx";
 import { useLiveRefresh, LIVE_REFRESH_INTERVAL_MS } from "../hooks/useLiveRefresh.ts";
 import { useShellOutputStream } from "../hooks/useShellOutputStream.ts";
@@ -776,15 +776,18 @@ export default function ServerDetail() {
                   <Trans>Keine Projekte.</Trans>
                 </p>
               ) : projectTree.mode === "tree" ? (
-                <ProjectTree
-                  serverID={server.id}
-                  tree={projectTree}
-                  renamingID={renamingProjectID}
-                  renameBusy={projectRowRenameBusy}
-                  onStartRename={(project) => setRenamingProjectID(project.id)}
-                  onCancelRename={() => setRenamingProjectID(null)}
-                  onRename={(project, patch) => void handleProjectRename(project, patch)}
-                />
+                <>
+                  <ProjectTree
+                    serverID={server.id}
+                    tree={projectTree}
+                    renamingID={renamingProjectID}
+                    renameBusy={projectRowRenameBusy}
+                    onStartRename={(project) => setRenamingProjectID(project.id)}
+                    onCancelRename={() => setRenamingProjectID(null)}
+                    onRename={(project, patch) => void handleProjectRename(project, patch)}
+                  />
+                  <ProjectTreeHint />
+                </>
               ) : (
                 <ul className="menu gap-1">
                   {projects.map((p) => {

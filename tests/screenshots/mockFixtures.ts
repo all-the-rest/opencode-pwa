@@ -15,6 +15,17 @@
 const T0 = Date.UTC(2026, 9, 8, 12, 0, 0);
 const minutes = (n: number) => T0 + n * 60_000;
 
+/**
+ * `Project.time` of a tree row: `created`/`updated`/`active` anchored on the
+ * moment of the capture, so the surviving duplicate row is always the newer
+ * twin and no fixture has to be re-dated.
+ */
+const rowTime = (createdMinAgo: number, updatedMinAgo: number, activeMinAgo: number) => ({
+  created: Date.now() - Math.abs(createdMinAgo) * 60_000,
+  updated: Date.now() - Math.abs(updatedMinAgo) * 60_000,
+  active: Date.now() - Math.abs(activeMinAgo) * 60_000,
+});
+
 export const CHAT_MESSAGES = [
   {
     type: "user",
@@ -387,6 +398,45 @@ export const PROJECTS = [
     time: { created: minutes(-800), updated: minutes(-120), active: minutes(-10) },
     sandboxes: [],
   },
+];
+
+/**
+ * The owner's live `project.list` payload, verbatim — these are paths from
+ * their own server (23 rows there; every path they named is here, including
+ * `/projects/LuminaRust` twice, which is what their server really returns).
+ * It carries the two cases the compressed tree exists for: project-less
+ * single-child chains (`/home/dev/.cache/octest/live`) and a duplicate
+ * canonical path that must collapse to one row.
+ *
+ * Timestamps are `Date.now()`-anchored so the surviving LuminaRust row is
+ * always the newer twin.
+ */
+export const PROJECTS_TREE = [
+  { id: "live-users", name: "/Users/florianreisinger", canonical: "/Users/florianreisinger",
+    time: rowTime(-720, -720, -700) },
+  { id: "live-de", name: "/de", canonical: "/de", time: rowTime(-700, -500, -500) },
+  { id: "live-home-dev", name: "/home/dev", canonical: "/home/dev",
+    time: rowTime(-900, -2, -1), icon: { color: "oklch(0.72 0.19 264)" } },
+  { id: "live-octest-live", name: "/home/dev/.cache/octest/live", canonical: "/home/dev/.cache/octest/live",
+    time: rowTime(-90, -90, -90) },
+  { id: "live-octest-lab", name: "/home/dev/octest-lab/work", canonical: "/home/dev/octest-lab/work",
+    time: rowTime(-120, -120, -30), icon: { color: "oklch(0.72 0.19 150)" } },
+  { id: "live-root", name: "Root", canonical: "/projects", time: rowTime(-1000, -1000, -900) },
+  // The duplicate row their server reports; the stale twin must disappear.
+  { id: "live-lumina-old", name: "/projects/LuminaRust", canonical: "/projects/LuminaRust",
+    time: rowTime(-300, -300, -300) },
+  { id: "live-lumina", name: "/projects/LuminaRust", canonical: "/projects/LuminaRust",
+    time: rowTime(-300, -40, -5), icon: { color: "oklch(0.72 0.19 300)" } },
+  { id: "live-ebcont", name: "/projects/ebcont-seo-test", canonical: "/projects/ebcont-seo-test",
+    time: rowTime(-400, -50, -50) },
+  { id: "live-ebcont-images", name: "/projects/ebcont-seo-test/images/dl", canonical: "/projects/ebcont-seo-test/images/dl",
+    time: rowTime(-20, -20, -20) },
+  { id: "live-tmp", name: "/tmp/opencode", canonical: "/tmp/opencode",
+    time: rowTime(-600, -60, -60) },
+  { id: "live-instr", name: "/tmp/opencode/instr-check", canonical: "/tmp/opencode/instr-check",
+    time: rowTime(-80, -80, -80) },
+  { id: "live-event", name: "Event Test", canonical: "/tmp/opencode/proj-smoke",
+    time: rowTime(-70, -70, -3), icon: { color: "oklch(0.72 0.19 90)" } },
 ];
 
 export const SESSION_ROWS = [

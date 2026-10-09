@@ -32,6 +32,7 @@ import {
   MCP_SERVERS,
   PERMISSIONS,
   PROJECTS,
+  PROJECTS_TREE,
   RUNNING_PTYS,
   RUNNING_SHELLS,
   SESSION_DIFF_ROWS,
@@ -203,7 +204,8 @@ async function mockApi(page: Page, route: UiReviewRoute, state: UiReviewState) {
       return;
     }
     if (url.includes("/api/project")) {
-      const projects = filled && mock !== "none" && mock !== "settings" ? PROJECTS : [];
+      const projects =
+        filled && mock !== "none" && mock !== "settings" ? (mock === "project-tree" ? PROJECTS_TREE : PROJECTS) : [];
       await json(routeReq, { data: projects });
       return;
     }

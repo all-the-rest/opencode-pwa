@@ -68,6 +68,16 @@
   path-like canonical are always flat rows. Documentation + evaluation in
   `features/05-parity.md` („Projekt-Displayname + Ordner-Baum + Projekt
   anlegen (Welle 7)").
+- **Chain compression + duplicates** (owner ask, wave 8): a folder that holds
+  no project of its own and has exactly one child folds into that child, so
+  `/home/dev/.cache/octest/live` is ONE row (`.cache/octest/live`) instead of
+  three. A compressed chain is auto-expanded (nothing starts collapsed) and
+  carries its chevron only where it branches again; a folder with a project of
+  its own, or with 2+ children, stays a collapsible tree node. Duplicate
+  canonical paths collapse to the entry with the newest
+  `time.active`/`time.updated` (`dedupeProjectPaths`, `projectRecency`).
+  Unit tests: `src/lib/projectTree.test.ts` (the owner's live payload), E2E
+  `@feature:project-tree`, screenshot route `server-project-tree`.
 - **New project**: there is no create endpoint for projects in the installed
   client (`project: { list, update }`). The server folder picker
   (`ServerFolderPicker`) browses `file.list` (wrapper `listDirectory`, which

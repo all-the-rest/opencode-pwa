@@ -137,6 +137,19 @@ Reihenfolge steht, jede Welle wird vor dem commit verifiziert (lint/test/build/e
       { directory } })`, weil die Client-Library keinen Projekt-Create-Endpoint hat.
       Details in `features/05-parity.md` („Projekt-Displayname + Ordner-Baum +
       Projekt anlegen (Welle 7)").
+- [ ] **Baum-Verfeinerung — Kettenkompression + Duplikate** (Owner-Payload,
+      23 Projekte vom eigenen Server): projektlose Ordnerketten mit genau einem
+      Kind werden zu EINER Zeile (`.cache/octest/live`), automatisch
+      aufgeklappt, Chevron nur bei echter Verzweigung; Blatt-Projekte flach;
+      doppelte `canonical`-Pfade (`/projects/LuminaRust` zweimal) auf die
+      frischere `time.active`/`time.updated` reduziert. Implementiert in
+      `src/lib/projectTree.ts` (`compressChain`, `dedupeProjectPaths`,
+      `projectRecency`), `src/components/ProjectTree.tsx` (`data-chain`),
+      `ProjectInfo.time` in `src/lib/opencode.ts`. Tests:
+      `src/lib/projectTree.test.ts`, `src/components/ProjectTree.test.tsx`,
+      `tests/e2e/w21-project-tree-picker.spec.ts` (`@feature:project-tree`),
+      Screenshot-Route `server-project-tree` mit dem echten Payload. Details in
+      `features/05-parity.md` („2b — Ordnerketten komprimieren").
 
 
 ## Bewusst offen/dokumentiert (kein Handlungsbedarf)

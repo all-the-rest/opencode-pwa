@@ -126,6 +126,9 @@ function TreeNode({ node, depth, collapsed, onToggle, shared }: NodeProps) {
   const expanded = !collapsed.has(node.path);
   const hasChildren = node.children.length > 0;
   const label = projectTreeNodeLabel(node);
+  // A compressed chain stands for several folders at once; its row carries the
+  // marker so tests (and the review) can tell it from a plain folder row.
+  const compressed = node.chain.length > 1;
   // The first project sitting exactly on this node owns the row link.
   const own = node.projects[0];
   const renaming = own !== undefined && shared.renamingID === own.id;
@@ -135,6 +138,7 @@ function TreeNode({ node, depth, collapsed, onToggle, shared }: NodeProps) {
         className="flex items-center gap-1 rounded hover:bg-base-300/40"
         style={{ paddingLeft: INDENT_STEP_PX * depth }}
         data-testid={`${shared.testId}-node-${node.path}`}
+        data-chain={compressed ? "true" : undefined}
       >
         {hasChildren ? (
           <button
@@ -230,14 +234,19 @@ function TreeNode({ node, depth, collapsed, onToggle, shared }: NodeProps) {
  * the `project-row-<id>` testid of the flat list so existing tests and
  * muscle memory stay valid.
  *
- * Projects without a path-like `canonical` always render as plain rows —
- * a tree cannot invent a directory for them. Usable at 360px: rows truncate,
- * never scroll sideways.
+ * Project-less folders with a single child are compressed into one row
+ * (`.cache/octest/live`, `data-chain="true"` on the row) and everything starts
+ * expanded — the project underneath a chain is visible without a click. Only
+ * real branch points (a folder with a project of its own, or 2+ children)
+ * carry a chevron; a leaf project stays a plain flat row. Usable at 360px:
+ * rows truncate, never scroll sideways.
  */
 export default function ProjectTree(props: ProjectTreeProps) {
   const { tree } = props;
   const testId = props.testId ?? "project";
   const shared = { ...props, testId };
+  // Auto-expanded: nothing starts collapsed, so a compressed chain shows the
+  // project it ends in (and everything below it) without a single click.
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set<string>());
 
   function toggle(path: string) {
@@ -287,7 +296,9 @@ export default function ProjectTree(props: ProjectTreeProps) {
 export function ProjectTreeHint() {
   return (
     <p className="text-xs opacity-70">
-      <Trans>Pfade als Baum gruppiert – gemeinsame Ordner nur einmal.</Trans>
+      <Trans>
+        Pfade als Baum gruppiert – gemeinsame Ordner nur einmal, projektlose Ordnerketten in einer Zeile.
+      </Trans>
     </p>
   );
 }

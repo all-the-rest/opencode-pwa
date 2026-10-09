@@ -14,6 +14,7 @@ export type UiReviewMock =
   | "session-diff"
   | "agents"
   | "project"
+  | "project-tree"
   | "tools"
   | "agent-detail";
 
@@ -101,6 +102,16 @@ export const routes: UiReviewRoute[] = [
     path: "/servers/e2e-server/projects/p1",
     states: ["filled", "empty"],
     mock: "project",
+    seedServer: true,
+  },
+  // The owner's live projects payload: long project-less chains (compressed
+  // into one row), a real branch under /tmp/opencode, a renamed project and
+  // the duplicated /projects/LuminaRust path.
+  {
+    name: "server-project-tree",
+    path: "/servers/e2e-server",
+    states: ["filled"],
+    mock: "project-tree",
     seedServer: true,
   },
   {

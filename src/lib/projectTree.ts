@@ -10,6 +10,11 @@ import type { ProjectInfo } from "./opencode.ts";
  * on every row; a prefix tree shows it once. This module builds that tree
  * purely (no React, no fetch) and decides when the tree degenerates and the
  * flat list is the better rendering.
+ *
+ * Two refinements keep a real tree short (owner ask, driven by a live payload
+ * that showed it): folders with no project of their own and exactly one child
+ * are compressed into a single row (`.cache/octest/live`), and a directory the
+ * server lists twice collapses to one entry.
  */
 
 /** One directory of the project tree: holds projects and/or sub-directories. */
@@ -18,6 +23,13 @@ export interface ProjectTreeNode {
   path: string;
   /** Last path segment — the fallback display label. */
   label: string;
+  /**
+   * Labels of the compressed chain this row stands for, top-down and ending in
+   * {@link label}. Longer than one entry when project-less single-child folders
+   * were folded into this row: `/home/dev/.cache/octest/live` renders as one
+   * row labelled `.cache/octest/live` instead of three.
+   */
+  chain: string[];
   /** Projects whose canonical path is exactly this node. */
   projects: ProjectInfo[];
   /** Sub-directories that hold at least one project. */
@@ -94,10 +106,72 @@ export function projectIconColor(project: ProjectInfo): string | undefined {
   return project.icon?.color;
 }
 
+/**
+ * When one project path was listed twice, the newer entry survives. Read from
+ * `Project.time` (`types.d.ts:508`): the newest of `active`/`updated`
+ * (falling back to `created`), so a payload without timestamps loses to the
+ * entry that has one.
+ */
+export function projectRecency(project: ProjectInfo): number {
+  const time = project.time;
+  if (time === undefined) return 0;
+  const stamps = [time.active, time.updated, time.created].filter(
+    (value): value is number => typeof value === "number" && Number.isFinite(value),
+  );
+  return stamps.length === 0 ? 0 : Math.max(...stamps);
+}
+
+/** Normalized key of a canonical path (`/a/b` and `/a/b/` are one directory). */
+function canonicalKey(canonical: string): string {
+  return canonical.replace(/\\/g, "/").replace(/\/+$/, "");
+}
+
+/**
+ * Collapse duplicate canonical paths into one entry.
+ *
+ * A live server really can answer `project.list()` with the same directory
+ * twice (the owner's `/projects/LuminaRust` comes back twice). Two rows for one
+ * folder read like a bug, so the newer entry (`time.active`/`time.updated`)
+ * wins and the stale one disappears. Projects without a path-like canonical
+ * have no directory to duplicate — they always survive.
+ */
+export function dedupeProjectPaths(projects: ProjectInfo[]): ProjectInfo[] {
+  const kept: ProjectInfo[] = [];
+  const byPath = new Map<string, ProjectInfo>();
+  for (const project of projects) {
+    const canonical = project.canonical;
+    if (canonical === undefined || !isPathLike(canonical)) {
+      kept.push(project);
+      continue;
+    }
+    const key = canonicalKey(canonical);
+    const known = byPath.get(key);
+    if (known === undefined) {
+      byPath.set(key, project);
+      kept.push(project);
+      continue;
+    }
+    if (projectRecency(project) > projectRecency(known)) {
+      kept[kept.indexOf(known)] = project;
+      byPath.set(key, project);
+    }
+  }
+  return kept;
+}
+
 /** Label of a tree node: a project renamed away from its path wins. */
 export function projectTreeNodeLabel(node: ProjectTreeNode): string {
   const custom = node.projects.find((p) => p.name !== "" && !isPathLike(p.name));
-  return custom === undefined ? node.label : custom.name;
+  return custom === undefined ? projectChainLabel(node) : custom.name;
+}
+
+/**
+ * Displayed label of a node: the compressed chain joined with "/", the way a
+ * file manager shows a path with no branching in it. A single-element chain is
+ * just the node's own label.
+ */
+export function projectChainLabel(node: ProjectTreeNode): string {
+  return node.chain.length === 0 ? node.label : node.chain.join("/");
 }
 
 interface DraftNode {
@@ -135,10 +209,38 @@ function finalize(level: Map<string, DraftNode>): ProjectTreeNode[] {
     .map((draft) => ({
       path: draft.path,
       label: draft.label,
+      chain: [draft.label],
       projects: draft.projects,
       children: finalize(draft.children),
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/**
+ * Fold project-less single-child folders into their one child.
+ *
+ * A folder that holds no project of its own and has exactly one child carries
+ * no information: `/home/dev/.cache/octest/live` is three rows for one
+ * project. Such a node is absorbed by its child and the two labels join into
+ * one row (`.cache/octest/live`). The walk stops where the folder means
+ * something — a project of its own, or a real branch (2+ children) — so those
+ * stay collapsible tree nodes.
+ */
+function compressChain(node: ProjectTreeNode): ProjectTreeNode {
+  let current: ProjectTreeNode = {
+    ...node,
+    children: node.children.map(compressChain),
+  };
+  const absorbed: string[] = [];
+  // A leaf directory always holds a project (the tree is built from project
+  // paths), so the loop can only end on a project node or a branch.
+  while (current.projects.length === 0 && current.children.length === 1) {
+    const child = current.children[0];
+    if (child === undefined) break;
+    absorbed.push(current.label);
+    current = child;
+  }
+  return { ...current, chain: [...absorbed, ...current.chain] };
 }
 
 /** A project that is also the parent of another project — real nesting. */
@@ -149,13 +251,14 @@ function nodeHasNestedProject(node: ProjectTreeNode): boolean {
 
 /**
  * Group projects by the prefixes of their canonical paths. Projects without a
- * path-like `canonical` are reported as `unpathed` and always render flat.
+ * path-like `canonical` are reported as `unpathed` and always render flat;
+ * duplicate canonical paths collapse into one entry (newest wins).
  */
 export function buildProjectTree(projects: ProjectInfo[]): ProjectTree {
   const pathed: ProjectInfo[] = [];
   const unpathed: ProjectInfo[] = [];
   const drafts = new Map<string, DraftNode>();
-  for (const project of projects) {
+  for (const project of dedupeProjectPaths(projects)) {
     const canonical = project.canonical;
     const segments = canonical === undefined ? [] : pathSegments(canonical);
     if (canonical === undefined || !isPathLike(canonical) || segments.length === 0) {
@@ -165,7 +268,7 @@ export function buildProjectTree(projects: ProjectInfo[]): ProjectTree {
     pathed.push(project);
     insertProject(drafts, project, segments, canonical.startsWith("/"));
   }
-  const roots = finalize(drafts);
+  const roots = finalize(drafts).map(compressChain);
   const nested = roots.some((node) => nodeHasNestedProject(node));
   return {
     mode: pathed.length > 0 && (roots.length > 1 || nested) ? "tree" : "flat",
