@@ -11,3 +11,7 @@
 - Subagent questions surface to the user: implementers must return open
   decisions as explicit questions; the orchestrator asks them via the
   question tool instead of deciding silently or burying them in reports.
+- Rules only, no decisions: this file holds rules only - instructions that apply to
+  any work in this repo. Durable decisions, rationale, measurements and history do not
+  belong here; they go into `docs/`/`features/` (the project docs), open items into
+  `AGENTS.todo.md`, and completed work into the git history.
