@@ -1,6 +1,7 @@
 # AGENTS.todo.md
 
-Stand: 2026-10-09 (Welle 6 + Welle 7 eingetragen). Nur offene TODOs (veraltete
+Stand: 2026-10-19 (Welle 6 + Welle 7 eingetragen; Skills-Stand aus dem Bereich
+`be24163..787670a` eingetragen). Nur offene TODOs (veraltete
 Einträge bereinigt: Parität-Batches, Deep-Link-Paste, Prozess-Regel und
 Userscripts-Verdikt sind umgesetzt/dokumentiert).
 UI-Review-Befunde 1, 2, 6, 7 und 9 sind mit Welle 6 erledigt (Details in
@@ -8,7 +9,7 @@ UI-Review-Befunde 1, 2, 6, 7 und 9 sind mit Welle 6 erledigt (Details in
 Basic/Experte"); Befund 8 (Projektseite: Pfad + Farbe) mit Welle 7.
 Welle 7 ist umgesetzt und verifiziert (lint 0, vitest, build, e2e inkl. Mobile,
 Screenshots) — die letzte Code-Welle; danach stehen nur noch die drei offenen
-Punkte unten.
+Punkte unten plus die zwei Skills-Positionen aus dem Abschnitt unten.
 
 ## Navigation (Owner-Entscheidung 2026-10-07, umgesetzt)
 
@@ -163,6 +164,43 @@ Reihenfolge steht, jede Welle wird vor dem commit verifiziert (lint/test/build/e
       `tests/e2e/w21-project-tree-picker.spec.ts` (`@feature:project-tree`),
       Screenshot-Route `server-project-tree` mit dem echten Payload. Details in
       `features/05-parity.md` („2b — Ordnerketten komprimieren").
+
+
+## Skills-Stand (2026-10-19) — Positionen aus dem Bereich `be24163..787670a`
+
+Einträge aus dem Fortschreiben von `AGENTS.skills.md` (Stand `787670a`). Wie
+`AGENTS.todo.md` insgesamt: **Log, kein Auftrag** — die Umsetzung braucht eine
+ausdrückliche Beauftragung.
+
+1. **Pfad-Filter für die CI-Workflows** (`github-ci-filters`) — die Skill will
+   `paths-ignore`, damit ein reiner Doku-Commit nicht die ganze Pipeline startet.
+   Beide Workflows (`.github/workflows/ci.yml`, `.github/workflows/pages.yml`)
+   laufen heute auf **jeden** Push/PR ohne Filter; dieses Repo ist docs-lastig
+   (`features/`, `docs/`, `AGENTS*.md`). Precondition der Skill Step 1 ist am
+   2026-10-19 geprüft: **kein** Check liest eine Repo-`.md` als Input (die
+   `.md`-Treffer in `tests/` sind Mock-Fixtures, kein Consumer) — ein
+   `'**/*.md'`-Filter wäre also zulässig. `main` ist **nicht** branch-protected
+   (`gh api …/branches/main/protection` → `Branch not protected`), also keine
+   Pending-Check-Falle. Zu entscheiden: Filter setzen (in beiden Workflows, für
+   `push` **und** `pull_request`, `branches:`-Filter stehen lassen,
+   `.github/workflows/**` nie mitignorieren) oder bewusst ohne Filter bleiben —
+   dann mit Begründung hier festhalten, damit die offene Position nicht
+   untergeht.
+
+2. **`node-deps`-Policy: `packageManager`-Pin und `minimumReleaseAgeExclude`**
+   (`node-deps`) — die Skill verbietet beides: keine exakten Pins im Manifest
+   („Versionsausschluss über `pnpm` ins Lockfile") und kein
+   `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`. `package.json` führt
+   `"packageManager": "pnpm@10.0.0"` (Pin), `pnpm-workspace.yaml` führt drei
+   `minimumReleaseAgeExclude`-Einträge für `@opencode/{client,protocol,schema}@2.0.23`.
+   Die CI-Kommentare in `ci.yml`/`pages.yml` begründen das mit
+   `ERR_PNPM_BAD_PM_VERSION` (ohne `version:`-Key im `pnpm/action-setup`-Schritt
+   gewinnt `packageManager`) — die Skill will es umgekehrt (Major-Linie
+   `version: 11` im Workflow, kein Pin im Manifest). Die Abhängigkeiten selbst
+   sind bereits ranges-only (`^`/`~` in `package.json`) — offen sind nur die
+   beiden Pin-Formen. Zu entscheiden: auf die Skill-Form umstellen (mit
+   `pnpm install --frozen-lockfile` + Build-Gate geprüft) oder die
+   Abweichung als bewusste Projektentscheidung hier festhalten.
 
 
 ## Bewusst offen/dokumentiert (kein Handlungsbedarf)
