@@ -9,8 +9,9 @@ UI-Review-Befunde 1, 2, 6, 7 und 9 sind mit Welle 6 erledigt (Details in
 Basic/Experte"); Befund 8 (Projektseite: Pfad + Farbe) mit Welle 7.
 Welle 7 ist umgesetzt und verifiziert (lint 0, vitest, build, e2e inkl. Mobile,
 Screenshots) — die letzte Code-Welle; danach stehen nur noch die **sieben** offenen
-Checkbox-Punkte unten (`grep -c '^- \[ \]' AGENTS.todo.md` → 7; bei Welle 4 und
-Welle 5 steht „erledigt" schon im Text, ihre Box ist aber nicht abgehakt) plus die
+Checkbox-Punkte unten (`grep -c '^- \[ \]' AGENTS.todo.md` → 7; bei Welle 4,
+Welle 5 und der Baum-Verfeinerung steht „erledigt" schon im Text, ihre Box ist
+aber nicht abgehakt) plus die
 zwei Skills-Positionen aus dem Abschnitt unten.
 
 ## Navigation (Owner-Entscheidung 2026-10-07, umgesetzt)

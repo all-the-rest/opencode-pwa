@@ -39,7 +39,8 @@ das nichts (`update-models` bleibt `nein`, die `ui-review`-Änderung betrifft nu
 Formulierung im Findings-Template). Working Tree: die früher als uncommitted genannten
 Dateien (`update-models/SKILL.md`, `update-models/references/registry.md`) waren beim
 Prüfen bereits committet (`219171c`, 2026-10-19 18:24:46 UTC — 26 Minuten **vor** dem
-Marker-Commit `4507c4a`, 18:51:08 UTC). Für `references/registry.md` ist das belegbar
+Marker-Commit `4507c4a`, Autorzeit 18:51:08 UTC, Committer-Zeit 18:51:40 UTC). Für
+`references/registry.md` ist das belegbar
 (letzte Änderung 17:46:38 UTC, also vor dem Commit; danach nie wieder geschrieben);
 für `SKILL.md` lässt der Dateizustand um 18:51 UTC nicht mehr belegen (die Datei wurde
 am 2026-10-20 erneut geschrieben). Ob der Arbeitsbaum um 18:51 UTC sauber war, ist
@@ -55,8 +56,10 @@ committet waren.
   Bedarf ein eigener Auftrag, kein Marker-Rest: `localStorage` (`opencode-pwa:servers`)
   hält **kein** Passwort, nur die Server-Metadaten (`id`/`name`/`baseUrl`/`username`
   und die optionale `color` — `ServerConfig`, `src/lib/opencode.ts`), das Passwort liegt
-  AES-GCM-verschlüsselt in IndexedDB (`opencode-pwa-credential-vault`,
-  `src/lib/credentialVault.ts`; `features/01-architecture.md` §„Credential Vault").
+  im Normalfall AES-GCM-verschlüsselt in IndexedDB (`opencode-pwa-credential-vault`,
+  `src/lib/credentialVault.ts`; `features/01-architecture.md` §„Credential Vault") —
+  ohne WebCrypto oder IndexedDB bleibt es nur für die laufende Sitzung im Speicher
+  und wird nie persistiert (`src/lib/credentialVault.ts:16-19`).
 - `web-audit` (neu, `59f9533`; versteckt) — trifft nicht zu: kein Sitemap-/Content-Scope
   (eine SPA-Shell ohne öffentliche Content-Seiten); die visuelle Prüfung läuft über
   `ui-review`.
