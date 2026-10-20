@@ -8,8 +8,10 @@ UI-Review-Befunde 1, 2, 6, 7 und 9 sind mit Welle 6 erledigt (Details in
 `features/05-parity.md`, Abschnitt „Messenger Chat + Running Strip +
 Basic/Experte"); Befund 8 (Projektseite: Pfad + Farbe) mit Welle 7.
 Welle 7 ist umgesetzt und verifiziert (lint 0, vitest, build, e2e inkl. Mobile,
-Screenshots) — die letzte Code-Welle; danach stehen nur noch die drei offenen
-Punkte unten plus die zwei Skills-Positionen aus dem Abschnitt unten.
+Screenshots) — die letzte Code-Welle; danach stehen nur noch die **sieben** offenen
+Checkbox-Punkte unten (`grep -c '^- \[ \]' AGENTS.todo.md` → 7; bei Welle 4 und
+Welle 5 steht „erledigt" schon im Text, ihre Box ist aber nicht abgehakt) plus die
+zwei Skills-Positionen aus dem Abschnitt unten.
 
 ## Navigation (Owner-Entscheidung 2026-10-07, umgesetzt)
 
@@ -174,16 +176,23 @@ ausdrückliche Beauftragung.
 
 1. **Pfad-Filter für die CI-Workflows** (`github-ci-filters`) — die Skill will
    `paths-ignore`, damit ein reiner Doku-Commit nicht die ganze Pipeline startet.
-   Beide Workflows (`.github/workflows/ci.yml`, `.github/workflows/pages.yml`)
-   laufen heute auf **jeden** Push/PR ohne Filter; dieses Repo ist docs-lastig
-   (`features/`, `docs/`, `AGENTS*.md`). Precondition der Skill Step 1 ist am
-   2026-10-19 geprüft: **kein** Check liest eine Repo-`.md` als Input (die
-   `.md`-Treffer in `tests/` sind Mock-Fixtures, kein Consumer) — ein
+   Die Trigger der beiden Workflows sind **verschieden**: `.github/workflows/ci.yml`
+   läuft auf `push` (Branches `[main]`) **und** `pull_request` (Branches `[main]`),
+   `.github/workflows/pages.yml` dagegen nur auf `push` (Branches `[main]`) plus
+   `workflow_dispatch` — einen `pull_request`-Trigger hat der Pages-Workflow
+   **nicht** (`grep -nE '^\s*(on|push|pull_request|branches|workflow_dispatch)'
+   .github/workflows/*.yml`). Beide Workflows laufen heute ohne `paths-ignore`; dieses
+   Repo ist docs-lastig (`features/`, `docs/`, `AGENTS*.md`). Precondition der Skill
+   Step 1 ist am 2026-10-19 geprüft: **kein** Check liest eine Repo-`.md` als Input
+   (die `.md`-Treffer in `tests/` sind Mock-Fixtures, kein Consumer) — ein
    `'**/*.md'`-Filter wäre also zulässig. `main` ist **nicht** branch-protected
    (`gh api …/branches/main/protection` → `Branch not protected`), also keine
-   Pending-Check-Falle. Zu entscheiden: Filter setzen (in beiden Workflows, für
-   `push` **und** `pull_request`, `branches:`-Filter stehen lassen,
-   `.github/workflows/**` nie mitignorieren) oder bewusst ohne Filter bleiben —
+   Pending-Check-Falle. Zu entscheiden: Filter setzen — je Workflow nur die Trigger,
+   die er hat (`ci.yml`: `push` **und** `pull_request`; `pages.yml`: nur `push`, der
+   manuelle `workflow_dispatch` braucht keinen Filter), `branches:`-Filter stehen
+   lassen, `.github/workflows/**` nie mitignorieren; **keinen** `pull_request`-Trigger
+   in `pages.yml` nachziehen — das wäre eine Verhaltensänderung und gehört nach Step 4
+   der Skill in einen zweiten, getrennten Commit — oder bewusst ohne Filter bleiben,
    dann mit Begründung hier festhalten, damit die offene Position nicht
    untergeht.
 

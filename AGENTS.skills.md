@@ -31,18 +31,32 @@ in der Zeile.
 
 ## Offen aus dem Bereich `be24163..787670a`
 
-Geprüft 2026-10-19 gegen `787670a` (35 Commits im Skills-Repo). Der Working Tree des
-Skills-Repos war beim Prüfen **nicht** sauber (`update-models/SKILL.md` und
-`update-models/references/registry.md` uncommitted) — diese Änderungen sind nicht Teil
-des Ranges und stecken nicht im Marker-Stand.
+Geprüft 2026-10-19 gegen `787670a` — **33 Commits** im Skills-Repo
+(`git -C <skills-repo> rev-list --count be24163..787670a`). Der Skills-Repo stand beim
+Prüfen auf `fa2268f` (`be24163..fa2268f` = 35 Commits); die zwei Commits nach dem
+Cursor (`219171c`, `fa2268f`) sind **nicht** Teil der Range, für dieses Projekt ändert
+das nichts (`update-models` bleibt `nein`, die `ui-review`-Änderung betrifft nur eine
+Formulierung im Findings-Template). Working Tree: die früher als uncommitted genannten
+Dateien (`update-models/SKILL.md`, `update-models/references/registry.md`) waren beim
+Prüfen bereits committet (`219171c`, 2026-10-19 18:24:46 UTC — 26 Minuten **vor** dem
+Marker-Commit `4507c4a`, 18:51:08 UTC). Für `references/registry.md` ist das belegbar
+(letzte Änderung 17:46:38 UTC, also vor dem Commit; danach nie wieder geschrieben);
+für `SKILL.md` lässt der Dateizustand um 18:51 UTC nicht mehr belegen (die Datei wurde
+am 2026-10-20 erneut geschrieben). Ob der Arbeitsbaum um 18:51 UTC sauber war, ist
+damit **nicht entscheidbar** — belegt ist nur, dass die genannten Änderungen
+committet waren.
 
 **Neu im Bereich**
 
 - `security-review` (neu, `82a9abb`; versteckt, `autoinvoke: false`) — trifft nicht zu:
   die Skill setzt eine beauftragte Prüfung mit Framework-Route-Table voraus; dieses Repo
   ist eine statische PWA ohne Server-Routen (die API ist der externe Opencode-Server).
-  Die client-seitige Credential-Oberfläche (Basic-Auth-Passwort im `localStorage`)
-  liegt außerhalb des Skill-Ablaufs — bei Bedarf ein eigener Auftrag, kein Marker-Rest.
+  Die client-seitige Credential-Oberfläche liegt außerhalb des Skill-Ablaufs — bei
+  Bedarf ein eigener Auftrag, kein Marker-Rest: `localStorage` (`opencode-pwa:servers`)
+  hält **kein** Passwort, nur die Server-Metadaten (`id`/`name`/`baseUrl`/`username`
+  und die optionale `color` — `ServerConfig`, `src/lib/opencode.ts`), das Passwort liegt
+  AES-GCM-verschlüsselt in IndexedDB (`opencode-pwa-credential-vault`,
+  `src/lib/credentialVault.ts`; `features/01-architecture.md` §„Credential Vault").
 - `web-audit` (neu, `59f9533`; versteckt) — trifft nicht zu: kein Sitemap-/Content-Scope
   (eine SPA-Shell ohne öffentliche Content-Seiten); die visuelle Prüfung läuft über
   `ui-review`.
@@ -57,9 +71,10 @@ Fallstrick-Regel hier notiert, damit die Frage nicht offen bleibt)
 - `vision-agents` — entfernt in `dccdd40` (der Vision-Subagent ist weg; `ui-review`
   liest zweifelhafte Bilder jetzt selbst erneut). Das Projekt referenzierte keinen
   Vision-Subagenten — keine Nacharbeit. Die Zeile stand nie in der Tabelle.
-- `model-updater` — entfernt in `1a096ba`, mit `update-opencode-models` zu `models`
-  zusammengeführt (weiter zu `update-models`).
-- `update-opencode-models` — entfernt in `1a096ba`, mit `model-updater` zusammengeführt.
+- `model-updater` — entfernt in `1c51237`; `1a096ba` legt den Nachfolger `models` an
+  (aus beiden Skills), `fc28ea3` benennt ihn zu `update-models` um.
+- `update-opencode-models` — entfernt in `1c51237`; mit `model-updater` in `models`
+  zusammengeführt (`1a096ba`, weiter zu `update-models`).
 
 **Geändert im Bereich** (Ergebnis je Skill)
 
@@ -73,18 +88,26 @@ Fallstrick-Regel hier notiert, damit die Frage nicht offen bleibt)
 - `codegraph-project-setup` — Scope-Hinweis „nur Code-Repos" (agents-skills selbst ist
   der Gegenfall) und versteckt. Dieses Repo ist ein Code-Repo mit Index und Hook,
   Zeile bleibt `ja`.
-- `docker-test-image`, `ghcr-visibility`, `laravel`, `node-deps`, `permissions`,
+- `docker-test-image`, `ghcr-visibility`, `laravel`, `node-deps`,
   `playwright-parallel`, `react-i18n`, `tailscale-serve` — nur Beschreibung
   gekürzt bzw. Skill versteckt, keine Verhaltensänderung; Zeilen bleiben wie belegt.
   Für `node-deps` ist die Policy selbst älter als der Bereich, das Projekt weicht aber
   an zwei Stellen ab → offene Position 2.
+- `permissions` — Beschreibung gekürzt und Skill versteckt, dazu zwei echte
+  Textänderungen: der Absatz „**V2 naming:**" (V2-Array-Form, `e630b9f`) und der
+  Kommandofix `opencode2 …` → `opencode …` (`980514a`). Die Policy selbst (keine
+  exakten Pins, `last-match-wins`) ändert sich nicht, und das Projekt hat keine eigene
+  Permissions-Datei → Zeile bleibt `nein`.
 - `github-ci-filters` — nur Beschreibung gekürzt (Trigger-Kern: `push` **und**
   `pull_request`, Branch-Protection-Falle). Das Repo hat zwei Workflows ohne
   `paths-ignore`; Precondition (kein Check liest eine Repo-`.md` als Input) und
   Branch-Protection (`main` nicht geschützt) am 2026-10-19 geprüft → offene Position 1.
 - `skills-marker` — Drift-Wortlaut (Drift = geänderte Pflicht, kein Text-Diff),
-  separate Commits als Default, Template-Kürzung; die Fallstricke „ein Skill verschwindet"
-  und „Anker verrotten" sind jetzt Teil des Bereichs → Zeile bleibt `ja`.
+  separate Commits als Default (im Fallstrick „der Marker-SHA verschwindet"),
+  Template-Kürzung; die Fallstricke „ein Skill verschwindet" und „Anker verrotten"
+  sind **nicht** Teil des Bereichs — sie stehen byte-identisch schon in `be24163`
+  (`git diff be24163..787670a -- .agents/skills/skills-marker/references/notes.md`
+  ändert nur „Konventionen" und „der Marker-SHA verschwindet") → Zeile bleibt `ja`.
 - `ui-review` — Vision-Subagent entfernt (zweifelhafte Bilder selbst erneut lesen),
   `models` → `update-models` im Text. Das Harness des Projekts nutzt keinen
   Vision-Subagenten — Zeile bleibt `ja`.
@@ -107,8 +130,8 @@ keine Config-Änderung.
 
 1. `agents-skills-consumed` ablesen → `<alt>`.
 2. Im Skills-Repo die Range bilden:
-   `git -C /projects/agents-skills log --oneline <alt>..HEAD`
-   `git -C /projects/agents-skills log --name-only --format= <alt>..HEAD -- .agents/skills | sort -u`
+   `git -C <skills-repo> log --oneline <alt>..HEAD`
+   `git -C <skills-repo> log --name-only --format= <alt>..HEAD -- .agents/skills | sort -u`
 3. Jeden betroffenen Skill gegen **dieses** Projekt prüfen. Trifft eine Änderung zu, wenn
    sie eine Pflicht, Schwelle, Ausnahme, Konvention oder ein Kommando betrifft, das
    **hier** gilt:
@@ -120,7 +143,7 @@ keine Config-Änderung.
 4. Offene Positionen nach `AGENTS.todo.md`; bestehende Anker neu belegen (Zeilennummern
    veralten — Abschnitte, Suchstrings und Pfade bevorzugen).
 5. Erst wenn für **jeden** Skill aus der Range eine Zeile steht:
-   `agents-skills-consumed: $(git -C /projects/agents-skills rev-parse --short HEAD)`,
+   `agents-skills-consumed: $(git -C <skills-repo> rev-parse --short HEAD)`,
    `geprüft am:` auf heute, Tabellen- und Bereichs-Abschnitt ersetzen.
 6. Falls Regeln oder Skills betroffen waren: die eingebetteten Regeln in der
    globalen `~/.config/opencode/AGENTS.md` gegen ihre Quelle in `.agents/rules/*`
