@@ -14,8 +14,9 @@ Checkbox-Punkte unten (`git show <stand>:AGENTS.todo.md | grep -c '^- \[ \]'` �
 festschreibt; der Board wird von diesem Commit geschrieben, `git diff --stat
 c86138b..<stand> -- AGENTS.todo.md` → mit Ausgabe, ein Vorgänger-Vergleich des Boards
 trägt deshalb nicht; bei Welle 4, Welle 5 und der Baum-Verfeinerung steht „erledigt"
-schon im Text, ihre Box ist aber nicht abgehakt) plus die fünf Skills-Positionen aus
-dem Abschnitt unten.
+schon im Text, ihre Box ist aber nicht abgehakt) plus die vier offenen
+Skills-Positionen aus dem Abschnitt unten (Position 1 ist am 2026-10-21 geschlossen
+und abgehakt; die Nummern 2 bis 5 bleiben stehen).
 
 ## Navigation (Owner-Entscheidung 2026-10-07, umgesetzt)
 
@@ -172,47 +173,87 @@ Reihenfolge steht, jede Welle wird vor dem commit verifiziert (lint/test/build/e
       `features/05-parity.md` („2b — Ordnerketten komprimieren").
 
 
-## Skills-Stand (2026-10-21) — offene Positionen aus den Bereichen `be24163..787670a` und `787670a..0449b05`
+## Skills-Stand (2026-10-21) — Positionen aus den Bereichen `be24163..787670a` und `787670a..0449b05`
 
 Einträge aus dem Fortschreiben von `AGENTS.skills.md` (Stand `0449b05`). Wie
 `AGENTS.todo.md` insgesamt: **Log, kein Auftrag** — die Umsetzung braucht eine
 ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
-`be24163..787670a` und sind am 2026-10-21 nachgeprüft — gemessen am Vorgänger
-`c86138b`, seitdem unverändert (Beleg: `git diff --stat c86138b..<stand> --
-.github/workflows/ci.yml .github/workflows/pages.yml package.json pnpm-workspace.yaml`
+`be24163..787670a`: Position 1 ist am 2026-10-21 **umgesetzt und verifiziert**
+(Beauftragung des Nutzers; Nachweis in der Position selbst), Position 2 ist am
+2026-10-21 nachgeprüft — gemessen am Vorgänger `473de80`, seitdem unverändert
+(Beleg: `git diff --stat 473de80..<stand> -- package.json pnpm-workspace.yaml`
 → ohne Ausgabe; nicht neu bewertet); die Positionen 3 bis 5 sind neu aus
 `787670a..0449b05`.
 
-1. **Pfad-Filter für die CI-Workflows** (`github-ci-filters`) — die Skill will
-   `paths-ignore`, damit ein reiner Doku-Commit nicht die ganze Pipeline startet.
-   Die Trigger der beiden Workflows sind **verschieden**: `.github/workflows/ci.yml`
-   läuft auf `push` (Branches `[main]`) **und** `pull_request` (Branches `[main]`),
-   `.github/workflows/pages.yml` dagegen nur auf `push` (Branches `[main]`) plus
-   `workflow_dispatch` — einen `pull_request`-Trigger hat der Pages-Workflow
-   **nicht** (`git grep -nE '^\s*(on|push|pull_request|branches|workflow_dispatch)'
+1. [x] **Pfad-Filter für die CI-Workflows** (`github-ci-filters`) — **erledigt und
+   verifiziert**: die Skill will `paths-ignore`, damit ein reiner Doku-Commit nicht
+   die ganze Pipeline startet. Umgesetzt am 2026-10-21 (Beauftragung des Nutzers):
+   `.github/workflows/ci.yml` trägt `paths-ignore: ['**/*.md']` unter **beiden**
+   Triggern (`push` **und** `pull_request`), `.github/workflows/pages.yml` unter
+   `push` — der manuelle `workflow_dispatch` bleibt ungefiltert, und einen
+   `pull_request`-Trigger hat der Pages-Workflow **nicht** (es wurde keiner
+   erfunden; das wäre eine Verhaltensänderung und gehört nach Step 4 der Skill in
+   einen zweiten, getrennten Commit). Die `branches:`-Filter (`[main]`) stehen
+   unverändert, `paths` und `paths-ignore` stehen nie am selben Event,
+   `.github/workflows/**` ist **nicht** mitignoriert. Innerhalb der Workflows ändert
+   sich **nichts** — der Workflow-Diff besteht ausschließlich aus dem
+   `paths-ignore`--Block (`git diff -- .github/workflows/` → **6** hinzugefügte Zeilen,
+   **0** entfernte: **3**× `paths-ignore:` + **3**× `- '**/*.md'`; kein Job, kein
+   Schritt, kein Matrix-Eintrag, kein Timeout, kein `continue-on-error`, keine
+   gelockerte Lint-Regel). Die Trigger sind **verschieden**: `ci.yml` läuft auf
+   `push` (Branches `[main]`) **und** `pull_request` (Branches `[main]`),
+   `pages.yml` auf `push` (Branches `[main]`) plus `workflow_dispatch`
+   (`git grep -nE '^\s*(on|push|pull_request|branches|workflow_dispatch)'
    <stand> -- .github/workflows/*.yml`, `<stand>` = der committete Stand dieses
-   Commits). Beide Workflows laufen am committeten Stand dieses Commits ohne
-   `paths-ignore` (`git grep -n "paths-ignore" <stand> -- .github/workflows/` → 0
-   Treffer); dieses Repo ist docs-lastig (`features/`, `docs/`, `AGENTS*.md`).
-   Precondition der Skill Step 1 ist am 2026-10-21 erneut geprüft — gemessen am
-   Vorgänger `c86138b`, seitdem unverändert (Beleg: `git diff --stat
-   c86138b..<stand> -- eslint.config.js vite.config.ts playwright.config.ts
-   .github/workflows/` → ohne Ausgabe): **kein** Check liest eine Repo-`.md` als
-   Input (`eslint.config.js` lints js/ts/mjs, `vite.config.ts` setzt die
-   vitest-`include` auf `src/**/*.test.{ts,tsx}`, `playwright.config.ts` hat
-   `testDir` = `tests/e2e`;
-   die `.md`-Treffer in `tests/` sind Mock-Fixtures, kein Consumer) — ein
-   `'**/*.md'`-Filter wäre also zulässig. `main` ist **nicht** branch-protected
-   (`gh api …/branches/main/protection` → `Branch not protected`, am 2026-10-21 erneut
-   geprüft), also keine Pending-Check-Falle. Die Skill ist seit `817c01e` **versteckt**
-   (nur per exakter ID ladbar) — das ändert die Pflicht nicht. Zu entscheiden: Filter
-   setzen — je Workflow nur die Trigger, die er hat (`ci.yml`: `push` **und**
-   `pull_request`; `pages.yml`: nur `push`, der manuelle `workflow_dispatch` braucht
-   keinen Filter), `branches:`-Filter stehen lassen, `.github/workflows/**` nie
-   mitignorieren; **keinen** `pull_request`-Trigger in `pages.yml` nachziehen — das
-   wäre eine Verhaltensänderung und gehört nach Step 4 der Skill in einen zweiten,
-   getrennten Commit — oder bewusst ohne Filter bleiben, dann mit Begründung hier
-   festhalten, damit die offene Position nicht untergeht.
+   Commits); dieses Repo ist docs-lastig (`features/`, `docs/`, `AGENTS*.md`).
+   Precondition der Skill (Step 1) ist am 2026-10-21 erneut geprüft, diesmal mit
+   der **klassifizierten** Sweep-Ausgabe: der repo-weite Sweep mit **quotierten**
+   `--include`-Globs liefert am Vorgänger `473de80` **21** Treffer in **10** versionierten
+   Dateien (im Arbeitsbaum **22**, der 22. ist das nicht versionierte Build-Artefakt
+   unter `dist/assets/`), der zweite Sweep über die Prüfverzeichnisse
+   (`grep -rn "AGENTS\|\.md\|docs/" tests scripts .github`) liefert **15** Treffer in
+   **7** Dateien, davon **5** neue — zusammen **26** Fundstellen in **13** Dateien.
+   **Kein** Treffer öffnet eine Repo-`.md` als Eingabe: `src/lib/promptAttachments.ts:66`
+   ist eine **Dateiendungs**-Liste (`.md` neben `.txt`, `.pdf` … für den Datei-Picker),
+   `src/lib/diffView.test.ts:212` prüft `splitDiffPath("README.md")` (reine
+   String-Logik), `src/lib/sessionMessages.test.ts:54/57` nennen `"notizen.md"` in
+   einer Mock-Nachricht, `src/lib/opencode.test.ts:484/490/496/498` und
+   `src/components/ServerFolderPicker.test.tsx:27/71` sind Mock-Datei-Einträge,
+   `src/lib/promptAttachments.test.ts:156` ist ein Mock-Pfad,
+   `tests/screenshots/mockFixtures.ts:261/533` sind Mock-Fixtures (`docs/diff-notes.md`,
+   `README.md`), `tests/e2e/w6-vault-tools.spec.ts:147`,
+   `tests/e2e/w21-project-tree-picker.spec.ts:104/355` (Mock-Datei plus daraus
+   gebildeter Test-Id) und `tests/e2e/w18-diff-render.spec.ts:71/73/74/102/255`
+   (Patch-Fixture mit dem **Namen** „README.md") nennen nur Namen; der zweite Sweep
+   zusätzlich `scripts/check-i18n.mjs:6` (Kommentar „AGENTS.todo W3" — das Skript liest
+   `locale/de/messages.po` und `messages.js`), `tests/e2e/w19-docks-lists-tabs.spec.ts:18`
+   (Kommentar `features/05-parity.md`) sowie `tests/screenshots/mockFixtures.ts:307`
+   und `tests/screenshots/ui-screenshots.spec.ts:24/182` (Bezeichner
+   `AGENTS_SESSION_ROWS`) — alles **Nennungen**, keine Eingabe. Der Build liest keine
+   Repo-`.md` (`public/` ohne `.md`; `vite.config.ts` ohne `copy`/`staticCopy`;
+   Workbox-`globPatterns` ohne `.md`; `import.meta.glob` → **0** Treffer in `src/`;
+   `pnpm build` = `tsc -b && vite build` mit `prebuild` = `scripts/check-i18n.mjs`).
+   **Die Liste der Dateien, die nicht ignoriert werden darf, ist damit leer** — das
+   Muster ist genau `'**/*.md'`, es deckt alle **11** versionierten `.md` ab (4 in der
+   Repo-Wurzel: `AGENTS.md`, `AGENTS.skills.md`, `AGENTS.todo.md`, `README.md`; 7 in der
+   Tiefe: `docs/manual-device-test.md` und `features/01…06-*.md`). `main`
+   ist **nicht** branch-protected (`gh api
+   repos/all-the-rest/opencode-pwa/branches/main/protection` → HTTP **404** „Branch not
+   protected", am 2026-10-21 erneut geprüft) → keine Ausnahme zu dokumentieren, keine
+   Pending-Check-Falle. Verifikation ohne Push (Skill Step 5): Doku-Commit `59e9925`
+   (`git diff --name-only 59e9925^ 59e9925` → `AGENTS.todo.md`,
+   `docs/manual-device-test.md`) → **beide** Pfade werden ignoriert; Code-Commit
+   `10c93c1` (`git diff --name-only 10c93c1^ 10c93c1` → **15** Pfade) → **13** davon
+   passen auf **kein** Muster (`src/**`, `tests/**`), die Pipeline läuft also weiter;
+   die Drei-Punkt-Form (PR-Semantik) liefert dieselben Pfadlisten, die
+   Umbenennungs-Formen (`-M` und `--no-renames`) ebenfalls. Upstream-Anmerkung:
+   Pfadfilter werden bei **Tag**-Pushes nicht ausgewertet — ein Doku-Tag-Push startet
+   die Pipeline weiter; das ist Upstream-Verhalten, kein Fehler des Filters, und es
+   wird nicht umgangen. Beleg des Laufs: dieser Commit ändert Workflow-Dateien, wird
+   also **nicht** ignoriert und löst **beide** Pipelines aus (CI und Pages) — ohne
+   Lauf wäre der Filter syntaktisch fehlerhaft oder würde die Workflow-Dateien
+   selbst ignorieren (`gh run list --commit <stand>`). Die Skill ist seit `817c01e`
+   **versteckt** (nur per exakter ID ladbar) — das ändert die Pflicht nicht.
 
 2. **`node-deps`-Policy: `packageManager`-Pin und `minimumReleaseAgeExclude`**
    (`node-deps`) — die Skill verbietet beides: keine exakten Pins im Manifest
@@ -225,8 +266,8 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
    gewinnt `packageManager`) — die Skill will es umgekehrt (Major-Linie
    `version: 11` im Workflow, kein Pin im Manifest). Die Abhängigkeiten selbst
    sind bereits ranges-only (`^`/`~` in `package.json`) — offen sind nur die
-   beiden Pin-Formen. Am 2026-10-21 nachgeprüft — gemessen am Vorgänger `c86138b`,
-   seitdem unverändert (Beleg: `git diff --stat c86138b..<stand> -- package.json
+   beiden Pin-Formen. Am 2026-10-21 nachgeprüft — gemessen am Vorgänger `473de80`,
+   seitdem unverändert (Beleg: `git diff --stat 473de80..<stand> -- package.json
    pnpm-workspace.yaml` → ohne Ausgabe; die Skill selbst ist in `787670a..0449b05`
    nicht geändert).
    Zu entscheiden: auf die Skill-Form umstellen (mit

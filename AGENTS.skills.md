@@ -20,7 +20,7 @@ ohne Ausgabe = unverändert.
 | `docker-test-image` | nein | | trifft nicht zu, weil das Repo kein CI-Image baut (kein Dockerfile; die Workflows bauen direkt auf `ubuntu-latest`) |
 | `generated-docs` | offen | `README.md` (Endpunkt-Tabelle), `AGENTS.todo.md` (Zahlen im Fließtext), `features/05-parity.md` (Messwerte im Fließtext) — ohne Drift-Gate | `AGENTS.todo.md` → Abschnitt „Skills-Stand (2026-10-21)", Position 3 |
 | `ghcr-visibility` | nein | | trifft nicht zu, weil das Repo keine Container-Images publiziert (kein GHCR-Paket; Deploy läuft über GitHub Pages) |
-| `github-ci-filters` | offen | `.github/workflows/ci.yml`, `.github/workflows/pages.yml` (Trigger ohne `paths-ignore`) | `AGENTS.todo.md` → Abschnitt „Skills-Stand (2026-10-21)", Position 1 |
+| `github-ci-filters` | ja | `.github/workflows/ci.yml` (`push` **und** `pull_request`, je `paths-ignore: ['**/*.md']`), `.github/workflows/pages.yml` (`push`, `paths-ignore: ['**/*.md']`) | |
 | `laravel` | nein | | trifft nicht zu, weil das Projekt kein PHP-Backend hat (statische PWA ohne Server-Routen) |
 | `node-deps` | offen | `package.json` (`packageManager: pnpm@10.0.0`), `pnpm-workspace.yaml` (`minimumReleaseAgeExclude`) | `AGENTS.todo.md` → Abschnitt „Skills-Stand (2026-10-21)", Position 2 |
 | `permissions` | nein | | trifft nicht zu, weil die Skill die `opencode.jsonc`-Permissions der Maschine beschreibt; das Projekt hat keine eigene Permissions-Datei |
@@ -124,21 +124,29 @@ heißt „nicht normal ladbar", nicht „unwirksam" — per exakter ID ladbar)
   unverändert (`git grep -n "opencode-go/" c86138b -- src/` → 0 Treffer; Beleg:
   `git diff --stat c86138b..<stand> -- src/` → ohne Ausgabe). Zeile
   bleibt `nein`, Grund neu begründet.
-- `github-ci-filters` (versteckt in `817c01e`) — **trifft zu, ist nicht drin**: das
+- `github-ci-filters` (versteckt in `817c01e`) — **trifft zu, ist jetzt drin**: das
   Verstecken ändert die Pflicht nicht — die Skill ist per exakter ID ladbar, und die
-  Pflicht trifft dieses Repo weiter zu. Die beiden Workflows laufen ohne
-  `paths-ignore` — gemessen am Vorgänger `c86138b`, seitdem unverändert (Trigger:
-  `ci.yml` = `push` **und** `pull_request`, `pages.yml` = `push` **und**
-  `workflow_dispatch`; `pages.yml` hat **keinen** `pull_request`-Trigger;
-  `git grep -n "paths-ignore" c86138b -- .github/workflows/` → 0 Treffer; Beleg:
-  `git diff --stat c86138b..<stand> -- .github/workflows/ci.yml
-  .github/workflows/pages.yml` → ohne Ausgabe) —, das Repo ist docs-lastig
-  (`features/`, `docs/`, `AGENTS*.md`). Die Precondition hält am 2026-10-21 erneut:
-  kein Check liest eine Repo-`.md` als Input (`eslint.config.js` lints js/ts/mjs,
-  `vite.config.ts` vitest-`include` = `src/**/*.test.{ts,tsx}`, `playwright.config.ts`
-  `testDir` = `tests/e2e`); `main` ist nicht branch-protected (`gh api
-  repos/:owner/:repo/branches/main/protection` → „Branch not protected"). Zeile bleibt
-  `offen` → offene Position 1.
+  Pflicht trifft dieses Repo weiter zu. Die beiden Workflows tragen jetzt
+  `paths-ignore` — `ci.yml` unter **beiden** Triggern (`push` **und**
+  `pull_request`), `pages.yml` unter `push` (`workflow_dispatch` bleibt ungefiltert;
+  `pages.yml` hat **keinen** `pull_request`-Trigger, es wurde keiner erfunden); der
+  `branches:`-Filter (`[main]`) ist unverändert. Der Vorzustand ist am Vorgänger
+  `473de80` gemessen (`git grep -n "paths-ignore" 473de80 -- .github/workflows/` → 0
+  Treffer); **dieser** Commit schreibt die beiden Workflow-Dateien, ein
+  Vorgänger-Vergleich trägt für sie deshalb nicht (`git diff --stat
+  473de80..<stand> -- .github/workflows/ci.yml .github/workflows/pages.yml` → **mit
+  Ausgabe`). Das Repo ist docs-lastig (`features/`, `docs/`, `AGENTS*.md`). Die
+  Precondition der Skill (Step 1) hält am 2026-10-21 erneut: kein Check liest eine
+  Repo-`.md` als Input (`eslint.config.js` lints js/ts/mjs, `vite.config.ts`
+  vitest-`include` = `src/**/*.test.{ts,tsx}`, `playwright.config.ts` `testDir` =
+  `tests/e2e`; die `.md`-Nennungen in `tests/` und `src/` sind Mock-Fixtures und
+  Dateiendungs-Listen, keine Eingabe) — gemessen am Vorgänger `473de80`, seitdem
+  unverändert (`git diff --stat 473de80..<stand> -- eslint.config.js
+  vite.config.ts playwright.config.ts` → ohne Ausgabe); `main` ist nicht
+  branch-protected (`gh api repos/:owner/:repo/branches/main/protection` → „Branch not
+  protected"). Zeile wird
+  `ja`; die offene Position 1 ist geschlossen (`AGENTS.todo.md` → Abschnitt
+  „Skills-Stand (2026-10-21)").
 
 **Geändert im Bereich** (Ergebnis je Skill)
 
@@ -195,11 +203,15 @@ gelisteten Fremdartefakte — `AGENTS.md`, `.codegraph/`, `.githooks/pre-commit`
 `tests/screenshots/ui-screenshots.spec.ts`, `playwright.screenshots.config.ts`,
 `features/06-remote-access.md`, `package.json`, `pnpm-workspace.yaml` (17
 Pfadnennungen, 16 verschiedene Pfade — `scripts/check-i18n.mjs` steht zweimal: als
-Verweis ohne Ziel und als tragender Anker) — sind zwischen `c86138b` und diesem
-Commit unverändert (Beleg je Pfad: `git diff --stat c86138b..<stand> -- <pfad>` →
-ohne Ausgabe); der Board `AGENTS.todo.md` ist in **fünf** Tabellenzeilen als Anker
-geprüft und wird von diesem Commit geschrieben (`git diff --stat c86138b..<stand>
--- AGENTS.todo.md` → mit Ausgabe). Ergebnis: **1 Verweis ohne Ziel** —
+Verweis ohne Ziel und als tragender Anker) — sind zwischen `473de80` und diesem
+Commit unverändert (Beleg je Pfad: `git diff --stat 473de80..<stand> -- <pfad>` →
+ohne Ausgabe); der Board `AGENTS.todo.md` ist in **vier** Tabellenzeilen als Anker
+geprüft und wird von diesem Commit geschrieben (`git diff --stat 473de80..<stand>
+-- AGENTS.todo.md` → mit Ausgabe); die beiden Workflow-Dateien
+`.github/workflows/ci.yml` und `.github/workflows/pages.yml` sind jetzt der tragende
+Anker der Zeile `github-ci-filters` — sie werden von diesem Commit geschrieben
+(`git diff --stat 473de80..<stand> -- .github/workflows/ci.yml
+.github/workflows/pages.yml` → mit Ausgabe). Ergebnis: **1 Verweis ohne Ziel** —
 `scripts/check-i18n.mjs:6` verweist auf „AGENTS.todo W3"; einen Eintrag W3 gibt es
 nicht: im Todo vor dem Fortschreiben, das den Cursor auf `0449b05` gesetzt hat, kommt
 die Zeichenfolge nicht vor — gemessen an `c737d17`
