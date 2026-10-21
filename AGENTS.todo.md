@@ -1,8 +1,8 @@
 # AGENTS.todo.md
 
 Stand: 2026-10-21 (Welle 6 + Welle 7 eingetragen; Skills-Stand aus dem Bereich
-`787670a..0449b05` eingetragen). Nur offene TODOs (veraltete
-Einträge bereinigt: Parität-Batches, Deep-Link-Paste, Prozess-Regel und
+`787670a..0449b05` und aus dem Bereich `0449b05..4205142` eingetragen). Nur offene
+TODOs (veraltete Einträge bereinigt: Parität-Batches, Deep-Link-Paste, Prozess-Regel und
 Userscripts-Verdikt sind umgesetzt/dokumentiert).
 UI-Review-Befunde 1, 2, 6, 7 und 9 sind mit Welle 6 erledigt (Details in
 `features/05-parity.md`, Abschnitt „Messenger Chat + Running Strip +
@@ -87,9 +87,12 @@ im Cache — ein Reload mitten im Lauf zeigt keinen halb gestreamten Stand.
    `/projects/*`) bleiben flach — die Wurzel doppelt sich nur. Projekte ohne
    kanonischen Pfad bleiben flache Zeilen unter dem Baum (`unpathed`).
 2. **Neues Projekt = Session im Ordner.** Die Client-Library hat keinen
-   Projekt-Create-Endpoint (nur `list`/`update`, `client.d.ts:147-149`), also
+   Projekt-Create-Endpoint — der Client `@opencode/client@2.0.23` (Version im
+   Lockfile, `pnpm-lock.yaml`) kennt unter `project` genau `list` und `update` —,
+   also
    legt der Server-Ordner-Picker eine Session mit
-   `location: { directory }` an (`SessionCreateInput`, `types.d.ts:3767+`) —
+   `location: { directory }` an (`SessionCreateInput` — Typ des Servers, nicht in
+   diesem Repo) —
    so entsteht ein Projekt auch im Original. Nicht offline verifizierbar: ob ein
    Server für ein fabrikneues Verzeichnis einen Projekt-Eintrag anlegt; das ist
    Server-Verhalten, das E2E mockt es.
@@ -182,9 +185,9 @@ Reihenfolge steht, jede Welle wird vor dem commit verifiziert (lint/test/build/e
       `features/05-parity.md` („2b — Ordnerketten komprimieren").
 
 
-## Skills-Stand (2026-10-21) — Positionen aus den Bereichen `be24163..787670a` und `787670a..0449b05`
+## Skills-Stand (2026-10-21) — Positionen aus den Bereichen `be24163..787670a`, `787670a..0449b05` und `0449b05..4205142`
 
-Einträge aus dem Fortschreiben von `AGENTS.skills.md` (Stand `0449b05`). Wie
+Einträge aus dem Fortschreiben von `AGENTS.skills.md` (Stand `4205142`). Wie
 `AGENTS.todo.md` insgesamt: **Log, kein Auftrag** — die Umsetzung braucht eine
 ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
 `be24163..787670a`: Position 1 ist am 2026-10-21 **umgesetzt und verifiziert**
@@ -192,7 +195,11 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
 2026-10-21 nachgeprüft — gemessen am Vorgänger `473de80`, seitdem unverändert
 (Beleg: `git diff --stat 473de80..<stand> -- package.json pnpm-workspace.yaml`
 → ohne Ausgabe; nicht neu bewertet); die Positionen 3 bis 5 sind neu aus
-`787670a..0449b05`.
+`787670a..0449b05`. Der Bereich `0449b05..4205142` bringt **keine neue Position**:
+seine drei Skills sind bereits erfasst — `github-ci-filters` in Position 1,
+`ratchet-gates` in Position 4, `skills-marker` (die Regel selbst) ohne Position.
+Die Belege der Positionen 1, 4 und 5 sind am 2026-10-21 neu gemessen (Stand, Rahmen
+und Anker: `AGENTS.skills.md`, Abschnitt „Offen aus dem Bereich `0449b05..4205142`").
 
 1. [x] **Pfad-Filter für die CI-Workflows** (`github-ci-filters`) — **erledigt und
    verifiziert**: die Skill will `paths-ignore`, damit ein reiner Doku-Commit nicht
@@ -203,7 +210,9 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
    `pull_request`-Trigger hat der Pages-Workflow **nicht** (es wurde keiner
    erfunden; das wäre eine Verhaltensänderung und gehört nach Step 4 der Skill in
    einen zweiten, getrennten Commit). Die `branches:`-Filter (`[main]`) stehen
-   unverändert, `paths` und `paths-ignore` stehen nie am selben Event,
+   unverändert, `paths` und `paths-ignore` stehen nie am selben Event (das Repo hat
+   **keinen** `paths:`-Block — `git grep -n "paths:" 2f32095 -- .github/workflows/` →
+   **0** Treffer; gemessen am Vorgänger `2f32095`, seitdem unverändert),
    `.github/workflows/**` ist **nicht** mitignoriert. Innerhalb der Workflows ändert
    sich **nichts** — der Workflow-Diff besteht ausschließlich aus dem
    `paths-ignore`--Block (Zustand: der Vorgänger `473de80` und der die Workflows
@@ -231,10 +240,16 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
    ausgepackten Baum). Der repo-weite Sweep mit **quotierten** `--include`-Globs —
    `grep -rn --include='*.ts' --include='*.tsx' '\.md"' .`, also repo-weit ab der
    Repo-Wurzel mit den Globs `*.ts` und `*.tsx` — liefert **21** Treffer in **10**
-   versionierten Dateien. Der zweite Sweep über die Prüfverzeichnisse
+   versionierten Dateien. Der zweite Sweep über die Prüfverzeichnisse ist nach der
+   **neuen** Regel der Skill in **jedem** Prüfverzeichnis zu fahren, und dieses Repo
+   hat **zwei**: `tests scripts .github` und `src/` (vitest:
+   `include: ["src/**/*.test.{ts,tsx}]`, `vite.config.ts`) — der Sweep
+   `grep -rn "AGENTS\|\.md\|docs/" tests scripts .github src` liefert **38** Treffer in
+   **20** Dateien; der repo-weite Sweep ist eine **Teilmenge** davon (alle **10**
+   Dateien des ersten Sweeps sind darin enthalten), die Vereinigung ist also
+   **38** Fundstellen in **20** Dateien. Zum Vergleich: der Sweep **ohne** `src/`
    (`grep -rn "AGENTS\|\.md\|docs/" tests scripts .github`) liefert **18** Treffer in
-   **9** Dateien, davon **8** neue (Fundstellen, die der erste Sweep nicht
-   mitzählt) — zusammen **29** Fundstellen in **15** Dateien. Dazu eine
+   **9** Dateien. Dazu eine
    **nicht rekonstruierbare** Arbeitsbaum-Messung vom 2026-10-21: dasselbe
    Sweep-1-Kommando im Arbeitsbaum → **21**/**10**; sie ist später nicht
    nachprüfbar, weil der Arbeitsbaum `node_modules/` und ein unversioniertes
@@ -260,7 +275,16 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
    und `tests/screenshots/ui-screenshots.spec.ts:24/182` (Bezeichner
    `AGENTS_SESSION_ROWS`) sowie `.github/workflows/ci.yml:7/11` und
    `.github/workflows/pages.yml:7` (die `paths-ignore`-Muster `'**/*.md'`) — alles
-   **Nennungen**, keine Eingabe. Der Build liest keine
+   **Nennungen**, keine Eingabe. Die Treffer in `src/` sind Kommentare
+   (`src/components/ConfigCard.tsx:22`, `src/components/IntegrationsCard.tsx:54`,
+   `src/components/SessionDocks.tsx:25/210`, `src/lib/opencode.ts:1582/2711`,
+   `src/pages/SessionDetail.tsx:785/1196` — sie nennen `features/05-parity.md` bzw.
+   `features/02-api-contract.md`), die **Dateiendungs**-Liste
+   `src/lib/promptAttachments.ts:66/67` (`.md`, `.mdx` neben `.txt`, `.pdf` … für den
+   Datei-Picker) und Mock-Datei-Einträge (`src/lib/opencode.test.ts:484/490/496/498`,
+   `src/components/ServerFolderPicker.test.tsx:27/71`,
+   `src/lib/promptAttachments.test.ts:156`, `src/lib/sessionMessages.test.ts:54/57`,
+   `src/lib/diffView.test.ts:212`) — **Nennungen**, keine Eingabe. Der Build liest keine
    Repo-`.md` (`public/` ohne `.md`; `vite.config.ts` ohne `copy`/`staticCopy`;
    Workbox-`globPatterns` ohne `.md`; `import.meta.glob` → **0** Treffer in `src/`;
    `pnpm build` = `tsc -b && vite build` mit `prebuild` = `scripts/check-i18n.mjs`).
@@ -341,17 +365,17 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
      Kopfkommentar („no AST scan for unwrapped strings"). Der Verweis dahinter
      (wörtlich „AGENTS.todo W3“) zeigt auf einen Eintrag, den es nicht mehr gibt —
      im Todo vor dem Fortschreiben, das den Cursor auf `0449b05` gesetzt hat, kommt
-     die Zeichenfolge nicht vor — gemessen an `c737d17`
+     die Zeichenfolge nicht vor — gemessen am Stand `c737d17`
      (`git show c737d17:AGENTS.todo.md | grep -c "W3"` → 0; derselbe Wert 0 an den
      weiteren Vor-Ständen `1f73917`, `4507c4a`, `73c032f`) —. **Kein Eintrag W3**:
      im Bereich `c737d17..ddd15a4` trägt `AGENTS.todo.md` höchstens **zwei Zeilen**
      mit **zwei Vorkommen** — das Zitat desselben Zeigers und das Messkommando
-     selbst (am Endstand `ddd15a4`: `git show ddd15a4:AGENTS.todo.md | grep -n "W3"`
+     selbst (gemessen am Stand `ddd15a4`: `git show ddd15a4:AGENTS.todo.md | grep -n "W3"`
      → Zeilen 257 und 260; als Vorkommenszählung `git show ddd15a4:AGENTS.todo.md |
      grep -o "W3" | wc -l` → **2**) — und `AGENTS.skills.md` höchstens **drei Zeilen**
      mit **vier Vorkommen**: **zwei Zitate** des Zeigers (Zeilen 87 und 173), eine
      **Nennung** des Labels (Zeile 173: „Eintrag W3") und **das Messkommando** (Zeile
-     176) (am Endstand `ddd15a4`: `git show ddd15a4:AGENTS.skills.md | grep -n "W3"`
+     176) (gemessen am Stand `ddd15a4`: `git show ddd15a4:AGENTS.skills.md | grep -n "W3"`
      → Zeilen 87, 173 und 176; als Vorkommenszählung
      `git show ddd15a4:AGENTS.skills.md | grep -o "W3" | wc -l` → **4**); ein Eintrag
      mit W3 existiert nicht
@@ -405,11 +429,12 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
    mit `medium` = „mit Workaround") aus `ratchet-gates`
    (`references/vocabulary.md`) und der Status als **eigenes** Feld — nie in der
    Schwere-Spalte. Das Harness ist hier angewendet; die Findings-Liste ist es nicht:
-   `AGENTS.todo.md` §„UI-Review-Befunde" (10 Zeilen — gemessen am Vorgänger
-   `c86138b`, seitdem unverändert: `git show c86138b:AGENTS.todo.md | grep -cE
+   `AGENTS.todo.md` §„UI-Review-Befunde" (10 Zeilen — gemessen am Stand
+   `c86138b`: `git show c86138b:AGENTS.todo.md | grep -cE
    '^\| [0-9]+ \|'` → **10**, `git show c86138b:AGENTS.todo.md | grep -cE
    '^\| [0-9]+ \|.*erledigt'` → **6**; am committeten Stand dieses Commits dieselben
-   Werte, die Tabelle hat dieser Commit nicht geändert) verwendet
+   Werte, die Tabelle hat dieser Commit nicht geändert — der Board wird von diesem
+   Commit geschrieben, „seitdem unverändert" trägt für die Datei deshalb nicht) verwendet
    `hoch`/`mittel`/`niedrig`, führt den Status mit im Behebungs-Text statt in einer
    eigenen Spalte (6 der 10 Zeilen tragen „erledigt"
    in der Behebungs-Spalte; die Zeilen 3–5 sind über die Welle 5 geschlossen, ohne
@@ -429,7 +454,8 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
 
 - PTY: Text-Ansicht via `terminal/read` (Entscheidung in `features/05-parity.md`).
 - **Todo-Dock**: Der installierte Client kennt keine Todo-API (kein `todo`-Symbol in
-  `generated/types.d.ts`) — das Dock rendert deshalb nichts. Erweiterungspunkt in
+  den generierten Typen des Clients — `generated/types.d.ts` liegt nicht in diesem
+  Repo) — das Dock rendert deshalb nichts. Erweiterungspunkt in
   `src/components/SessionDocks.tsx` (`TodoDock`) + `{ type: "todos" }` in
   `src/lib/dockStack.ts`; es genügt ein List-Endpoint auf dem Server.
 - **Permission `decision: "always"`**: dokumentierte Produktentscheidung
