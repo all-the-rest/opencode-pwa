@@ -9,11 +9,13 @@ UI-Review-Befunde 1, 2, 6, 7 und 9 sind mit Welle 6 erledigt (Details in
 Basic/Experte"); Befund 8 (Projektseite: Pfad + Farbe) mit Welle 7.
 Welle 7 ist umgesetzt und verifiziert (lint 0, vitest, build, e2e inkl. Mobile,
 Screenshots) — die letzte Code-Welle; danach stehen nur noch die **sieben** offenen
-Checkbox-Punkte unten (`grep -c '^- \[ \]' AGENTS.todo.md` → 7, gemessen am
-committeten Stand dieses Commits — Datei-Stand, den dieser Commit festschreibt;
-dieselbe Zählung im Vorgänger `45cb323`: 7; bei Welle 4, Welle 5 und der
-Baum-Verfeinerung steht „erledigt" schon im Text, ihre Box ist aber nicht
-abgehakt) plus die fünf Skills-Positionen aus dem Abschnitt unten.
+Checkbox-Punkte unten (`git show <stand>:AGENTS.todo.md | grep -c '^- \[ \]'` → 7;
+`<stand>` = der committete Stand dieses Commits — Datei-Stand, den dieser Commit
+festschreibt; der Board wird von diesem Commit geschrieben, `git diff --stat
+c86138b..<stand> -- AGENTS.todo.md` → mit Ausgabe, ein Vorgänger-Vergleich des Boards
+trägt deshalb nicht; bei Welle 4, Welle 5 und der Baum-Verfeinerung steht „erledigt"
+schon im Text, ihre Box ist aber nicht abgehakt) plus die fünf Skills-Positionen aus
+dem Abschnitt unten.
 
 ## Navigation (Owner-Entscheidung 2026-10-07, umgesetzt)
 
@@ -175,8 +177,10 @@ Reihenfolge steht, jede Welle wird vor dem commit verifiziert (lint/test/build/e
 Einträge aus dem Fortschreiben von `AGENTS.skills.md` (Stand `0449b05`). Wie
 `AGENTS.todo.md` insgesamt: **Log, kein Auftrag** — die Umsetzung braucht eine
 ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
-`be24163..787670a` und sind am 2026-10-21 am committeten Stand dieses Commits
-nachgeprüft (nicht neu bewertet); die Positionen 3 bis 5 sind neu aus
+`be24163..787670a` und sind am 2026-10-21 nachgeprüft — gemessen am Vorgänger
+`c86138b`, seitdem unverändert (Beleg: `git diff --stat c86138b..<stand> --
+.github/workflows/ci.yml .github/workflows/pages.yml package.json pnpm-workspace.yaml`
+→ ohne Ausgabe; nicht neu bewertet); die Positionen 3 bis 5 sind neu aus
 `787670a..0449b05`.
 
 1. **Pfad-Filter für die CI-Workflows** (`github-ci-filters`) — die Skill will
@@ -185,13 +189,18 @@ nachgeprüft (nicht neu bewertet); die Positionen 3 bis 5 sind neu aus
    läuft auf `push` (Branches `[main]`) **und** `pull_request` (Branches `[main]`),
    `.github/workflows/pages.yml` dagegen nur auf `push` (Branches `[main]`) plus
    `workflow_dispatch` — einen `pull_request`-Trigger hat der Pages-Workflow
-   **nicht** (`grep -nE '^\s*(on|push|pull_request|branches|workflow_dispatch)'
-   .github/workflows/*.yml`). Beide Workflows laufen heute ohne `paths-ignore`; dieses
-   Repo ist docs-lastig (`features/`, `docs/`, `AGENTS*.md`). Precondition der Skill
-   Step 1 ist am 2026-10-21 erneut geprüft (am committeten Stand dieses Commits,
-   unverändert gegenüber `45cb323`): **kein** Check liest eine Repo-`.md` als Input
-   (`eslint.config.js` lints js/ts/mjs, `vite.config.ts` setzt die vitest-`include`
-   auf `src/**/*.test.{ts,tsx}`, `playwright.config.ts` hat `testDir` = `tests/e2e`;
+   **nicht** (`git grep -nE '^\s*(on|push|pull_request|branches|workflow_dispatch)'
+   <stand> -- .github/workflows/*.yml`, `<stand>` = der committete Stand dieses
+   Commits). Beide Workflows laufen am committeten Stand dieses Commits ohne
+   `paths-ignore` (`git grep -n "paths-ignore" <stand> -- .github/workflows/` → 0
+   Treffer); dieses Repo ist docs-lastig (`features/`, `docs/`, `AGENTS*.md`).
+   Precondition der Skill Step 1 ist am 2026-10-21 erneut geprüft — gemessen am
+   Vorgänger `c86138b`, seitdem unverändert (Beleg: `git diff --stat
+   c86138b..<stand> -- eslint.config.js vite.config.ts playwright.config.ts
+   .github/workflows/` → ohne Ausgabe): **kein** Check liest eine Repo-`.md` als
+   Input (`eslint.config.js` lints js/ts/mjs, `vite.config.ts` setzt die
+   vitest-`include` auf `src/**/*.test.{ts,tsx}`, `playwright.config.ts` hat
+   `testDir` = `tests/e2e`;
    die `.md`-Treffer in `tests/` sind Mock-Fixtures, kein Consumer) — ein
    `'**/*.md'`-Filter wäre also zulässig. `main` ist **nicht** branch-protected
    (`gh api …/branches/main/protection` → `Branch not protected`, am 2026-10-21 erneut
@@ -216,9 +225,10 @@ nachgeprüft (nicht neu bewertet); die Positionen 3 bis 5 sind neu aus
    gewinnt `packageManager`) — die Skill will es umgekehrt (Major-Linie
    `version: 11` im Workflow, kein Pin im Manifest). Die Abhängigkeiten selbst
    sind bereits ranges-only (`^`/`~` in `package.json`) — offen sind nur die
-   beiden Pin-Formen. Am 2026-10-21 am committeten Stand dieses Commits
-   nachgeprüft: beide Formen sind unverändert (die Skill selbst ist in
-   `787670a..0449b05` nicht geändert).
+   beiden Pin-Formen. Am 2026-10-21 nachgeprüft — gemessen am Vorgänger `c86138b`,
+   seitdem unverändert (Beleg: `git diff --stat c86138b..<stand> -- package.json
+   pnpm-workspace.yaml` → ohne Ausgabe; die Skill selbst ist in `787670a..0449b05`
+   nicht geändert).
    Zu entscheiden: auf die Skill-Form umstellen (mit
    `pnpm install --frozen-lockfile` + Build-Gate geprüft) oder die
    Abweichung als bewusste Projektentscheidung hier festhalten.
@@ -258,8 +268,19 @@ nachgeprüft (nicht neu bewertet); die Positionen 3 bis 5 sind neu aus
      im Todo vor dem Fortschreiben, das den Cursor auf `0449b05` gesetzt hat, kommt
      die Zeichenfolge nicht vor — gemessen an `c737d17`
      (`git show c737d17:AGENTS.todo.md | grep -c "W3"` → 0; derselbe Wert 0 an den
-     weiteren Vor-Ständen `1f73917`, `4507c4a`, `73c032f`) —; die Fundstelle hier
-     zitiert den Zeiger, sie löst ihn nicht auf. Entweder wird die Blindstelle dort
+     weiteren Vor-Ständen `1f73917`, `4507c4a`, `73c032f`) —. **Kein Eintrag W3**:
+     im Bereich `c737d17..ddd15a4` trägt `AGENTS.todo.md` höchstens **zwei**
+     Fundstellen — das Zitat desselben Zeigers und das Messkommando selbst (am
+     Endstand `ddd15a4`: `git show ddd15a4:AGENTS.todo.md | grep -n "W3"` → Zeilen 257
+     und 260) — und `AGENTS.skills.md` höchstens **drei** (drei Zitate desselben
+     Zeigers; am Endstand `ddd15a4`: `git show ddd15a4:AGENTS.skills.md | grep -n
+     "W3"` → Zeilen 87, 173 und 176); ein Eintrag mit W3 existiert nicht
+     (`git show ddd15a4:AGENTS.todo.md | grep -cE '^- \[.\].*W3'` → 0; derselbe Wert 0
+     an `c86138b` und `45cb323`). Repo-weit trägt der Stand `ddd15a4` **19** Treffer
+     in **4** Dateien (`git grep -n "W3" ddd15a4`): die 5 in den beiden
+     Marker-Dateien, den vorbestehenden in `scripts/check-i18n.mjs:6` und **13**
+     Base64-Zufallstreffer in `pnpm-lock.yaml`. Die Fundstellen zitieren den Zeiger,
+     sie lösen ihn nicht auf. Entweder wird die Blindstelle dort
      benannt (mit Owner und Ticket) oder der Verweis auf einen existierenden
      Eintrag gezogen.
    - `AGENTS.todo.md` §„Bewusst offen/dokumentiert (kein Handlungsbedarf)" — 6
@@ -271,8 +292,11 @@ nachgeprüft (nicht neu bewertet); die Positionen 3 bis 5 sind neu aus
      Todo-Dock-Eintrag. Die kanonische Regel: ein Eintrag, der nicht `fixed` ist,
      braucht Id, Owner und Ticket.
    - Die Prüfstufen existieren (`AGENTS.md`: `@smoke`/`@regression`/`@feature`;
-     `pnpm test:e2e:smoke` = **1** Test am committeten Stand dieses Commits), aber
-     welche Fehlerklassen nur die langsame Stufe abdeckt und welche gar keine, ist
+     `pnpm test:e2e:smoke` = **1** Test — gemessen am Vorgänger `c86138b`, seitdem
+     unverändert: `git grep -n "@smoke" c86138b -- tests/` → **1** Treffer
+     (`tests/e2e/smoke.spec.ts`; statisch gemessen, der Test wurde nicht ausgeführt;
+     Beleg: `git diff --stat c86138b..<stand> -- tests/e2e AGENTS.md` → ohne Ausgabe),
+     aber welche Fehlerklassen nur die langsame Stufe abdeckt und welche gar keine, ist
      nirgends als Liste dokumentiert.
    Zu entscheiden: die Gates auf Zähler umstellen (Baseline erzeugen, Richtung
    festlegen, Paydown-Befehl) oder den Boolean-Stand als bewusste Entscheidung
@@ -285,9 +309,13 @@ nachgeprüft (nicht neu bewertet); die Positionen 3 bis 5 sind neu aus
    mit `medium` = „mit Workaround") aus `ratchet-gates`
    (`references/vocabulary.md`) und der Status als **eigenes** Feld — nie in der
    Schwere-Spalte. Das Harness ist hier angewendet; die Findings-Liste ist es nicht:
-   `AGENTS.todo.md` §„UI-Review-Befunde" (10 Zeilen am committeten Stand dieses
-   Commits) verwendet `hoch`/`mittel`/`niedrig`, führt den Status mit im
-   Behebungs-Text statt in einer eigenen Spalte (6 der 10 Zeilen tragen „erledigt"
+   `AGENTS.todo.md` §„UI-Review-Befunde" (10 Zeilen — gemessen am Vorgänger
+   `c86138b`, seitdem unverändert: `git show c86138b:AGENTS.todo.md | grep -cE
+   '^\| [0-9]+ \|'` → **10**, `git show c86138b:AGENTS.todo.md | grep -cE
+   '^\| [0-9]+ \|.*erledigt'` → **6**; am committeten Stand dieses Commits dieselben
+   Werte, die Tabelle hat dieser Commit nicht geändert) verwendet
+   `hoch`/`mittel`/`niedrig`, führt den Status mit im Behebungs-Text statt in einer
+   eigenen Spalte (6 der 10 Zeilen tragen „erledigt"
    in der Behebungs-Spalte; die Zeilen 3–5 sind über die Welle 5 geschlossen, ohne
    Statuswort), und die einzige
    noch offene Zeile (#10, „Server-Werkzeuge: 5 Karten mit „Keine …"") hat weder

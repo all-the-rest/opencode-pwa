@@ -3,6 +3,13 @@
 agents-skills-consumed: 0449b05
 geprüft am: 2026-10-21
 
+Messkonvention: `<stand>` = der committete Stand dieses Commits (die SHA, die erst
+mit dem Commit existiert). Der Cursor oben ist **kein** Rahmen — er zeigt den Stand
+des Skills-Repos. Aussagen über **Fremddateien** (Dateien, die dieser Commit nicht
+anfasst) werden am Vorgänger gemessen („gemessen am Vorgänger `<sha>`, seitdem
+unverändert"); der Beleg je Pfad ist `git diff --stat <sha>..<stand> -- <pfad>` →
+ohne Ausgabe = unverändert.
+
 ## Skill-Stand
 
 | Skill | angewendet? | wo im Projekt | offene Position |
@@ -93,8 +100,11 @@ zusätzlich inhaltliche Änderungen), 4 weitere inhaltlich geändert
   „zurückgestellt") und damit `accepted`/`wontfix` — offener Punkt bleibt nur der
   Todo-Dock-Eintrag;
   (c) die Prüfstufen existieren (`AGENTS.md`: `@smoke`/`@regression`/`@feature`;
-  `pnpm test:e2e:smoke` = **1** Test am committeten Stand dieses Commits), aber
-  welche Fehlerklassen nur die langsame Stufe abdeckt und welche gar keine, ist
+  `pnpm test:e2e:smoke` = **1** Test — gemessen am Vorgänger `c86138b`, seitdem
+  unverändert: `git grep -n "@smoke" c86138b -- tests/` → **1** Treffer
+  (`tests/e2e/smoke.spec.ts`; statisch gemessen, der Test wurde nicht ausgeführt;
+  Beleg: `git diff --stat c86138b..<stand> -- tests/e2e AGENTS.md` → ohne Ausgabe),
+  aber welche Fehlerklassen nur die langsame Stufe abdeckt und welche gar keine, ist
   nirgends als Liste dokumentiert. → offene Position 4.
 
 **Versteckt im Bereich** — 3 Skills (vorher normale Zeilen „ja"/„nein"; versteckt
@@ -110,18 +120,23 @@ heißt „nicht normal ladbar", nicht „unwirksam" — per exakter ID ladbar)
   `8c6b9af`) — **trifft nicht zu**: Modell-Registry, Preise und die konfigurierte
   Modellwahl sind Maschinen-/Account-Stand. Der neue Snapshot (`219171c`,
   `opencode-go/minimax-m3.1-flash-free`) ist ein Stand der globalen Config; im
-  Projekt steht keine Modell-ID (kein Treffer für `opencode-go/` in `src/`). Zeile
+  Projekt steht keine Modell-ID — gemessen am Vorgänger `c86138b`, seitdem
+  unverändert (`git grep -n "opencode-go/" c86138b -- src/` → 0 Treffer; Beleg:
+  `git diff --stat c86138b..<stand> -- src/` → ohne Ausgabe). Zeile
   bleibt `nein`, Grund neu begründet.
 - `github-ci-filters` (versteckt in `817c01e`) — **trifft zu, ist nicht drin**: das
   Verstecken ändert die Pflicht nicht — die Skill ist per exakter ID ladbar, und die
   Pflicht trifft dieses Repo weiter zu. Die beiden Workflows laufen ohne
-  `paths-ignore` (Trigger am committeten Stand dieses Commits: `ci.yml` = `push` **und**
-  `pull_request`, `pages.yml` = `push` **und** `workflow_dispatch`; `pages.yml` hat
-  **keinen** `pull_request`-Trigger), das Repo ist docs-lastig (`features/`, `docs/`,
-  `AGENTS*.md`). Die Precondition hält am 2026-10-21 erneut: kein Check liest eine
-  Repo-`.md` als Input (`eslint.config.js` lints js/ts/mjs, `vite.config.ts`
-  vitest-`include` = `src/**/*.test.{ts,tsx}`, `playwright.config.ts` `testDir` =
-  `tests/e2e`); `main` ist nicht branch-protected (`gh api
+  `paths-ignore` — gemessen am Vorgänger `c86138b`, seitdem unverändert (Trigger:
+  `ci.yml` = `push` **und** `pull_request`, `pages.yml` = `push` **und**
+  `workflow_dispatch`; `pages.yml` hat **keinen** `pull_request`-Trigger;
+  `git grep -n "paths-ignore" c86138b -- .github/workflows/` → 0 Treffer; Beleg:
+  `git diff --stat c86138b..<stand> -- .github/workflows/ci.yml
+  .github/workflows/pages.yml` → ohne Ausgabe) —, das Repo ist docs-lastig
+  (`features/`, `docs/`, `AGENTS*.md`). Die Precondition hält am 2026-10-21 erneut:
+  kein Check liest eine Repo-`.md` als Input (`eslint.config.js` lints js/ts/mjs,
+  `vite.config.ts` vitest-`include` = `src/**/*.test.{ts,tsx}`, `playwright.config.ts`
+  `testDir` = `tests/e2e`); `main` ist nicht branch-protected (`gh api
   repos/:owner/:repo/branches/main/protection` → „Branch not protected"). Zeile bleibt
   `offen` → offene Position 1.
 
@@ -150,9 +165,13 @@ heißt „nicht normal ladbar", nicht „unwirksam" — per exakter ID ladbar)
   den „vision-agent"-Wortlaut. Das **Harness** ist angewendet
   (`tests/screenshots/ui-review.config.ts`, `ui-screenshots.spec.ts`,
   `playwright.screenshots.config.ts`), die **Findings-Liste** nicht:
-  `AGENTS.todo.md` §„UI-Review-Befunde" (10 Zeilen am committeten Stand dieses
-  Commits) nutzt `hoch`/`mittel`/`niedrig`, führt den Status mit im Behebungs-Text
-  statt in einer eigenen Spalte (6 der 10 Zeilen tragen „erledigt" in der
+  `AGENTS.todo.md` §„UI-Review-Befunde" (10 Zeilen — gemessen am Vorgänger
+  `c86138b`, seitdem unverändert: `git show c86138b:AGENTS.todo.md | grep -cE
+  '^\| [0-9]+ \|'` → **10**, `git show c86138b:AGENTS.todo.md | grep -cE
+  '^\| [0-9]+ \|.*erledigt'` → **6**; am committeten Stand dieses Commits dieselben
+  Werte, die Tabelle hat dieser Commit nicht geändert) nutzt `hoch`/`mittel`/`niedrig`,
+  führt den Status mit im Behebungs-Text statt in einer eigenen Spalte (6 der 10
+  Zeilen tragen „erledigt" in der
   Behebungs-Spalte; die Zeilen 3–5 sind über die Welle 5 geschlossen, ohne
   Statuswort), und die einzige
   offene Zeile (#10, „Server-Werkzeuge: 5 Karten mit „Keine …"") hat weder Owner noch
@@ -168,15 +187,35 @@ heißt „nicht normal ladbar", nicht „unwirksam" — per exakter ID ladbar)
 --diff-filter=D --name-only 787670a..0449b05 -- .agents/skills` ist leer).
 
 **Anker-Audit** — alle Zeilen der Tabelle am committeten Stand **dieses Commits**
-neu belegt (Datei-Stand, den dieser Commit festschreibt; die geprüften Artefakte
-sind zwischen `45cb323` und diesem Commit unverändert). Ergebnis: **1 Verweis ohne
-Ziel** — `scripts/check-i18n.mjs:6` verweist auf „AGENTS.todo W3"; einen Eintrag W3
-gibt es nicht: im Todo vor dem Fortschreiben, das den Cursor auf `0449b05` gesetzt
-hat, kommt die Zeichenfolge nicht vor — gemessen an `c737d17`
+neu belegt (Datei-Stand, den dieser Commit festschreibt). Die im Anker-Audit
+gelisteten Fremdartefakte — `AGENTS.md`, `.codegraph/`, `.githooks/pre-commit`,
+`playwright.config.ts`, `pnpm-lock.yaml`, `lingui.config.ts`,
+`src/logic/I18nProvider.tsx`, `src/main.tsx`, `scripts/check-i18n.mjs`,
+`eslint.config.js`, `tests/screenshots/ui-review.config.ts`,
+`tests/screenshots/ui-screenshots.spec.ts`, `playwright.screenshots.config.ts`,
+`features/06-remote-access.md`, `package.json`, `pnpm-workspace.yaml` (17
+Pfadnennungen, 16 verschiedene Pfade — `scripts/check-i18n.mjs` steht zweimal: als
+Verweis ohne Ziel und als tragender Anker) — sind zwischen `c86138b` und diesem
+Commit unverändert (Beleg je Pfad: `git diff --stat c86138b..<stand> -- <pfad>` →
+ohne Ausgabe); der Board `AGENTS.todo.md` ist in **fünf** Tabellenzeilen als Anker
+geprüft und wird von diesem Commit geschrieben (`git diff --stat c86138b..<stand>
+-- AGENTS.todo.md` → mit Ausgabe). Ergebnis: **1 Verweis ohne Ziel** —
+`scripts/check-i18n.mjs:6` verweist auf „AGENTS.todo W3"; einen Eintrag W3 gibt es
+nicht: im Todo vor dem Fortschreiben, das den Cursor auf `0449b05` gesetzt hat, kommt
+die Zeichenfolge nicht vor — gemessen an `c737d17`
 (`git show c737d17:AGENTS.todo.md | grep -c "W3"` → 0; derselbe Wert 0 an den
-weiteren Vor-Ständen `1f73917`, `4507c4a`, `73c032f`) —, und die einzigen
-Fundstellen seither sind das Zitat desselben Zeigers in offene Position 4 —
-zitiert, nicht aufgelöst.
+weiteren Vor-Ständen `1f73917`, `4507c4a`, `73c032f`) —. **Kein Eintrag W3**: im
+Bereich `c737d17..ddd15a4` trägt `AGENTS.todo.md` höchstens **zwei** Fundstellen —
+das Zitat desselben Zeigers und das Messkommando selbst (am Endstand `ddd15a4`:
+`git show ddd15a4:AGENTS.todo.md | grep -n "W3"` → Zeilen 257 und 260) — und
+`AGENTS.skills.md` höchstens **drei** (drei Zitate desselben Zeigers; am Endstand
+`ddd15a4`: `git show ddd15a4:AGENTS.skills.md | grep -n "W3"` → Zeilen 87, 173 und 176);
+ein Eintrag mit W3 existiert nicht
+(`git show ddd15a4:AGENTS.todo.md | grep -cE '^- \[.\].*W3'` → 0; derselbe Wert 0 an
+`c86138b` und `45cb323`). Repo-weit trägt der Stand `ddd15a4` **19** Treffer in **4**
+Dateien (`git grep -n "W3" ddd15a4`): die 5 in den beiden Marker-Dateien, den
+vorbestehenden in `scripts/check-i18n.mjs:6` und **13** Base64-Zufallstreffer in
+`pnpm-lock.yaml`. Die Fundstellen zitieren den Zeiger, sie lösen ihn nicht auf.
 Die übrigen Anker tragen: `AGENTS.md` (DoD,
 „Quality gates before commit", „Build-agent rule", „Subagent questions surface to the
 user"), `.codegraph/`, `.githooks/pre-commit` mit `core.hooksPath=.githooks`,
