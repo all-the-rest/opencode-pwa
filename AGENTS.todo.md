@@ -1,7 +1,8 @@
 # AGENTS.todo.md
 
 Stand: 2026-10-21 (Welle 6 + Welle 7 eingetragen; Skills-Stand aus dem Bereich
-`787670a..0449b05` und aus dem Bereich `0449b05..4205142` eingetragen). Nur offene
+`787670a..0449b05`, aus dem Bereich `0449b05..4205142` und aus dem Bereich
+`4205142..5243791` eingetragen). Nur offene
 TODOs (veraltete Einträge bereinigt: Parität-Batches, Deep-Link-Paste, Prozess-Regel und
 Userscripts-Verdikt sind umgesetzt/dokumentiert).
 UI-Review-Befunde 1, 2, 6, 7 und 9 sind mit Welle 6 erledigt (Details in
@@ -185,7 +186,7 @@ Reihenfolge steht, jede Welle wird vor dem commit verifiziert (lint/test/build/e
       `features/05-parity.md` („2b — Ordnerketten komprimieren").
 
 
-## Skills-Stand (2026-10-21) — Positionen aus den Bereichen `be24163..787670a`, `787670a..0449b05` und `0449b05..4205142`
+## Skills-Stand (2026-10-21) — Positionen aus den Bereichen `be24163..787670a`, `787670a..0449b05`, `0449b05..4205142` und `4205142..5243791`
 
 Einträge aus dem Fortschreiben von `AGENTS.skills.md` (Stand `4205142`). Wie
 `AGENTS.todo.md` insgesamt: **Log, kein Auftrag** — die Umsetzung braucht eine
@@ -198,8 +199,16 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
 `787670a..0449b05`. Der Bereich `0449b05..4205142` bringt **keine neue Position**:
 seine drei Skills sind bereits erfasst — `github-ci-filters` in Position 1,
 `ratchet-gates` in Position 4, `skills-marker` (die Regel selbst) ohne Position.
-Die Belege der Positionen 1, 4 und 5 sind am 2026-10-21 neu gemessen (Stand, Rahmen
-und Anker: `AGENTS.skills.md`, Abschnitt „Offen aus dem Bereich `0449b05..4205142`").
+Der Bereich `4205142..5243791` bringt **keine neue Position** ebenfalls: seine vier
+Skills sind bereits erfasst — `ui-review` in Position 5, `skills-marker` (die Regel
+selbst) und `build-verify` ohne Position, `agent-config` trifft nicht zu (das Projekt
+definiert kein Agent-Setup). Die Belege der Positionen 1, 4 und 5 sind am 2026-10-21
+neu gemessen; **Stand, Rahmen und Anker trägt dieses Board selbst** — jede Position
+nennt ihren Beleg mit Rahmen und Anker (Position 1: gemessen am Vorgänger `2f32095`,
+seitdem unverändert; Position 4: gemessen am Vorgänger `c86138b`, seitdem
+unverändert; Position 5: gemessen am Stand `c86138b`, am committeten Stand des
+schreibenden Commits dieselben Werte). Der Abschnitt des Markers, der diese Belege bis
+2026-10-21 trug, ist durch die neue Range ersetzt.
 
 1. [x] **Pfad-Filter für die CI-Workflows** (`github-ci-filters`) — **erledigt und
    verifiziert**: die Skill will `paths-ignore`, damit ein reiner Doku-Commit nicht
@@ -319,9 +328,10 @@ und Anker: `AGENTS.skills.md`, Abschnitt „Offen aus dem Bereich `0449b05..4205
    `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`. `package.json` führt
    `"packageManager": "pnpm@10.0.0"` (Pin), `pnpm-workspace.yaml` führt drei
    `minimumReleaseAgeExclude`-Einträge für `@opencode/{client,protocol,schema}@2.0.23`.
-   Die CI-Kommentare in `ci.yml`/`pages.yml` begründen das mit
-   `ERR_PNPM_BAD_PM_VERSION` (ohne `version:`-Key im `pnpm/action-setup`-Schritt
-   gewinnt `packageManager`) — die Skill will es umgekehrt (Major-Linie
+   Die CI-Kommentare begründen das: `ci.yml` (Z. 22–23) nennt
+   `ERR_PNPM_BAD_PM_VERSION`, `pages.yml` (Z. 17) verweist für denselben Grund auf
+   `ci.yml` (ohne `version:`-Key im `pnpm/action-setup`-Schritt gewinnt
+   `packageManager`) — die Skill will es umgekehrt (Major-Linie
    `version: 11` im Workflow, kein Pin im Manifest). Die Abhängigkeiten selbst
    sind bereits ranges-only (`^`/`~` in `package.json`) — offen sind nur die
    beiden Pin-Formen. Am 2026-10-21 nachgeprüft — gemessen am Vorgänger `473de80`,
