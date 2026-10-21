@@ -17,10 +17,12 @@ Boards trägt deshalb nicht (Regel: `skills-marker/SKILL.md` → „Bezugsrahmen
 bei Welle 4, Welle 5 und der Baum-Verfeinerung steht der Vermerk schon im Text,
 ihre Box ist aber nicht abgehakt — Welle 4 und Welle 5 tragen „erledigt", die
 Baum-Verfeinerung trägt „Implementiert" (Beleg je Block am committeten Stand,
-`git show <stand>:AGENTS.todo.md | sed -n '131,132p' | grep -o "erledigt" | wc -l`
-→ **1**; `git show <stand>:AGENTS.todo.md | sed -n '133,138p' | grep -o "erledigt" |
-wc -l` → **1**; `git show <stand>:AGENTS.todo.md | sed -n '168,182p' | grep -o
-"erledigt" | wc -l` → **0**, dasselbe Kommando mit `Implementiert` → **1**) plus die
+inhaltsverankert statt über Zeilennummern — die Bereichsgrenzen stehen am Text des
+jeweiligen Blocks, nicht an einer Zeilenzahl):
+`git show <stand>:AGENTS.todo.md | sed -n '/^- \[ \] \*\*Welle 4 /,/a4d43c7/p' | grep -o "erledigt" | wc -l` → **1**;
+`git show <stand>:AGENTS.todo.md | sed -n '/^- \[ \] \*\*Welle 5 /,/; Details in/p' | grep -o "erledigt" | wc -l` → **1**;
+`git show <stand>:AGENTS.todo.md | sed -n '/^- \[ \] \*\*Baum-Verfeinerung /,/2b — Ordnerketten komprimieren/p' | grep -o "erledigt" | wc -l` → **0**,
+dasselbe Kommando mit `Implementiert` → **1**) plus die
 vier offenen
 Skills-Positionen aus dem Abschnitt unten (Position 1 ist am 2026-10-21 geschlossen
 und abgehakt; die Nummern 2 bis 5 bleiben stehen).
@@ -223,16 +225,23 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
    Commit schreibt die Dateien nicht)); dieses Repo ist docs-lastig (`features/`,
    `docs/`, `AGENTS*.md`).
    Precondition der Skill (Step 1) ist am 2026-10-21 erneut geprüft, diesmal mit
-   der **klassifizierten** Sweep-Ausgabe: der repo-weite Sweep mit **quotierten**
-   `--include`-Globs — `grep -rn --include='*.ts' --include='*.tsx' '\.md"' .`, also
-   repo-weit ab der Repo-Wurzel mit den Globs `*.ts` und `*.tsx` — liefert am
-   Vorgänger `473de80` **21** Treffer in **10** versionierten Dateien (gemessen am
-   Stand `473de80` ohne Checkout, `git archive 473de80 | tar -x -C <tmpdir>` und
-   dasselbe Kommando darin → **21**/**10**; im Arbeitsbaum am 2026-10-21 ebenfalls
-   **21**/**10**, `dist/assets/` enthält nur `.css`/`.js`-Artefakte und damit keinen
-   `.ts`/`.tsx`-Treffer mehr), der zweite Sweep über die Prüfverzeichnisse
-   (`grep -rn "AGENTS\|\.md\|docs/" tests scripts .github`) liefert **15** Treffer in
-   **7** Dateien, davon **5** neue — zusammen **26** Fundstellen in **13** Dateien.
+   der **klassifizierten** Sweep-Ausgabe; **beide** Sweeps stehen unter **einem**
+   benannten Stand: dem committeten Stand dieses Commits, gemessen ohne Checkout
+   (`git archive <stand> | tar -x -C <tmpdir>`, dann dieselben Kommandos im
+   ausgepackten Baum). Der repo-weite Sweep mit **quotierten** `--include`-Globs —
+   `grep -rn --include='*.ts' --include='*.tsx' '\.md"' .`, also repo-weit ab der
+   Repo-Wurzel mit den Globs `*.ts` und `*.tsx` — liefert **21** Treffer in **10**
+   versionierten Dateien. Der zweite Sweep über die Prüfverzeichnisse
+   (`grep -rn "AGENTS\|\.md\|docs/" tests scripts .github`) liefert **18** Treffer in
+   **9** Dateien, davon **8** neue (Fundstellen, die der erste Sweep nicht
+   mitzählt) — zusammen **29** Fundstellen in **15** Dateien. Dazu eine
+   **nicht rekonstruierbare** Arbeitsbaum-Messung vom 2026-10-21: dasselbe
+   Sweep-1-Kommando im Arbeitsbaum → **21**/**10**; sie ist später nicht
+   nachprüfbar, weil der Arbeitsbaum `node_modules/` und ein unversioniertes
+   `dist/` enthielt (beides gitignoriert und bauabhängig) — `ls dist/assets/` → nur
+   `.css`/`.js`-Artefakte, `find dist/assets -name '*.ts*'` → keine Ausgabe,
+   `grep -rn --include='*.ts' --include='*.tsx' '\.md"' node_modules dist` → keine
+   Ausgabe. Der committete Stand oben trägt die Aussage.
    **Kein** Treffer öffnet eine Repo-`.md` als Eingabe: `src/lib/promptAttachments.ts:66`
    ist eine **Dateiendungs**-Liste (`.md` neben `.txt`, `.pdf` … für den Datei-Picker),
    `src/lib/diffView.test.ts:212` prüft `splitDiffPath("README.md")` (reine
@@ -249,7 +258,9 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
    `locale/de/messages.po` und `messages.js`), `tests/e2e/w19-docks-lists-tabs.spec.ts:18`
    (Kommentar `features/05-parity.md`) sowie `tests/screenshots/mockFixtures.ts:307`
    und `tests/screenshots/ui-screenshots.spec.ts:24/182` (Bezeichner
-   `AGENTS_SESSION_ROWS`) — alles **Nennungen**, keine Eingabe. Der Build liest keine
+   `AGENTS_SESSION_ROWS`) sowie `.github/workflows/ci.yml:7/11` und
+   `.github/workflows/pages.yml:7` (die `paths-ignore`-Muster `'**/*.md'`) — alles
+   **Nennungen**, keine Eingabe. Der Build liest keine
    Repo-`.md` (`public/` ohne `.md`; `vite.config.ts` ohne `copy`/`staticCopy`;
    Workbox-`globPatterns` ohne `.md`; `import.meta.glob` → **0** Treffer in `src/`;
    `pnpm build` = `tsc -b && vite build` mit `prebuild` = `scripts/check-i18n.mjs`).
@@ -336,19 +347,24 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
      im Bereich `c737d17..ddd15a4` trägt `AGENTS.todo.md` höchstens **zwei Zeilen**
      mit **zwei Vorkommen** — das Zitat desselben Zeigers und das Messkommando
      selbst (am Endstand `ddd15a4`: `git show ddd15a4:AGENTS.todo.md | grep -n "W3"`
-     → Zeilen 257 und 260) — und `AGENTS.skills.md` höchstens **drei Zeilen** mit
-     **vier Vorkommen**: **zwei Zitate** des Zeigers (Zeilen 87 und 173), eine
+     → Zeilen 257 und 260; als Vorkommenszählung `git show ddd15a4:AGENTS.todo.md |
+     grep -o "W3" | wc -l` → **2**) — und `AGENTS.skills.md` höchstens **drei Zeilen**
+     mit **vier Vorkommen**: **zwei Zitate** des Zeigers (Zeilen 87 und 173), eine
      **Nennung** des Labels (Zeile 173: „Eintrag W3") und **das Messkommando** (Zeile
      176) (am Endstand `ddd15a4`: `git show ddd15a4:AGENTS.skills.md | grep -n "W3"`
-     → Zeilen 87, 173 und 176); ein Eintrag mit W3 existiert nicht
+     → Zeilen 87, 173 und 176; als Vorkommenszählung
+     `git show ddd15a4:AGENTS.skills.md | grep -o "W3" | wc -l` → **4**); ein Eintrag
+     mit W3 existiert nicht
      (`git show ddd15a4:AGENTS.todo.md | grep -cE '^- \[.\].*W3'` → 0; derselbe Wert 0
      an `c86138b` und `45cb323`). Repo-weit trägt der Stand `ddd15a4` **19 Zeilen**
      mit **21 Vorkommen** in **4** Dateien — der Umfang ist **alle versionierten
      Dateien** des Stands (`git grep -n "W3" ddd15a4` → 19 Zeilen; `git grep -o "W3"
      ddd15a4 | wc -l` → 21 Vorkommen; `git grep -l "W3" ddd15a4` → 4 Dateien; die
-     Verteilung je Datei über `git grep -o "W3" ddd15a4 -- <pfad> | wc -l`: davon
+     Verteilung je Datei über `git grep -o "W3" ddd15a4 -- <pfad> | wc -l`
+     (Vorkommen) und `git grep -n "W3" ddd15a4 -- <pfad> | wc -l` (Zeilen): davon
      **4** in `AGENTS.skills.md` (3 Zeilen), **2** in `AGENTS.todo.md` (2 Zeilen),
-     **1** in `scripts/check-i18n.mjs:6` und **14** in `pnpm-lock.yaml` (13 Zeilen)).
+     **1** in `scripts/check-i18n.mjs:6` und **14** in `pnpm-lock.yaml` (13 Zeilen);
+     3+2+1+13 = **19** Zeilen, 4+2+1+14 = **21** Vorkommen).
      Die Fundstellen zitieren den Zeiger, sie lösen ihn nicht auf. Entweder wird die
      Blindstelle dort
      benannt (mit Owner und Ticket) oder der Verweis auf einen existierenden

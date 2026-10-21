@@ -239,19 +239,24 @@ weiteren Vor-Ständen `1f73917`, `4507c4a`, `73c032f`) —. **Kein Eintrag W3**:
 Bereich `c737d17..ddd15a4` trägt `AGENTS.todo.md` höchstens **zwei Zeilen** mit
 **zwei Vorkommen** — das Zitat desselben Zeigers und das Messkommando selbst (am
 Endstand `ddd15a4`: `git show ddd15a4:AGENTS.todo.md | grep -n "W3"` → Zeilen 257
-und 260) — und `AGENTS.skills.md` höchstens **drei Zeilen** mit **vier Vorkommen**:
-**zwei Zitate** des Zeigers (Zeilen 87 und 173), eine **Nennung** des Labels (Zeile
-173: „Eintrag W3") und **das Messkommando** (Zeile 176) (am Endstand `ddd15a4`:
-`git show ddd15a4:AGENTS.skills.md | grep -n "W3"` → Zeilen 87, 173 und 176);
+und 260; als Vorkommenszählung `git show ddd15a4:AGENTS.todo.md | grep -o "W3" |
+wc -l` → **2**) — und `AGENTS.skills.md` höchstens **drei Zeilen** mit **vier
+Vorkommen**: **zwei Zitate** des Zeigers (Zeilen 87 und 173), eine **Nennung** des
+Labels (Zeile 173: „Eintrag W3") und **das Messkommando** (Zeile 176) (am Endstand
+`ddd15a4`: `git show ddd15a4:AGENTS.skills.md | grep -n "W3"` → Zeilen 87, 173 und
+176; als Vorkommenszählung `git show ddd15a4:AGENTS.skills.md | grep -o "W3" |
+wc -l` → **4**);
 ein Eintrag mit W3 existiert nicht
 (`git show ddd15a4:AGENTS.todo.md | grep -cE '^- \[.\].*W3'` → 0; derselbe Wert 0 an
 `c86138b` und `45cb323`). Repo-weit trägt der Stand `ddd15a4` **19 Zeilen** mit
 **21 Vorkommen** in **4** Dateien — der Umfang ist **alle versionierten Dateien**
 des Stands (`git grep -n "W3" ddd15a4` → 19 Zeilen; `git grep -o "W3" ddd15a4 |
 wc -l` → 21 Vorkommen; `git grep -l "W3" ddd15a4` → 4 Dateien; die Verteilung je
-Datei über `git grep -o "W3" ddd15a4 -- <pfad> | wc -l`: davon
+Datei über `git grep -o "W3" ddd15a4 -- <pfad> | wc -l` (Vorkommen) und
+`git grep -n "W3" ddd15a4 -- <pfad> | wc -l` (Zeilen): davon
 **4** in `AGENTS.skills.md` (3 Zeilen), **2** in `AGENTS.todo.md` (2 Zeilen), **1** in
-`scripts/check-i18n.mjs:6` und **14** in `pnpm-lock.yaml` (13 Zeilen)).
+`scripts/check-i18n.mjs:6` und **14** in `pnpm-lock.yaml` (13 Zeilen);
+3+2+1+13 = **19** Zeilen, 4+2+1+14 = **21** Vorkommen).
 Die Fundstellen zitieren den Zeiger, sie lösen ihn nicht auf.
 Die übrigen Anker tragen: `AGENTS.md` (DoD,
 „Quality gates before commit", „Build-agent rule", „Subagent questions surface to the
@@ -278,13 +283,17 @@ nicht eingebettet. Nichts nachzuziehen.
 Commit schreibt die beiden Dateien nicht): `AGENTS.md:3` verlangt Englisch für Code
 und Doku („Language: code and docs in English, UI strings in German"), `README.md:4`
 ebenso („German UI, English code and docs"). Die Commit-Bodies sind **nicht einheitlich
-englisch**: in der Marker-Serie (`docs(skills):`/`docs(agents):` — die Commits
-`1f73917`, `4507c4a`, `73c032f`, `c737d17`, `45cb323`, `c86138b` und dieser) haben
-**zwei** einen deutschen Body (`c737d17`, `45cb323`) — gemessen mit
-`git cat-file commit <sha>` an jedem der genannten SHAs (committeter Stand,
-Rohformat). Die übrigen sind englisch: `1f73917` zitiert die Regel ausdrücklich
+englisch**: in der Marker-Serie (`docs(skills):`/`docs(agents):` — die Serie wird
+**abgeleitet**, nicht handgepflegt: `git log --oneline --grep='^docs(skills):'
+--grep='^docs(agents):'`, am committeten Stand dieses Commits **11** Commits) haben
+**zwei** einen deutschen Body (`c737d17`, `45cb323`) — bestimmt je Commit über das
+Rohformat (`git cat-file commit <sha>`; Body = alles nach der Leerzeile, die dem
+Subject folgt) und über einen Schwellwert deutscher Funktionswörter
+(`git cat-file commit <sha> | sed '1,/^$/d' | sed 's/\x60[^\x60]*\x60//g' | grep -oiE '\b(und|nicht|oder|aber|auch|noch|nur|schon|werden|wird|kein|keine|sich|beim|durch|einer|einem|einen|ohne|wenn|weil|dann|sowie|haben|sind|bleibt|trägt|gilt)\b' | wc -l` ≥ **10** → deutscher Body; der zweite `sed` streicht die Code-Spannen, damit sich die Wortliste im Body des Mess-Commits nicht selbst zählt; gemessen: `c737d17` **19**, `45cb323` **53**, alle übrigen **0** bis **4**). Die übrigen sind
+englisch: `1f73917` zitiert die Regel ausdrücklich
 („in the file's language (English, per rule 1)"), `4507c4a` und `73c032f` schreiben
-englisch, obwohl sie deutsche Dateien ändern, ebenso dieser Commit. Die
+englisch, obwohl sie deutsche Dateien ändern, ebenso der Commit, der diese Datei
+schreibt. Die
 **Marker-Datei selbst bleibt deutsch** — vorbestehender Zustand (`c737d17` war
 ebenfalls deutsch), keine Übersetzung.
 
