@@ -14,8 +14,14 @@ Checkbox-Punkte unten (`git show <stand>:AGENTS.todo.md | grep -c '^- \[ \]'` �
 den dieser Commit festschreibt; der Board wird von diesem Commit geschrieben, `git diff
 --stat c86138b..<stand> -- AGENTS.todo.md` → mit Ausgabe, ein Vorgänger-Vergleich des
 Boards trägt deshalb nicht (Regel: `skills-marker/SKILL.md` → „Bezugsrahmen-Regel");
-bei Welle 4, Welle 5 und der Baum-Verfeinerung steht „erledigt"
-schon im Text, ihre Box ist aber nicht abgehakt) plus die vier offenen
+bei Welle 4, Welle 5 und der Baum-Verfeinerung steht der Vermerk schon im Text,
+ihre Box ist aber nicht abgehakt — Welle 4 und Welle 5 tragen „erledigt", die
+Baum-Verfeinerung trägt „Implementiert" (Beleg je Block am committeten Stand,
+`git show <stand>:AGENTS.todo.md | sed -n '131,132p' | grep -o "erledigt" | wc -l`
+→ **1**; `git show <stand>:AGENTS.todo.md | sed -n '133,138p' | grep -o "erledigt" |
+wc -l` → **1**; `git show <stand>:AGENTS.todo.md | sed -n '168,182p' | grep -o
+"erledigt" | wc -l` → **0**, dasselbe Kommando mit `Implementiert` → **1**) plus die
+vier offenen
 Skills-Positionen aus dem Abschnitt unten (Position 1 ist am 2026-10-21 geschlossen
 und abgehakt; die Nummern 2 bis 5 bleiben stehen).
 
@@ -198,10 +204,15 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
    unverändert, `paths` und `paths-ignore` stehen nie am selben Event,
    `.github/workflows/**` ist **nicht** mitignoriert. Innerhalb der Workflows ändert
    sich **nichts** — der Workflow-Diff besteht ausschließlich aus dem
-   `paths-ignore`--Block (`git diff -- .github/workflows/` → **6** hinzugefügte Zeilen,
-   **0** entfernte: **3**× `paths-ignore:` + **3**× `- '**/*.md'`; kein Job, kein
-   Schritt, kein Matrix-Eintrag, kein Timeout, kein `continue-on-error`, keine
-   gelockerte Lint-Regel). Die Trigger sind **verschieden**: `ci.yml` läuft auf
+   `paths-ignore`--Block (Zustand: der Vorgänger `473de80` und der die Workflows
+   schreibende Commit `2f32095`; `git diff --numstat 473de80..2f32095 --
+   .github/workflows/ci.yml .github/workflows/pages.yml` → **6** hinzugefügte Zeilen,
+   **0** entfernte — **4**/`0` in `ci.yml` und **2**/`0` in `pages.yml`, inhaltlich
+   **3**× `paths-ignore:` + **3**× `- '**/*.md'`; `git diff --stat 473de80..2f32095 --
+   .github/workflows/ci.yml .github/workflows/pages.yml` → „2 files changed, 6
+   insertions(+)"; kein Job, kein Schritt, kein Matrix-Eintrag, kein Timeout, kein
+   `continue-on-error`, keine gelockerte Lint-Regel). Die Trigger sind
+   **verschieden**: `ci.yml` läuft auf
    `push` (Branches `[main]`) **und** `pull_request` (Branches `[main]`),
    `pages.yml` auf `push` (Branches `[main]`) plus `workflow_dispatch`
    (`git grep -nE '^\s*(on|push|pull_request|branches|workflow_dispatch)'
@@ -213,9 +224,13 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
    `docs/`, `AGENTS*.md`).
    Precondition der Skill (Step 1) ist am 2026-10-21 erneut geprüft, diesmal mit
    der **klassifizierten** Sweep-Ausgabe: der repo-weite Sweep mit **quotierten**
-   `--include`-Globs liefert am Vorgänger `473de80` **21** Treffer in **10** versionierten
-   Dateien (im Arbeitsbaum **22**, der 22. ist das nicht versionierte Build-Artefakt
-   unter `dist/assets/`), der zweite Sweep über die Prüfverzeichnisse
+   `--include`-Globs — `grep -rn --include='*.ts' --include='*.tsx' '\.md"' .`, also
+   repo-weit ab der Repo-Wurzel mit den Globs `*.ts` und `*.tsx` — liefert am
+   Vorgänger `473de80` **21** Treffer in **10** versionierten Dateien (gemessen am
+   Stand `473de80` ohne Checkout, `git archive 473de80 | tar -x -C <tmpdir>` und
+   dasselbe Kommando darin → **21**/**10**; im Arbeitsbaum am 2026-10-21 ebenfalls
+   **21**/**10**, `dist/assets/` enthält nur `.css`/`.js`-Artefakte und damit keinen
+   `.ts`/`.tsx`-Treffer mehr), der zweite Sweep über die Prüfverzeichnisse
    (`grep -rn "AGENTS\|\.md\|docs/" tests scripts .github`) liefert **15** Treffer in
    **7** Dateien, davon **5** neue — zusammen **26** Fundstellen in **13** Dateien.
    **Kein** Treffer öffnet eine Repo-`.md` als Eingabe: `src/lib/promptAttachments.ts:66`
@@ -328,8 +343,11 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
      → Zeilen 87, 173 und 176); ein Eintrag mit W3 existiert nicht
      (`git show ddd15a4:AGENTS.todo.md | grep -cE '^- \[.\].*W3'` → 0; derselbe Wert 0
      an `c86138b` und `45cb323`). Repo-weit trägt der Stand `ddd15a4` **19 Zeilen**
-     mit **21 Vorkommen** in **4** Dateien (`git grep -n "W3" ddd15a4` → 19 Zeilen;
-     davon **4** in `AGENTS.skills.md` (3 Zeilen), **2** in `AGENTS.todo.md` (2 Zeilen),
+     mit **21 Vorkommen** in **4** Dateien — der Umfang ist **alle versionierten
+     Dateien** des Stands (`git grep -n "W3" ddd15a4` → 19 Zeilen; `git grep -o "W3"
+     ddd15a4 | wc -l` → 21 Vorkommen; `git grep -l "W3" ddd15a4` → 4 Dateien; die
+     Verteilung je Datei über `git grep -o "W3" ddd15a4 -- <pfad> | wc -l`: davon
+     **4** in `AGENTS.skills.md` (3 Zeilen), **2** in `AGENTS.todo.md` (2 Zeilen),
      **1** in `scripts/check-i18n.mjs:6` und **14** in `pnpm-lock.yaml` (13 Zeilen)).
      Die Fundstellen zitieren den Zeiger, sie lösen ihn nicht auf. Entweder wird die
      Blindstelle dort

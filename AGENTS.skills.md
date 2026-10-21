@@ -246,7 +246,10 @@ und 260) — und `AGENTS.skills.md` höchstens **drei Zeilen** mit **vier Vorkom
 ein Eintrag mit W3 existiert nicht
 (`git show ddd15a4:AGENTS.todo.md | grep -cE '^- \[.\].*W3'` → 0; derselbe Wert 0 an
 `c86138b` und `45cb323`). Repo-weit trägt der Stand `ddd15a4` **19 Zeilen** mit
-**21 Vorkommen** in **4** Dateien (`git grep -n "W3" ddd15a4` → 19 Zeilen; davon
+**21 Vorkommen** in **4** Dateien — der Umfang ist **alle versionierten Dateien**
+des Stands (`git grep -n "W3" ddd15a4` → 19 Zeilen; `git grep -o "W3" ddd15a4 |
+wc -l` → 21 Vorkommen; `git grep -l "W3" ddd15a4` → 4 Dateien; die Verteilung je
+Datei über `git grep -o "W3" ddd15a4 -- <pfad> | wc -l`: davon
 **4** in `AGENTS.skills.md` (3 Zeilen), **2** in `AGENTS.todo.md` (2 Zeilen), **1** in
 `scripts/check-i18n.mjs:6` und **14** in `pnpm-lock.yaml` (13 Zeilen)).
 Die Fundstellen zitieren den Zeiger, sie lösen ihn nicht auf.
@@ -270,9 +273,11 @@ die globale `~/.config/opencode/AGENTS.md` bettet nur die Frage-Regel ein — di
 neue Regel zur Zahl im Footer ist maschinenweit, nicht projektspezifisch, und wird
 nicht eingebettet. Nichts nachzuziehen.
 
-**Sprache** (Stand dieses Commits): `AGENTS.md:3` verlangt Englisch für Code und Doku
-(„Language: code and docs in English, UI strings in German"), `README.md:4` ebenso
-(„German UI, English code and docs"). Die Commit-Bodies sind **nicht einheitlich
+**Sprache** (gemessen am Vorgänger `2f32095`, seitdem unverändert — Beleg:
+`git diff --stat 2f32095..<stand> -- AGENTS.md README.md` → ohne Ausgabe; dieser
+Commit schreibt die beiden Dateien nicht): `AGENTS.md:3` verlangt Englisch für Code
+und Doku („Language: code and docs in English, UI strings in German"), `README.md:4`
+ebenso („German UI, English code and docs"). Die Commit-Bodies sind **nicht einheitlich
 englisch**: in der Marker-Serie (`docs(skills):`/`docs(agents):` — die Commits
 `1f73917`, `4507c4a`, `73c032f`, `c737d17`, `45cb323`, `c86138b` und dieser) haben
 **zwei** einen deutschen Body (`c737d17`, `45cb323`) — gemessen mit
