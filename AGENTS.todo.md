@@ -10,10 +10,11 @@ Basic/Experte"); Befund 8 (Projektseite: Pfad + Farbe) mit Welle 7.
 Welle 7 ist umgesetzt und verifiziert (lint 0, vitest, build, e2e inkl. Mobile,
 Screenshots) — die letzte Code-Welle; danach stehen nur noch die **sieben** offenen
 Checkbox-Punkte unten (`git show <stand>:AGENTS.todo.md | grep -c '^- \[ \]'` → 7;
-`<stand>` = der committete Stand dieses Commits — Datei-Stand, den dieser Commit
-festschreibt; der Board wird von diesem Commit geschrieben, `git diff --stat
-c86138b..<stand> -- AGENTS.todo.md` → mit Ausgabe, ein Vorgänger-Vergleich des Boards
-trägt deshalb nicht; bei Welle 4, Welle 5 und der Baum-Verfeinerung steht „erledigt"
+**Lokale Ergänzung:** `<stand>` = der committete Stand dieses Commits — Datei-Stand,
+den dieser Commit festschreibt; der Board wird von diesem Commit geschrieben, `git diff
+--stat c86138b..<stand> -- AGENTS.todo.md` → mit Ausgabe, ein Vorgänger-Vergleich des
+Boards trägt deshalb nicht (Regel: `skills-marker/SKILL.md` → „Bezugsrahmen-Regel");
+bei Welle 4, Welle 5 und der Baum-Verfeinerung steht „erledigt"
 schon im Text, ihre Box ist aber nicht abgehakt) plus die vier offenen
 Skills-Positionen aus dem Abschnitt unten (Position 1 ist am 2026-10-21 geschlossen
 und abgehakt; die Nummern 2 bis 5 bleiben stehen).
@@ -204,8 +205,12 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
    `push` (Branches `[main]`) **und** `pull_request` (Branches `[main]`),
    `pages.yml` auf `push` (Branches `[main]`) plus `workflow_dispatch`
    (`git grep -nE '^\s*(on|push|pull_request|branches|workflow_dispatch)'
-   <stand> -- .github/workflows/*.yml`, `<stand>` = der committete Stand dieses
-   Commits); dieses Repo ist docs-lastig (`features/`, `docs/`, `AGENTS*.md`).
+   2f32095 -- .github/workflows/*.yml` → `push`/`pull_request` in `ci.yml`,
+   `push`/`workflow_dispatch` in `pages.yml`; gemessen am Vorgänger `2f32095`,
+   seitdem unverändert (Beleg: `git diff --stat 2f32095..<stand> --
+   .github/workflows/ci.yml .github/workflows/pages.yml` → ohne Ausgabe; dieser
+   Commit schreibt die Dateien nicht)); dieses Repo ist docs-lastig (`features/`,
+   `docs/`, `AGENTS*.md`).
    Precondition der Skill (Step 1) ist am 2026-10-21 erneut geprüft, diesmal mit
    der **klassifizierten** Sweep-Ausgabe: der repo-weite Sweep mit **quotierten**
    `--include`-Globs liefert am Vorgänger `473de80` **21** Treffer in **10** versionierten
@@ -249,10 +254,13 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
    Umbenennungs-Formen (`-M` und `--no-renames`) ebenfalls. Upstream-Anmerkung:
    Pfadfilter werden bei **Tag**-Pushes nicht ausgewertet — ein Doku-Tag-Push startet
    die Pipeline weiter; das ist Upstream-Verhalten, kein Fehler des Filters, und es
-   wird nicht umgangen. Beleg des Laufs: dieser Commit ändert Workflow-Dateien, wird
-   also **nicht** ignoriert und löst **beide** Pipelines aus (CI und Pages) — ohne
-   Lauf wäre der Filter syntaktisch fehlerhaft oder würde die Workflow-Dateien
-   selbst ignorieren (`gh run list --commit <stand>`). Die Skill ist seit `817c01e`
+   wird nicht umgangen. Beleg des Laufs: der Commit `2f32095` ändert Workflow-Dateien,
+   wird also **nicht** ignoriert und löste **beide** Pipelines aus (CI und Pages) —
+   2 Läufe, beide `success` (`gh run list --commit
+   2f32095d71f270034c6bab7cf76ac4dafd1f2ddf` → CI `39649341123`, Pages `39649341143`,
+   beide `2026-10-21T18:03:53Z`; `--commit` verlangt die **vollständige** SHA, die
+   kurze `2f32095` liefert leer) — ohne Lauf wäre der Filter syntaktisch fehlerhaft
+   oder würde die Workflow-Dateien selbst ignorieren. Die Skill ist seit `817c01e`
    **versteckt** (nur per exakter ID ladbar) — das ändert die Pflicht nicht.
 
 2. **`node-deps`-Policy: `packageManager`-Pin und `minimumReleaseAgeExclude`**
@@ -310,18 +318,21 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
      die Zeichenfolge nicht vor — gemessen an `c737d17`
      (`git show c737d17:AGENTS.todo.md | grep -c "W3"` → 0; derselbe Wert 0 an den
      weiteren Vor-Ständen `1f73917`, `4507c4a`, `73c032f`) —. **Kein Eintrag W3**:
-     im Bereich `c737d17..ddd15a4` trägt `AGENTS.todo.md` höchstens **zwei**
-     Fundstellen — das Zitat desselben Zeigers und das Messkommando selbst (am
-     Endstand `ddd15a4`: `git show ddd15a4:AGENTS.todo.md | grep -n "W3"` → Zeilen 257
-     und 260) — und `AGENTS.skills.md` höchstens **drei** (drei Zitate desselben
-     Zeigers; am Endstand `ddd15a4`: `git show ddd15a4:AGENTS.skills.md | grep -n
-     "W3"` → Zeilen 87, 173 und 176); ein Eintrag mit W3 existiert nicht
+     im Bereich `c737d17..ddd15a4` trägt `AGENTS.todo.md` höchstens **zwei Zeilen**
+     mit **zwei Vorkommen** — das Zitat desselben Zeigers und das Messkommando
+     selbst (am Endstand `ddd15a4`: `git show ddd15a4:AGENTS.todo.md | grep -n "W3"`
+     → Zeilen 257 und 260) — und `AGENTS.skills.md` höchstens **drei Zeilen** mit
+     **vier Vorkommen**: **zwei Zitate** des Zeigers (Zeilen 87 und 173), eine
+     **Nennung** des Labels (Zeile 173: „Eintrag W3") und **das Messkommando** (Zeile
+     176) (am Endstand `ddd15a4`: `git show ddd15a4:AGENTS.skills.md | grep -n "W3"`
+     → Zeilen 87, 173 und 176); ein Eintrag mit W3 existiert nicht
      (`git show ddd15a4:AGENTS.todo.md | grep -cE '^- \[.\].*W3'` → 0; derselbe Wert 0
-     an `c86138b` und `45cb323`). Repo-weit trägt der Stand `ddd15a4` **19** Treffer
-     in **4** Dateien (`git grep -n "W3" ddd15a4`): die 5 in den beiden
-     Marker-Dateien, den vorbestehenden in `scripts/check-i18n.mjs:6` und **13**
-     Base64-Zufallstreffer in `pnpm-lock.yaml`. Die Fundstellen zitieren den Zeiger,
-     sie lösen ihn nicht auf. Entweder wird die Blindstelle dort
+     an `c86138b` und `45cb323`). Repo-weit trägt der Stand `ddd15a4` **19 Zeilen**
+     mit **21 Vorkommen** in **4** Dateien (`git grep -n "W3" ddd15a4` → 19 Zeilen;
+     davon **4** in `AGENTS.skills.md` (3 Zeilen), **2** in `AGENTS.todo.md` (2 Zeilen),
+     **1** in `scripts/check-i18n.mjs:6` und **14** in `pnpm-lock.yaml` (13 Zeilen)).
+     Die Fundstellen zitieren den Zeiger, sie lösen ihn nicht auf. Entweder wird die
+     Blindstelle dort
      benannt (mit Owner und Ticket) oder der Verweis auf einen existierenden
      Eintrag gezogen.
    - `AGENTS.todo.md` §„Bewusst offen/dokumentiert (kein Handlungsbedarf)" — 6
@@ -333,10 +344,20 @@ ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
      Todo-Dock-Eintrag. Die kanonische Regel: ein Eintrag, der nicht `fixed` ist,
      braucht Id, Owner und Ticket.
    - Die Prüfstufen existieren (`AGENTS.md`: `@smoke`/`@regression`/`@feature`;
-     `pnpm test:e2e:smoke` = **1** Test — gemessen am Vorgänger `c86138b`, seitdem
-     unverändert: `git grep -n "@smoke" c86138b -- tests/` → **1** Treffer
-     (`tests/e2e/smoke.spec.ts`; statisch gemessen, der Test wurde nicht ausgeführt;
-     Beleg: `git diff --stat c86138b..<stand> -- tests/e2e AGENTS.md` → ohne Ausgabe),
+     **1** `@smoke`-getaggte Spec — statisch gemessen, der Test wurde **nicht**
+     ausgeführt: gemessen am Vorgänger `c86138b`, seitdem unverändert (`git grep -n
+     "@smoke" c86138b -- tests/` → **1** Treffer, `tests/e2e/smoke.spec.ts`, Zeile 16;
+     Beleg: `git diff --stat c86138b..<stand> -- tests/e2e AGENTS.md package.json
+     playwright.config.ts` → ohne Ausgabe). Das **benannte** Kommando
+     `pnpm test:e2e:smoke` ist `playwright test --grep @smoke` (`package.json:16`) und
+     läuft **ohne** `--project`: die Spec läuft in `chromium` und `mobile`
+     (`playwright.config.ts` — `e2e-guard` trägt `testMatch /e2e-guard\.spec\.ts/`,
+     `chromium` und `mobile` nur `testIgnore`) → **2 Läufe** derselben Spec, lokal
+     **nicht** ausgeführt; das CI-Kommando `pnpm exec playwright test --grep @smoke
+     --project=chromium` (`.github/workflows/ci.yml`, Schritt „E2E smoke (chromium
+     only)") fährt genau diese **eine** — gemessen am Vorgänger `2f32095`, seitdem
+     unverändert (Beleg: `git diff --stat 2f32095..<stand> --
+     .github/workflows/ci.yml` → ohne Ausgabe),
      aber welche Fehlerklassen nur die langsame Stufe abdeckt und welche gar keine, ist
      nirgends als Liste dokumentiert.
    Zu entscheiden: die Gates auf Zähler umstellen (Baseline erzeugen, Richtung
