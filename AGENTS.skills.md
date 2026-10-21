@@ -285,17 +285,14 @@ und Doku („Language: code and docs in English, UI strings in German"), `README
 ebenso („German UI, English code and docs"). Die Commit-Bodies sind **nicht einheitlich
 englisch**: in der Marker-Serie (`docs(skills):`/`docs(agents):` — die Serie wird
 **abgeleitet**, nicht handgepflegt: `git log --oneline --grep='^docs(skills):'
---grep='^docs(agents):'`, am committeten Stand dieses Commits **11** Commits) haben
+--grep='^docs(agents):'`, am committeten Stand dieses Commits **12** Commits) haben
 **zwei** einen deutschen Body (`c737d17`, `45cb323`) — bestimmt je Commit über das
 Rohformat (`git cat-file commit <sha>`; Body = alles nach der Leerzeile, die dem
 Subject folgt) und über einen Schwellwert deutscher Funktionswörter
-(`git cat-file commit <sha> | sed '1,/^$/d' | sed 's/\x60[^\x60]*\x60//g' | grep -oiE '\b(und|nicht|oder|aber|auch|noch|nur|schon|werden|wird|kein|keine|sich|beim|durch|einer|einem|einen|ohne|wenn|weil|dann|sowie|haben|sind|bleibt|trägt|gilt)\b' | wc -l` ≥ **10** → deutscher Body; der zweite `sed` streicht die Code-Spannen, damit sich die Wortliste im Body des Mess-Commits nicht selbst zählt; gemessen: `c737d17` **19**, `45cb323` **53**, alle übrigen **0** bis **4**). Die übrigen sind
-englisch: `1f73917` zitiert die Regel ausdrücklich
-(„in the file's language (English, per rule 1)"), `4507c4a` und `73c032f` schreiben
-englisch, obwohl sie deutsche Dateien ändern, ebenso der Commit, der diese Datei
-schreibt. Die
-**Marker-Datei selbst bleibt deutsch** — vorbestehender Zustand (`c737d17` war
-ebenfalls deutsch), keine Übersetzung.
+(`git cat-file commit <sha> | sed '1,/^$/d' | sed 's/\x60[^\x60]*\x60//g' | grep -oiE '\b(und|nicht|oder|aber|auch|noch|nur|schon|werden|wird|kein|keine|sich|beim|durch|einer|einem|einen|ohne|wenn|weil|dann|sowie|haben|sind|bleibt|trägt|gilt)\b' | wc -l` ≥ **11** → deutscher Body; der zweite `sed` streicht die Code-Spuren, damit sich die Wortliste im Body des Mess-Commits nicht selbst zählt; gemessen: `c737d17` **19**, `45cb323` **53**, alle übrigen **0** bis **4** — der größte englische Wert ist **4** (`a3e4a9f`), der kleinste deutsche **19** (`c737d17`)). **Der Schwellwert 11 ist aus der Lücke abgeleitet, nicht gesetzt:** die Lücke zwischen dem größten englischen und dem kleinsten deutschen Wert ist **[5, 18]** — jeder Wert darin klassifiziert alle **12** Commits identisch (die Klassifikation ist robust, offen war nur die Provenienz des Cutoffs); **11** ist die untere der beiden mittleren Ganzzahlen der Lücke (Mitte **11.5**) und hält den kleinsten Abstand zu beiden Clustern bei **7** Treffern (**7** zum englischen, **8** zum deutschen). Die übrigen **zehn** sind englisch — die Menge leitet das Kommando ab (Serie **plus** Schwellwert je Commit), nicht eine Handliste; **Belege aus dieser Menge** (nicht die ganze Menge): `1f73917` zitiert die Regel ausdrücklich
+(„in the file's language (English, per rule 1)"), `4507c4a` und `73c032f` schreiben englisch, obwohl sie deutsche Dateien ändern.
+Der Body des Commits, der diese Datei schreibt, ist englisch — **am Body des jeweils schreibenden Commits mit demselben Kommando gemessen**, nicht aus einer Liste abgeleitet: das ist eine Eigenschaft, die am schreibenden Commit neu gemessen wird, und kein Element einer Liste.
+Die **Marker-Datei selbst bleibt deutsch** — vorbestehender Zustand (`c737d17` war ebenfalls deutsch), keine Übersetzung.
 
 ## Fortschreiben
 
