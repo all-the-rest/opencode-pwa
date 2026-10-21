@@ -49,15 +49,15 @@ zusätzlich inhaltliche Änderungen), 4 weitere inhaltlich geändert
 
 | SHA | betrifft | was sich geändert hat |
 |---|---|---|
-| `0449b05` | `build-verify` (+ `.agents/rules/build-verify.md`) | die geteilte Regel: jede Zahl, die etwas über den Commit oder seine Gates behauptet, nennt **Zustand** (Working Tree / committeter Stand) und **Umfang** (gefilterte Teilmenge, Range, Stufe); der committete Stand wird gemessen, nicht ausgecheckt (`git archive <sha> \| tar -x -C <tmpdir>`) — `references/notes.md` (+61), `references/verifier-prompt.md` |
+| `0449b05` | `build-verify` (+ `.agents/rules/build-verify.md`) | die geteilte Regel: jede Zahl, die etwas über den Commit oder seine Gates behauptet, nennt **Zustand** (Working Tree / committeter Stand) und **Umfang** (gefilterte Teilmenge, Range, Stufe); der committete Stand wird gemessen, nicht ausgecheckt (`git archive <sha> \| tar -x -C <tmpdir>`) — `references/notes.md` (+60/−1) |
 | `d7888cd` | `ratchet-gates` | die Karte von den Gates zu den Kommandos (`references/cli.md`, +134) |
 | `b9f140b` | `security-review`, `ui-review` | Befunde der Vokabular-Verifikation geschlossen: Stufe `info` in der Reihenfolge, `medium` = „mit Workaround" |
-| `b0d1b51` | `build-verify`, `ratchet-gates`, `security-review`, `ui-review` | ein gemeinsames Vokabular für Findings- und Gap-Listen (neu `ratchet-gates/references/vocabulary.md`, +87): Status `fixed`/`open` statt `fixed`/`open`/`new`, Status als eigenes Feld, `AKZEPTIERT` = kanonisch `accepted` |
+| `b0d1b51` | `build-verify` (ausschließlich `references/verifier-prompt.md`, +8/−6), `ratchet-gates`, `security-review`, `ui-review` | ein gemeinsames Vokabular für Findings- und Gap-Listen (neu `ratchet-gates/references/vocabulary.md`, +87/−0): Status `fixed`/`open` statt `fixed`/`open`/`new`, Status als eigenes Feld, `AKZEPTIERT` = kanonisch `accepted`; in `build-verify` ändert der Commit nur das Verifier-Protokoll |
 | `5a0c1b0` | **kein Skill** | berührt nur `AGENTS.todo.md` im Skills-Repo (Entscheidung: der ratchet CLI bekommt ein eigenes Repo `~/dev/ratchet-cli`; die Karte bleibt in der Skill) |
 | `0024d7e` | `agent-config`, `build-verify`, `skills-marker` (+ `.agents/rules/build-verify.md`) | Drift um den ungenutzten `instructions`-Key geschlossen: kein Config-Key trägt Always-on-Text, er ist in eine `AGENTS.md` eingebettet |
 | `817c01e` | `agent-config`, `build-verify`, `github-ci-filters`, `update-models` | drei Skills werden hinter exakten IDs versteckt (`metadata.opencode/autoinvoke: false`) |
-| `00dbd22` | `generated-docs` (neu), `ratchet-gates`, `agent-config` | neue versteckte Skill „documentation checked, not believed" (Skill + 2 Referenzen) |
-| `70d49e0` | `ratchet-gates` (neu), `agent-config` | neue versteckte Skill „baselines that only move one way" (Skill + 4 Referenzen) |
+| `00dbd22` | `generated-docs` (neu), `ratchet-gates`, `agent-config` | neue versteckte Skill „documentation checked, not believed" (Skill + 2 Referenzen: `drift-and-generation.md`, `source-of-truth.md`) |
+| `70d49e0` | `ratchet-gates` (neu), `agent-config` | neue versteckte Skill „baselines that only move one way" (Skill + 3 Referenzen: `check-tiers.md`, `generated-docs.md`, `ratchet-baselines.md`; die vierte Referenz `vocabulary.md` kam mit `b0d1b51`) |
 | `8c6b9af` | `update-models` | die `$0`-Aussage auf das konfigurierte Modell eingeschränkt |
 | `fa2268f` | `ui-review` | „vision-agent"-Wortlaut aus der Findings-Vorlage entfernt |
 | `219171c` | `update-models` | Namespace-Regel und Snapshot an die neue Config angeglichen (Snapshot 2026-10-19: `opencode-go/minimax-m3.1-flash-free`) |
@@ -75,8 +75,9 @@ zusätzlich inhaltliche Änderungen), 4 weitere inhaltlich geändert
   (alles Genannte existiert und ist erreichbar) oder wird aus dem Code abgeleitet;
   (b) Zahlen im Fließtext: `AGENTS.todo.md` (u. a. „44 Captures", „vitest 233/233",
   „e2e 117/117", „**sieben** offene Checkbox-Punkte") und `features/05-parity.md`
-  (u. a. „92 Frames", „174 Frames"); (c) kein Drift-Gate — nichts vergleicht Doku
-  gegen Quelle. → offene Position 3.
+  (u. a. „92 frames in 12 s", „174 frames in 20 s" — `features/05-parity.md`
+  §„Live delta folding"); (c) kein Drift-Gate — nichts vergleicht Doku gegen
+  Quelle. → offene Position 3.
 - `ratchet-gates` (neu, `70d49e0`) — **trifft zu, ist nicht drin**. Die Skill dreht
   das Boolean-Gate um („aktuell N Verstöße gegen Regel R", grün solange `count ≤ N`
   oder `count ≥ N`, Baseline nur in der erklärten Richtung) und verlangt, dass die
@@ -86,12 +87,16 @@ zusätzlich inhaltliche Änderungen), 4 weitere inhaltlich geändert
   compiled catalog") und benennt seine eigene Blindstelle im Kopfkommentar („no AST
   scan for unwrapped strings") — der Verweis dahinter (`AGENTS.todo W3`) zeigt auf
   einen Eintrag, den es nicht mehr gibt; (b) `AGENTS.todo.md` §„Bewusst
-  offen/dokumentiert (kein Handlungsbedarf)" — 6 Einträge, davon 5 offene Punkte ohne
-  Owner und ohne Ticket (der sechste ist als entschieden und umgesetzt markiert);
+  offen/dokumentiert (kein Handlungsbedarf)" — 6 Einträge (am committeten Stand
+  dieses Commits): 1 ist als entschieden und umgesetzt markiert, 5 tragen weder Owner
+  noch Ticket; 4 dieser 5 sind als dokumentierte Entscheidung markiert (Quellen:
+  `features/05-parity.md` für zwei Einträge, `features/03-userscripts-postmvp.md`,
+  „zurückgestellt") und damit `accepted`/`wontfix` — offener Punkt bleibt nur der
+  Todo-Dock-Eintrag;
   (c) die Prüfstufen existieren (`AGENTS.md`: `@smoke`/`@regression`/`@feature`;
-  `pnpm test:e2e:smoke` = **1** Test am committeten Stand), aber welche Fehlerklassen
-  nur die langsame Stufe abdeckt und welche gar keine, ist nirgends als Liste
-  dokumentiert. → offene Position 4.
+  `pnpm test:e2e:smoke` = **1** Test am committeten Stand dieses Commits), aber
+  welche Fehlerklassen nur die langsame Stufe abdeckt und welche gar keine, ist
+  nirgends als Liste dokumentiert. → offene Position 4.
 
 **Versteckt im Bereich** — 3 Skills (vorher normale Zeilen „ja"/„nein"; versteckt
 heißt „nicht normal ladbar", nicht „unwirksam" — per exakter ID ladbar)
@@ -146,13 +151,16 @@ heißt „nicht normal ladbar", nicht „unwirksam" — per exakter ID ladbar)
   den „vision-agent"-Wortlaut. Das **Harness** ist angewendet
   (`tests/screenshots/ui-review.config.ts`, `ui-screenshots.spec.ts`,
   `playwright.screenshots.config.ts`), die **Findings-Liste** nicht:
-  `AGENTS.todo.md` §„UI-Review-Befunde" (10 Zeilen am committeten Stand) nutzt
-  `hoch`/`mittel`/`niedrig`, führt den Status mit im Behebungs-Text statt in einer
-  eigenen Spalte (6 der 10 Zeilen tragen „erledigt" in der Behebungs-Spalte, die
+  `AGENTS.todo.md` §„UI-Review-Befunde" (10 Zeilen am committeten Stand dieses
+  Commits) nutzt `hoch`/`mittel`/`niedrig`, führt den Status mit im Behebungs-Text
+  statt in einer
+  eigener Spalte (6 der 10 Zeilen tragen „erledigt" in der Behebungs-Spalte, die
   Zeilen 3–5 sind über die Welle 5 geschlossen, ohne Statuswort), und die einzige
   offene Zeile (#10, „Server-Werkzeuge: 5 Karten mit „Keine …"") hat weder Owner noch
-  Ticket. Dieselbe Lücke ist für die Log der Website im Skills-Repo protokolliert
-  (`b9f140b`). → **Zeile wird `offen`** → offene Position 5.
+  Ticket. Eine verwandte Lücke — derselbe Lückentyp in einem anderen Repo — ist für
+  die UI-Log der Website im Skills-Repo protokolliert (`b9f140b`): dort die
+  zurückgezogene Bedeutung der Stufen, hier die deutschen Stufen und die fehlenden
+  Spalten. → **Zeile wird `offen`** → offene Position 5.
 - `skills-marker` (`0024d7e`) — nur der Wortlaut zum Wegfall des `instructions`-Keys
   (kein Config-Key trägt Regeltext; er ist in eine `AGENTS.md` eingebettet). Der
   Ablauf des Markers selbst ändert sich nicht — **Zeile bleibt `ja`**.
@@ -160,12 +168,14 @@ heißt „nicht normal ladbar", nicht „unwirksam" — per exakter ID ladbar)
 **Entfernt im Bereich**: keiner (kein Skill wurde gelöscht; `git log
 --diff-filter=D --name-only 787670a..0449b05 -- .agents/skills` ist leer).
 
-**Anker-Audit** — alle Zeilen der Tabelle am committeten Stand (`c737d17`) neu
-belegt. Ergebnis: **1 Verweis ohne Ziel** — `scripts/check-i18n.mjs:6` verweist auf
-„AGENTS.todo W3"; einen Eintrag W3 gibt es nicht: im Todo vor diesem Fortschreiben
-kommt die Zeichenfolge nicht vor (`git show c737d17:AGENTS.todo.md | grep -c "W3"`
-→ 0, committeter Stand), und die einzigen Fundstellen nach diesem Fortschreiben sind
-das Zitat desselben Zeigers in offene Position 4 — zitiert, nicht aufgelöst.
+**Anker-Audit** — alle Zeilen der Tabelle am committeten Stand **dieses Commits**
+neu belegt (Datei-Stand, den dieser Commit festschreibt; die geprüften Artefakte
+sind zwischen `45cb323` und diesem Commit unverändert). Ergebnis: **1 Verweis ohne
+Ziel** — `scripts/check-i18n.mjs:6` verweist auf „AGENTS.todo W3"; einen Eintrag W3
+gibt es nicht: im Todo vor dem **ersten** Fortschreiben kommt die Zeichenfolge nicht
+vor (`git show c737d17:AGENTS.todo.md | grep -c "W3"` → 0, committeter Stand vor dem
+ersten Fortschreiben), und die einzigen Fundstellen seither sind das
+Zitat desselben Zeigers in offene Position 4 — zitiert, nicht aufgelöst.
 Die übrigen Anker tragen: `AGENTS.md` (DoD,
 „Quality gates before commit", „Build-agent rule", „Subagent questions surface to the
 user"), `.codegraph/`, `.githooks/pre-commit` mit `core.hooksPath=.githooks`,
@@ -185,6 +195,16 @@ nur `build-verify.md` geändert (`0449b05`, `0024d7e`); `ask.md` ist unveränder
 die globale `~/.config/opencode/AGENTS.md` bettet nur die Frage-Regel ein — die
 neue Regel zur Zahl im Footer ist maschinenweit, nicht projektspezifisch, und wird
 nicht eingebettet. Nichts nachzuziehen.
+
+**Sprache** (Stand dieses Commits): `AGENTS.md:3` verlangt Englisch für Code und Doku
+(„Language: code and docs in English, UI strings in German"), `README.md:4` ebenso
+(„German UI, English code and docs"). Die **Commit-Bodies** dieses Repos sind
+englisch — die Marker-Commits `4507c4a` und `73c032f` schreiben englisch, obwohl sie
+deutsche Dateien ändern, und `1f73917` zitiert die Regel ausdrücklich („in the
+file's language (English, per rule 1)"). Der Body des Marker-Commits `45cb323` war
+deutsch — der Widerspruch ist dort nicht dokumentiert; er wird in diesem Commit
+nachgetragen. Die **Marker-Datei selbst bleibt deutsch** — vorbestehender Zustand
+(`c737d17` war ebenfalls deutsch), keine Übersetzung.
 
 ## Fortschreiben
 

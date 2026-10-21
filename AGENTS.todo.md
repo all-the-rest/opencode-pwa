@@ -10,9 +10,10 @@ Basic/Experte"); Befund 8 (Projektseite: Pfad + Farbe) mit Welle 7.
 Welle 7 ist umgesetzt und verifiziert (lint 0, vitest, build, e2e inkl. Mobile,
 Screenshots) — die letzte Code-Welle; danach stehen nur noch die **sieben** offenen
 Checkbox-Punkte unten (`grep -c '^- \[ \]' AGENTS.todo.md` → 7, gemessen am
-committeten Stand `c737d17`; bei Welle 4, Welle 5 und der Baum-Verfeinerung steht
-„erledigt" schon im Text, ihre Box ist aber nicht abgehakt) plus die
-fünf Skills-Positionen aus dem Abschnitt unten.
+committeten Stand dieses Commits — Datei-Stand, den dieser Commit festschreibt;
+dieselbe Zählung im Vorgänger `45cb323`: 7; bei Welle 4, Welle 5 und der
+Baum-Verfeinerung steht „erledigt" schon im Text, ihre Box ist aber nicht
+abgehakt) plus die fünf Skills-Positionen aus dem Abschnitt unten.
 
 ## Navigation (Owner-Entscheidung 2026-10-07, umgesetzt)
 
@@ -186,8 +187,8 @@ neu bewertet); die Positionen 3 bis 5 sind neu aus `787670a..0449b05`.
    **nicht** (`grep -nE '^\s*(on|push|pull_request|branches|workflow_dispatch)'
    .github/workflows/*.yml`). Beide Workflows laufen heute ohne `paths-ignore`; dieses
    Repo ist docs-lastig (`features/`, `docs/`, `AGENTS*.md`). Precondition der Skill
-   Step 1 ist am 2026-10-21 erneut geprüft (am committeten Stand `c737d17`,
-   unverändert): **kein** Check liest eine Repo-`.md` als Input
+   Step 1 ist am 2026-10-21 erneut geprüft (am committeten Stand dieses Commits,
+   unverändert gegenüber `45cb323`): **kein** Check liest eine Repo-`.md` als Input
    (`eslint.config.js` lints js/ts/mjs, `vite.config.ts` setzt die vitest-`include`
    auf `src/**/*.test.{ts,tsx}`, `playwright.config.ts` hat `testDir` = `tests/e2e`;
    die `.md`-Treffer in `tests/` sind Mock-Fixtures, kein Consumer) — ein
@@ -235,7 +236,8 @@ neu bewertet); die Positionen 3 bis 5 sind neu aus `787670a..0449b05`.
    - `AGENTS.todo.md` — Zahlen im Fließtext: „44 Captures" (§„UI-Review-Befunde"),
      „vitest 233/233" und „e2e 117/117" (§„Navigation"), „**sieben** offene
      Checkbox-Punkte" (Kopfzeile).
-   - `features/05-parity.md` — Messwerte im Fließtext („92 Frames", „174 Frames").
+   - `features/05-parity.md` §„Live delta folding" — Messwerte im Fließtext
+     („92 frames in 12 s", „174 frames in 20 s").
    Zu entscheiden: je Behauptung eine Quelle der Wahrheit benennen und die driftenden
    Stellen generieren (Generator + Drift-Gate als Diff) oder die Zahl durch einen
    Verweis auf eine generierte Tabelle ersetzen.
@@ -251,19 +253,23 @@ neu bewertet); die Positionen 3 bis 5 sind neu aus `787670a..0449b05`.
      („missing from the compiled catalog") und benennt seine eigene Blindstelle im
      Kopfkommentar („no AST scan for unwrapped strings"). Der Verweis dahinter
      (wörtlich „AGENTS.todo W3“) zeigt auf einen Eintrag, den es nicht mehr gibt —
-     im Todo vor diesem Fortschreiben kommt die Zeichenfolge nicht vor
-     (`git show c737d17:AGENTS.todo.md | grep -c "W3"` → 0); die Fundstelle hier
-     zitiert den Zeiger, sie löst ihn nicht auf. Entweder wird die Blindstelle
-     dort benannt (mit Owner und Ticket) oder der Verweis auf einen existierenden
-     Eintrag gezogen.
+     im Todo vor dem **ersten** Fortschreiben kommt die Zeichenfolge nicht vor
+     (`git show c737d17:AGENTS.todo.md | grep -c "W3"` → 0, committeter Stand vor dem
+     ersten Fortschreiben); die Fundstelle hier zitiert den Zeiger, sie löst ihn
+     nicht auf. Entweder wird die Blindstelle dort benannt (mit Owner und Ticket)
+     oder der Verweis auf einen existierenden Eintrag gezogen.
    - `AGENTS.todo.md` §„Bewusst offen/dokumentiert (kein Handlungsbedarf)" — 6
-     Einträge, davon 5 offene Punkte **ohne** Owner und **ohne** Ticket (der sechste
-     ist als entschieden und umgesetzt markiert). Die kanonische Regel: ein
-     Eintrag, der nicht `fixed` ist, braucht Id, Owner und Ticket.
+     Einträge (am committeten Stand dieses Commits): 1 ist als entschieden und
+     umgesetzt markiert (`fixed`), 5 tragen weder Owner noch Ticket; 4 dieser 5 sind
+     als dokumentierte Entscheidung markiert (Quellen: `features/05-parity.md` für
+     zwei Einträge, `features/03-userscripts-postmvp.md`, „zurückgestellt") und damit
+     im kanonischen Vokabular `accepted`/`wontfix` — offener Punkt bleibt nur der
+     Todo-Dock-Eintrag. Die kanonische Regel: ein Eintrag, der nicht `fixed` ist,
+     braucht Id, Owner und Ticket.
    - Die Prüfstufen existieren (`AGENTS.md`: `@smoke`/`@regression`/`@feature`;
-     `pnpm test:e2e:smoke` = **1** Test am committeten Stand), aber welche
-     Fehlerklassen nur die langsame Stufe abdeckt und welche gar keine, ist nirgends
-     als Liste dokumentiert.
+     `pnpm test:e2e:smoke` = **1** Test am committeten Stand dieses Commits), aber
+     welche Fehlerklassen nur die langsame Stufe abdeckt und welche gar keine, ist
+     nirgends als Liste dokumentiert.
    Zu entscheiden: die Gates auf Zähler umstellen (Baseline erzeugen, Richtung
    festlegen, Paydown-Befehl) oder den Boolean-Stand als bewusste Entscheidung
    festhalten — mit Lückenliste, Owner und Ticket je Eintrag.
@@ -275,13 +281,16 @@ neu bewertet); die Positionen 3 bis 5 sind neu aus `787670a..0449b05`.
    mit `medium` = „mit Workaround") aus `ratchet-gates`
    (`references/vocabulary.md`) und der Status als **eigenes** Feld — nie in der
    Schwere-Spalte. Das Harness ist hier angewendet; die Findings-Liste ist es nicht:
-   `AGENTS.todo.md` §„UI-Review-Befunde" (10 Zeilen am committeten Stand) verwendet
-   `hoch`/`mittel`/`niedrig`, führt den Status mit im Behebungs-Text statt in einer
-   eigenen Spalte (6 der 10 Zeilen tragen „erledigt" in der Behebungs-Spalte; die
+   `AGENTS.todo.md` §„UI-Review-Befunde" (10 Zeilen am committeten Stand dieses
+   Commits) verwendet `hoch`/`mittel`/`niedrig`, führt den Status mit im
+   Behebungs-Text statt in einer eigenen Spalte (6 der 10 Zeilen tragen „erledigt"
+   in der Behebungs-Spalte; die
    Zeilen 3–5 sind über die Welle 5 geschlossen, ohne Statuswort), und die einzige
    noch offene Zeile (#10, „Server-Werkzeuge: 5 Karten mit „Keine …"") hat weder
-   Owner noch Ticket. Dieselbe Lücke ist für die Log der Website im Skills-Repo
-   protokolliert (`b9f140b`) — die Präzedenz: einmal die Stufen, dann die offenen
+   Owner noch Ticket. Eine verwandte Lücke — derselbe Lückentyp in einem anderen
+   Repo — ist für die UI-Log der Website im Skills-Repo protokolliert (`b9f140b`):
+   dort die zurückgezogene Bedeutung der Stufen, hier die deutschen Stufen und die
+   fehlenden Spalten. Die Präzedenz bleibt: einmal die Stufen, dann die offenen
    Zeilen einzeln gegen die kanonischen Bedeutungen. Zu entscheiden: die Tabelle auf
    die kanonischen Stufen und Spalten umstellen (die geschlossenen Zeilen auf
    `fixed`, #10 offen mit Id, Owner und Ticket) oder die Abweichung bewusst
