@@ -75,9 +75,8 @@ zusätzlich inhaltliche Änderungen), 4 weitere inhaltlich geändert
   (alles Genannte existiert und ist erreichbar) oder wird aus dem Code abgeleitet;
   (b) Zahlen im Fließtext: `AGENTS.todo.md` (u. a. „44 Captures", „vitest 233/233",
   „e2e 117/117", „**sieben** offene Checkbox-Punkte") und `features/05-parity.md`
-  (u. a. „92 frames in 12 s", „174 frames in 20 s" — `features/05-parity.md`
-  §„Live delta folding"); (c) kein Drift-Gate — nichts vergleicht Doku gegen
-  Quelle. → offene Position 3.
+  §„Live delta folding" (u. a. „92 frames in 12 s", „174 frames in 20 s");
+  (c) kein Drift-Gate — nichts vergleicht Doku gegen Quelle. → offene Position 3.
 - `ratchet-gates` (neu, `70d49e0`) — **trifft zu, ist nicht drin**. Die Skill dreht
   das Boolean-Gate um („aktuell N Verstöße gegen Regel R", grün solange `count ≤ N`
   oder `count ≥ N`, Baseline nur in der erklärten Richtung) und verlangt, dass die
@@ -116,7 +115,7 @@ heißt „nicht normal ladbar", nicht „unwirksam" — per exakter ID ladbar)
 - `github-ci-filters` (versteckt in `817c01e`) — **trifft zu, ist nicht drin**: das
   Verstecken ändert die Pflicht nicht — die Skill ist per exakter ID ladbar, und die
   Pflicht trifft dieses Repo weiter zu. Die beiden Workflows laufen ohne
-  `paths-ignore` (Trigger am committeten Stand: `ci.yml` = `push` **und**
+  `paths-ignore` (Trigger am committeten Stand dieses Commits: `ci.yml` = `push` **und**
   `pull_request`, `pages.yml` = `push` **und** `workflow_dispatch`; `pages.yml` hat
   **keinen** `pull_request`-Trigger), das Repo ist docs-lastig (`features/`, `docs/`,
   `AGENTS*.md`). Die Precondition hält am 2026-10-21 erneut: kein Check liest eine
@@ -153,9 +152,9 @@ heißt „nicht normal ladbar", nicht „unwirksam" — per exakter ID ladbar)
   `playwright.screenshots.config.ts`), die **Findings-Liste** nicht:
   `AGENTS.todo.md` §„UI-Review-Befunde" (10 Zeilen am committeten Stand dieses
   Commits) nutzt `hoch`/`mittel`/`niedrig`, führt den Status mit im Behebungs-Text
-  statt in einer
-  eigener Spalte (6 der 10 Zeilen tragen „erledigt" in der Behebungs-Spalte, die
-  Zeilen 3–5 sind über die Welle 5 geschlossen, ohne Statuswort), und die einzige
+  statt in einer eigenen Spalte (6 der 10 Zeilen tragen „erledigt" in der
+  Behebungs-Spalte; die Zeilen 3–5 sind über die Welle 5 geschlossen, ohne
+  Statuswort), und die einzige
   offene Zeile (#10, „Server-Werkzeuge: 5 Karten mit „Keine …"") hat weder Owner noch
   Ticket. Eine verwandte Lücke — derselbe Lückentyp in einem anderen Repo — ist für
   die UI-Log der Website im Skills-Repo protokolliert (`b9f140b`): dort die
@@ -172,10 +171,12 @@ heißt „nicht normal ladbar", nicht „unwirksam" — per exakter ID ladbar)
 neu belegt (Datei-Stand, den dieser Commit festschreibt; die geprüften Artefakte
 sind zwischen `45cb323` und diesem Commit unverändert). Ergebnis: **1 Verweis ohne
 Ziel** — `scripts/check-i18n.mjs:6` verweist auf „AGENTS.todo W3"; einen Eintrag W3
-gibt es nicht: im Todo vor dem **ersten** Fortschreiben kommt die Zeichenfolge nicht
-vor (`git show c737d17:AGENTS.todo.md | grep -c "W3"` → 0, committeter Stand vor dem
-ersten Fortschreiben), und die einzigen Fundstellen seither sind das
-Zitat desselben Zeigers in offene Position 4 — zitiert, nicht aufgelöst.
+gibt es nicht: im Todo vor dem Fortschreiben, das den Cursor auf `0449b05` gesetzt
+hat, kommt die Zeichenfolge nicht vor — gemessen an `c737d17`
+(`git show c737d17:AGENTS.todo.md | grep -c "W3"` → 0; derselbe Wert 0 an den
+weiteren Vor-Ständen `1f73917`, `4507c4a`, `73c032f`) —, und die einzigen
+Fundstellen seither sind das Zitat desselben Zeigers in offene Position 4 —
+zitiert, nicht aufgelöst.
 Die übrigen Anker tragen: `AGENTS.md` (DoD,
 „Quality gates before commit", „Build-agent rule", „Subagent questions surface to the
 user"), `.codegraph/`, `.githooks/pre-commit` mit `core.hooksPath=.githooks`,
@@ -198,13 +199,16 @@ nicht eingebettet. Nichts nachzuziehen.
 
 **Sprache** (Stand dieses Commits): `AGENTS.md:3` verlangt Englisch für Code und Doku
 („Language: code and docs in English, UI strings in German"), `README.md:4` ebenso
-(„German UI, English code and docs"). Die **Commit-Bodies** dieses Repos sind
-englisch — die Marker-Commits `4507c4a` und `73c032f` schreiben englisch, obwohl sie
-deutsche Dateien ändern, und `1f73917` zitiert die Regel ausdrücklich („in the
-file's language (English, per rule 1)"). Der Body des Marker-Commits `45cb323` war
-deutsch — der Widerspruch ist dort nicht dokumentiert; er wird in diesem Commit
-nachgetragen. Die **Marker-Datei selbst bleibt deutsch** — vorbestehender Zustand
-(`c737d17` war ebenfalls deutsch), keine Übersetzung.
+(„German UI, English code and docs"). Die Commit-Bodies sind **nicht einheitlich
+englisch**: in der Marker-Serie (`docs(skills):`/`docs(agents):` — die Commits
+`1f73917`, `4507c4a`, `73c032f`, `c737d17`, `45cb323`, `c86138b` und dieser) haben
+**zwei** einen deutschen Body (`c737d17`, `45cb323`) — gemessen mit
+`git cat-file commit <sha>` an jedem der genannten SHAs (committeter Stand,
+Rohformat). Die übrigen sind englisch: `1f73917` zitiert die Regel ausdrücklich
+(„in the file's language (English, per rule 1)"), `4507c4a` und `73c032f` schreiben
+englisch, obwohl sie deutsche Dateien ändern, ebenso dieser Commit. Die
+**Marker-Datei selbst bleibt deutsch** — vorbestehender Zustand (`c737d17` war
+ebenfalls deutsch), keine Übersetzung.
 
 ## Fortschreiben
 

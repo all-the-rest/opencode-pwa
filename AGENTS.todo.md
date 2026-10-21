@@ -175,8 +175,9 @@ Reihenfolge steht, jede Welle wird vor dem commit verifiziert (lint/test/build/e
 Einträge aus dem Fortschreiben von `AGENTS.skills.md` (Stand `0449b05`). Wie
 `AGENTS.todo.md` insgesamt: **Log, kein Auftrag** — die Umsetzung braucht eine
 ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
-`be24163..787670a` und sind am 2026-10-21 am committeten Stand nachgeprüft (nicht
-neu bewertet); die Positionen 3 bis 5 sind neu aus `787670a..0449b05`.
+`be24163..787670a` und sind am 2026-10-21 am committeten Stand dieses Commits
+nachgeprüft (nicht neu bewertet); die Positionen 3 bis 5 sind neu aus
+`787670a..0449b05`.
 
 1. **Pfad-Filter für die CI-Workflows** (`github-ci-filters`) — die Skill will
    `paths-ignore`, damit ein reiner Doku-Commit nicht die ganze Pipeline startet.
@@ -215,8 +216,9 @@ neu bewertet); die Positionen 3 bis 5 sind neu aus `787670a..0449b05`.
    gewinnt `packageManager`) — die Skill will es umgekehrt (Major-Linie
    `version: 11` im Workflow, kein Pin im Manifest). Die Abhängigkeiten selbst
    sind bereits ranges-only (`^`/`~` in `package.json`) — offen sind nur die
-   beiden Pin-Formen. Am 2026-10-21 am committeten Stand nachgeprüft: beide Formen
-   sind unverändert (die Skill selbst ist in `787670a..0449b05` nicht geändert).
+   beiden Pin-Formen. Am 2026-10-21 am committeten Stand dieses Commits
+   nachgeprüft: beide Formen sind unverändert (die Skill selbst ist in
+   `787670a..0449b05` nicht geändert).
    Zu entscheiden: auf die Skill-Form umstellen (mit
    `pnpm install --frozen-lockfile` + Build-Gate geprüft) oder die
    Abweichung als bewusste Projektentscheidung hier festhalten.
@@ -253,11 +255,13 @@ neu bewertet); die Positionen 3 bis 5 sind neu aus `787670a..0449b05`.
      („missing from the compiled catalog") und benennt seine eigene Blindstelle im
      Kopfkommentar („no AST scan for unwrapped strings"). Der Verweis dahinter
      (wörtlich „AGENTS.todo W3“) zeigt auf einen Eintrag, den es nicht mehr gibt —
-     im Todo vor dem **ersten** Fortschreiben kommt die Zeichenfolge nicht vor
-     (`git show c737d17:AGENTS.todo.md | grep -c "W3"` → 0, committeter Stand vor dem
-     ersten Fortschreiben); die Fundstelle hier zitiert den Zeiger, sie löst ihn
-     nicht auf. Entweder wird die Blindstelle dort benannt (mit Owner und Ticket)
-     oder der Verweis auf einen existierenden Eintrag gezogen.
+     im Todo vor dem Fortschreiben, das den Cursor auf `0449b05` gesetzt hat, kommt
+     die Zeichenfolge nicht vor — gemessen an `c737d17`
+     (`git show c737d17:AGENTS.todo.md | grep -c "W3"` → 0; derselbe Wert 0 an den
+     weiteren Vor-Ständen `1f73917`, `4507c4a`, `73c032f`) —; die Fundstelle hier
+     zitiert den Zeiger, sie löst ihn nicht auf. Entweder wird die Blindstelle dort
+     benannt (mit Owner und Ticket) oder der Verweis auf einen existierenden
+     Eintrag gezogen.
    - `AGENTS.todo.md` §„Bewusst offen/dokumentiert (kein Handlungsbedarf)" — 6
      Einträge (am committeten Stand dieses Commits): 1 ist als entschieden und
      umgesetzt markiert (`fixed`), 5 tragen weder Owner noch Ticket; 4 dieser 5 sind
@@ -284,8 +288,8 @@ neu bewertet); die Positionen 3 bis 5 sind neu aus `787670a..0449b05`.
    `AGENTS.todo.md` §„UI-Review-Befunde" (10 Zeilen am committeten Stand dieses
    Commits) verwendet `hoch`/`mittel`/`niedrig`, führt den Status mit im
    Behebungs-Text statt in einer eigenen Spalte (6 der 10 Zeilen tragen „erledigt"
-   in der Behebungs-Spalte; die
-   Zeilen 3–5 sind über die Welle 5 geschlossen, ohne Statuswort), und die einzige
+   in der Behebungs-Spalte; die Zeilen 3–5 sind über die Welle 5 geschlossen, ohne
+   Statuswort), und die einzige
    noch offene Zeile (#10, „Server-Werkzeuge: 5 Karten mit „Keine …"") hat weder
    Owner noch Ticket. Eine verwandte Lücke — derselbe Lückentyp in einem anderen
    Repo — ist für die UI-Log der Website im Skills-Repo protokolliert (`b9f140b`):
