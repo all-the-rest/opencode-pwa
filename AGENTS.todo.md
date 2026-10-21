@@ -1,7 +1,7 @@
 # AGENTS.todo.md
 
-Stand: 2026-10-19 (Welle 6 + Welle 7 eingetragen; Skills-Stand aus dem Bereich
-`be24163..787670a` eingetragen). Nur offene TODOs (veraltete
+Stand: 2026-10-21 (Welle 6 + Welle 7 eingetragen; Skills-Stand aus dem Bereich
+`787670a..0449b05` eingetragen). Nur offene TODOs (veraltete
 Einträge bereinigt: Parität-Batches, Deep-Link-Paste, Prozess-Regel und
 Userscripts-Verdikt sind umgesetzt/dokumentiert).
 UI-Review-Befunde 1, 2, 6, 7 und 9 sind mit Welle 6 erledigt (Details in
@@ -9,10 +9,10 @@ UI-Review-Befunde 1, 2, 6, 7 und 9 sind mit Welle 6 erledigt (Details in
 Basic/Experte"); Befund 8 (Projektseite: Pfad + Farbe) mit Welle 7.
 Welle 7 ist umgesetzt und verifiziert (lint 0, vitest, build, e2e inkl. Mobile,
 Screenshots) — die letzte Code-Welle; danach stehen nur noch die **sieben** offenen
-Checkbox-Punkte unten (`grep -c '^- \[ \]' AGENTS.todo.md` → 7; bei Welle 4,
-Welle 5 und der Baum-Verfeinerung steht „erledigt" schon im Text, ihre Box ist
-aber nicht abgehakt) plus die
-zwei Skills-Positionen aus dem Abschnitt unten.
+Checkbox-Punkte unten (`grep -c '^- \[ \]' AGENTS.todo.md` → 7, gemessen am
+committeten Stand `c737d17`; bei Welle 4, Welle 5 und der Baum-Verfeinerung steht
+„erledigt" schon im Text, ihre Box ist aber nicht abgehakt) plus die
+fünf Skills-Positionen aus dem Abschnitt unten.
 
 ## Navigation (Owner-Entscheidung 2026-10-07, umgesetzt)
 
@@ -169,11 +169,13 @@ Reihenfolge steht, jede Welle wird vor dem commit verifiziert (lint/test/build/e
       `features/05-parity.md` („2b — Ordnerketten komprimieren").
 
 
-## Skills-Stand (2026-10-19) — Positionen aus dem Bereich `be24163..787670a`
+## Skills-Stand (2026-10-21) — offene Positionen aus den Bereichen `be24163..787670a` und `787670a..0449b05`
 
-Einträge aus dem Fortschreiben von `AGENTS.skills.md` (Stand `787670a`). Wie
+Einträge aus dem Fortschreiben von `AGENTS.skills.md` (Stand `0449b05`). Wie
 `AGENTS.todo.md` insgesamt: **Log, kein Auftrag** — die Umsetzung braucht eine
-ausdrückliche Beauftragung.
+ausdrückliche Beauftragung. Die Positionen 1 und 2 stammen aus dem Bereich
+`be24163..787670a` und sind am 2026-10-21 am committeten Stand nachgeprüft (nicht
+neu bewertet); die Positionen 3 bis 5 sind neu aus `787670a..0449b05`.
 
 1. **Pfad-Filter für die CI-Workflows** (`github-ci-filters`) — die Skill will
    `paths-ignore`, damit ein reiner Doku-Commit nicht die ganze Pipeline startet.
@@ -184,18 +186,22 @@ ausdrückliche Beauftragung.
    **nicht** (`grep -nE '^\s*(on|push|pull_request|branches|workflow_dispatch)'
    .github/workflows/*.yml`). Beide Workflows laufen heute ohne `paths-ignore`; dieses
    Repo ist docs-lastig (`features/`, `docs/`, `AGENTS*.md`). Precondition der Skill
-   Step 1 ist am 2026-10-19 geprüft: **kein** Check liest eine Repo-`.md` als Input
-   (die `.md`-Treffer in `tests/` sind Mock-Fixtures, kein Consumer) — ein
+   Step 1 ist am 2026-10-21 erneut geprüft (am committeten Stand `c737d17`,
+   unverändert): **kein** Check liest eine Repo-`.md` als Input
+   (`eslint.config.js` lints js/ts/mjs, `vite.config.ts` setzt die vitest-`include`
+   auf `src/**/*.test.{ts,tsx}`, `playwright.config.ts` hat `testDir` = `tests/e2e`;
+   die `.md`-Treffer in `tests/` sind Mock-Fixtures, kein Consumer) — ein
    `'**/*.md'`-Filter wäre also zulässig. `main` ist **nicht** branch-protected
-   (`gh api …/branches/main/protection` → `Branch not protected`), also keine
-   Pending-Check-Falle. Zu entscheiden: Filter setzen — je Workflow nur die Trigger,
-   die er hat (`ci.yml`: `push` **und** `pull_request`; `pages.yml`: nur `push`, der
-   manuelle `workflow_dispatch` braucht keinen Filter), `branches:`-Filter stehen
-   lassen, `.github/workflows/**` nie mitignorieren; **keinen** `pull_request`-Trigger
-   in `pages.yml` nachziehen — das wäre eine Verhaltensänderung und gehört nach Step 4
-   der Skill in einen zweiten, getrennten Commit — oder bewusst ohne Filter bleiben,
-   dann mit Begründung hier festhalten, damit die offene Position nicht
-   untergeht.
+   (`gh api …/branches/main/protection` → `Branch not protected`, am 2026-10-21 erneut
+   geprüft), also keine Pending-Check-Falle. Die Skill ist seit `817c01e` **versteckt**
+   (nur per exakter ID ladbar) — das ändert die Pflicht nicht. Zu entscheiden: Filter
+   setzen — je Workflow nur die Trigger, die er hat (`ci.yml`: `push` **und**
+   `pull_request`; `pages.yml`: nur `push`, der manuelle `workflow_dispatch` braucht
+   keinen Filter), `branches:`-Filter stehen lassen, `.github/workflows/**` nie
+   mitignorieren; **keinen** `pull_request`-Trigger in `pages.yml` nachziehen — das
+   wäre eine Verhaltensänderung und gehört nach Step 4 der Skill in einen zweiten,
+   getrennten Commit — oder bewusst ohne Filter bleiben, dann mit Begründung hier
+   festhalten, damit die offene Position nicht untergeht.
 
 2. **`node-deps`-Policy: `packageManager`-Pin und `minimumReleaseAgeExclude`**
    (`node-deps`) — die Skill verbietet beides: keine exakten Pins im Manifest
@@ -208,9 +214,78 @@ ausdrückliche Beauftragung.
    gewinnt `packageManager`) — die Skill will es umgekehrt (Major-Linie
    `version: 11` im Workflow, kein Pin im Manifest). Die Abhängigkeiten selbst
    sind bereits ranges-only (`^`/`~` in `package.json`) — offen sind nur die
-   beiden Pin-Formen. Zu entscheiden: auf die Skill-Form umstellen (mit
+   beiden Pin-Formen. Am 2026-10-21 am committeten Stand nachgeprüft: beide Formen
+   sind unverändert (die Skill selbst ist in `787670a..0449b05` nicht geändert).
+   Zu entscheiden: auf die Skill-Form umstellen (mit
    `pnpm install --frozen-lockfile` + Build-Gate geprüft) oder die
    Abweichung als bewusste Projektentscheidung hier festhalten.
+
+3. **Doku-Fakten prüfen statt glauben** (`generated-docs`, neu aus
+   `787670a..0449b05`) — die neue (versteckte) Skill verlangt einen **Besitzer je
+   Behauptung**: der Code, eine maschinenlesbare Datei, eine kuratierte Liste oder
+   eine Person. Zahlen im Fließtext sind Artefakte — sie werden im generierten Block
+   erzeugt oder durch einen Verweis auf die generierte Tabelle ersetzt. Drei Stellen
+   in diesem Repo tragen solche Behauptungen, und kein Gate prüft sie:
+   - `README.md`, Abschnitt „V2 API Endpoints Used" — die Tabelle nennt 8 Endpunkte,
+     der Code ruft deutlich mehr auf (`src/lib/opencode.ts`, u. a.
+     `/api/session/active`, `/api/session/{id}/diff`, `/api/permission/request`,
+     `/api/skill`, `/api/worktree`). Die Tabelle ist eine zweite Wahrheit und altert
+     still; nach der Skill braucht eine Liste von Behauptungen ihr **eigenes** Gate
+     (alles Genannte existiert und ist erreichbar) oder wird aus dem Code abgeleitet.
+   - `AGENTS.todo.md` — Zahlen im Fließtext: „44 Captures" (§„UI-Review-Befunde"),
+     „vitest 233/233" und „e2e 117/117" (§„Navigation"), „**sieben** offene
+     Checkbox-Punkte" (Kopfzeile).
+   - `features/05-parity.md` — Messwerte im Fließtext („92 Frames", „174 Frames").
+   Zu entscheiden: je Behauptung eine Quelle der Wahrheit benennen und die driftenden
+   Stellen generieren (Generator + Drift-Gate als Diff) oder die Zahl durch einen
+   Verweis auf eine generierte Tabelle ersetzen.
+
+4. **Gates als Ratchets, Lücken mit Owner und Ticket** (`ratchet-gates`, neu aus
+   `787670a..0449b05`) — die neue (versteckte) Skill dreht das Boolean-Gate um:
+   „aktuell N Verstöße gegen Regel R", grün solange `count ≤ N` (Obergrenze) oder
+   `count ≥ N` (Untergrenze), und die Baseline darf sich nur in der erklärten Richtung
+   bewegen. Sie verlangt außerdem, dass die **nicht abgedeckte Fläche** dort benannt
+   wird, wo sie lebt, und dass jede offene Lücke Owner und Ticket trägt. In diesem
+   Repo ist davon offen:
+   - `scripts/check-i18n.mjs` — das Gate prüft die Message-Population als Boolean
+     („missing from the compiled catalog") und benennt seine eigene Blindstelle im
+     Kopfkommentar („no AST scan for unwrapped strings"). Der Verweis dahinter
+     (wörtlich „AGENTS.todo W3“) zeigt auf einen Eintrag, den es nicht mehr gibt —
+     im Todo vor diesem Fortschreiben kommt die Zeichenfolge nicht vor
+     (`git show c737d17:AGENTS.todo.md | grep -c "W3"` → 0); die Fundstelle hier
+     zitiert den Zeiger, sie löst ihn nicht auf. Entweder wird die Blindstelle
+     dort benannt (mit Owner und Ticket) oder der Verweis auf einen existierenden
+     Eintrag gezogen.
+   - `AGENTS.todo.md` §„Bewusst offen/dokumentiert (kein Handlungsbedarf)" — 6
+     Einträge, davon 5 offene Punkte **ohne** Owner und **ohne** Ticket (der sechste
+     ist als entschieden und umgesetzt markiert). Die kanonische Regel: ein
+     Eintrag, der nicht `fixed` ist, braucht Id, Owner und Ticket.
+   - Die Prüfstufen existieren (`AGENTS.md`: `@smoke`/`@regression`/`@feature`;
+     `pnpm test:e2e:smoke` = **1** Test am committeten Stand), aber welche
+     Fehlerklassen nur die langsame Stufe abdeckt und welche gar keine, ist nirgends
+     als Liste dokumentiert.
+   Zu entscheiden: die Gates auf Zähler umstellen (Baseline erzeugen, Richtung
+   festlegen, Paydown-Befehl) oder den Boolean-Stand als bewusste Entscheidung
+   festhalten — mit Lückenliste, Owner und Ticket je Eintrag.
+
+5. **UI-Findings auf das kanonische Vokabular bringen** (`ui-review`, neu aus
+   `787670a..0449b05`) — die Findings-Vorlage der `ui-review`-Skill ist umgestellt:
+   Spalten `Id | Severity | Status | Owner | Ticket | File:Line | Screenshot | Finding |
+   Suggested fix`, die kanonischen Stufen (`critical`/`high`/`medium`/`low`/`info`,
+   mit `medium` = „mit Workaround") aus `ratchet-gates`
+   (`references/vocabulary.md`) und der Status als **eigenes** Feld — nie in der
+   Schwere-Spalte. Das Harness ist hier angewendet; die Findings-Liste ist es nicht:
+   `AGENTS.todo.md` §„UI-Review-Befunde" (10 Zeilen am committeten Stand) verwendet
+   `hoch`/`mittel`/`niedrig`, führt den Status mit im Behebungs-Text statt in einer
+   eigenen Spalte (6 der 10 Zeilen tragen „erledigt" in der Behebungs-Spalte; die
+   Zeilen 3–5 sind über die Welle 5 geschlossen, ohne Statuswort), und die einzige
+   noch offene Zeile (#10, „Server-Werkzeuge: 5 Karten mit „Keine …"") hat weder
+   Owner noch Ticket. Dieselbe Lücke ist für die Log der Website im Skills-Repo
+   protokolliert (`b9f140b`) — die Präzedenz: einmal die Stufen, dann die offenen
+   Zeilen einzeln gegen die kanonischen Bedeutungen. Zu entscheiden: die Tabelle auf
+   die kanonischen Stufen und Spalten umstellen (die geschlossenen Zeilen auf
+   `fixed`, #10 offen mit Id, Owner und Ticket) oder die Abweichung bewusst
+   festhalten.
 
 
 ## Bewusst offen/dokumentiert (kein Handlungsbedarf)
