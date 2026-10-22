@@ -1,7 +1,7 @@
 # Skills-Marker
 
-agents-skills-consumed: 5243791
-geprüft am: 2026-10-21
+agents-skills-consumed: 33cbd00
+geprüft am: 2026-10-22
 
 Bezugsrahmen — die gemeinsame Regel, **zitiert statt kopiert**: `skills-marker/SKILL.md` →
 „Bezugsrahmen-Regel" (Skill-ID + Datei + Anker, **ohne Zeilennummer** — die driftet, der
@@ -14,8 +14,8 @@ Form nicht an der Zitierstelle, ist sie hier falsch:
 - (c) eine Datei, die sich seit dem genannten Stand **geändert** hat.
 Der genannte SHA ist der **Messstand** — ein **Vorfahr**, nicht zwingend der direkte
 Vorgänger; (b) und (c) unterscheiden sich an der **Zeitform** (unverändert seit dem
-genannten Stand / geändert seit ihm), das **Nomen** („Vorgänger" / „Stand") entscheidet
-den Fall **nicht**.
+genannten Stand / geändert seit ihm), das **Nomen** („Vorgänger" / „Stand") entscheidet den
+Fall **nicht**.
 
 **Lokale Ergänzung:** `<stand>` = der committete Stand dieses Commits (die SHA, die erst
 mit dem Commit existiert). Der Cursor oben ist **kein** Rahmen — er zeigt den Stand
@@ -48,127 +48,119 @@ des Skills-Repos.
 umgesetzt (offene Position in `AGENTS.todo.md`) · `nein` = trifft nicht zu, Begründung
 in der Zeile.
 
-## Offen aus dem Bereich `4205142..5243791`
+## Offen aus dem Bereich `5243791..33cbd00`
 
-Geprüft 2026-10-21 gegen `5243791` — der Stand des Skills-Repos, **gemessen am
-2026-10-21, 22:05 UTC**; er kann sich während des Laufs bewegen (der **ungeprüfte
-Rest** steht am Ende dieses Abschnitts). **4 Commits** in der Range
-(`git -C <skills-repo> rev-list --count 4205142..5243791` → **4**). Betroffen sind
-**4 Skills** (Verzeichnisse unter `.agents/skills/`, dedupliziert über
-`git log --name-only --format= 4205142..5243791 -- .agents/skills`): **0 neu**
-(`git log --diff-filter=A --name-only --format= 4205142..5243791 -- .agents/skills`
+Geprüft 2026-10-22 gegen `33cbd00` — der Stand des Skills-Repos, **gemessen am
+2026-10-22, 06:00 UTC**; er kann sich während des Laufs bewegen (der **ungeprüfte
+Rest** steht am Ende dieses Abschnitts). **2 Commits** in der Range
+(`git -C <skills-repo> rev-list --count 5243791..33cbd00` → **2**). Betroffen sind
+**2 Skills** (Verzeichnisse unter `.agents/skills/`, dedupliziert über
+`git log --name-only --format= 5243791..33cbd00 -- .agents/skills`): **0 neu**
+(`git log --diff-filter=A --name-only --format= 5243791..33cbd00 -- .agents/skills`
 → leer), **0 zusätzlich versteckt** — die Skills mit `metadata.opencode/autoinvoke: false`
 sind an beiden Ständen **17** und die Namensmenge identisch (`git grep -l "autoinvoke:
-false" 4205142 -- .agents/skills` → **17**; dieselbe Zahl und dieselbe Namensliste an
-`5243791`) —, **4 inhaltlich geändert** (`skills-marker`, `ui-review`, `build-verify`,
-`agent-config`). Die Skill-Menge selbst ist an beiden Ständen dieselbe (**19**
-Verzeichnisse, `git ls-tree --name-only <stand> .agents/skills/`), **entfernt** wurde
-keiner (`git log --diff-filter=D --name-only 4205142..5243791 -- .agents/skills` → leer).
+false" 5243791 -- .agents/skills` → **17**; dieselbe Zahl und dieselbe Namensliste an
+`33cbd00`) —, **2 inhaltlich geändert** (`build-verify`, `agent-config`). Die Skill-Menge
+selbst ist an beiden Ständen dieselbe (**19** Verzeichnisse, `git ls-tree --name-only
+<stand> .agents/skills/`), **entfernt** wurde keiner (`git log --diff-filter=D --name-only
+5243791..33cbd00 -- .agents/skills` → leer).
 
-**⚠️ Abweichung von der Vorabmessung dieser Runde: drei Skill-Verzeichnisse wurden
-vorausgesagt, gemessen sind vier.** `80664ab` fasst neben `build-verify` auch
-`.agents/skills/agent-config/SKILL.md` an (die Kurzform der Amend-Ausnahme in §6).
-`git log --name-only --format= 4205142..5243791 -- .agents/skills | sort -u` nennt **6**
-Pfade in **4** Verzeichnissen — gezählt wird das Verzeichnis, nicht die Datei.
-`agent-config` ist deshalb unten mitentschieden; die Zeile der Skill-Stand-Tabelle
-ändert sich nicht (sie steht auf `nein`).
+**⚠️ Abweichung von der Vorabmessung dieser Runde: die Range hat zwei Commits, nicht
+einen.** Die Vorabmessung nannte `e559a39` und **gegebenenfalls** einen weiteren Commit,
+der während des Laufs landet — genau das ist eingetreten: `33cbd00` („docs(build-verify):
+the path-commit clause in the README, and rule 4's carve-out", committet am **2026-10-22,
+05:58 UTC**) kam **während** dieses Laufs in das Skills-Repo. Die Range wurde deshalb
+**erneut gemessen** und umfasst **beide** Commits; der Cursor steht am Ende auf dem
+zuletzt gemessenen Stand. `git log --name-only --format= 5243791..33cbd00 | sort -u`
+nennt **6** Pfade: **4** unter `.agents/skills/` in **2** Verzeichnissen (bei `build-verify`:
+`SKILL.md` und `references/notes.md`; bei `agent-config`: `SKILL.md` und
+`references/snippets.md`), dazu die Regel-Datei `.agents/rules/build-verify.md` und
+`README.md` des Skills-Repos. Gezählt wird das Verzeichnis, nicht die Datei — die beiden
+Dateien außerhalb von `.agents/skills/` sind **keine** Skills und tragen für dieses Projekt
+keine Pflicht.
 
 **Die Commits der Range, je mit SHA und Änderung**
 
 | SHA | betrifft | was sich geändert hat |
 |---|---|---|
-| `5243791` | `skills-marker` (nur `references/notes.md`) | die acht Befunde der Verifikation von `842e055` geschlossen: die Zitate der Notizen tragen jetzt den Stand, zu dem sie gemessen wurden, die wörtlichen Belege nennen ihre Quelle am jeweiligen Stand, und die Verweise auf Quell-Kommits nennen den Pfad, den sie meinen |
-| `80664ab` | `build-verify` (`SKILL.md`, `references/amend.md`, `references/notes.md`), `.agents/rules/build-verify.md`, `agent-config` (`SKILL.md`) | **Regel 6** der Datei `.agents/rules/build-verify.md` bekommt eine **Ausnahme**: der eigene, frische, bereits gepushte Commit darf per `--force-with-lease` ersetzt werden, wenn der Remote-Head genau dieser Commit ist, keine fremde Arbeit im Baum liegt und der ersetzte SHA offengelegt wird; die sechs Bedingungen, die CI-Regel und die Grenze „eine Ersetzung je Commit" stehen in `references/amend.md`; `agent-config` §6 nennt die Ausnahme und hält fest, dass **das Skills-Repo selbst** sie nicht nimmt |
-| `2e09608` | `ui-review` (nur `SKILL.md`) | die Befundvorlage wird mit den **neun** Spalten zitiert statt mit fünf, und die eigene Schweregrad-Liste (vier Stufen) weicht einem **Verweis** auf das kanonische Vokabular (`ratchet-gates`, `references/vocabulary.md`, **fünf** Stufen mit `info`); die Renderkriterien bleiben in der Vorlage |
-| `842e055` | `skills-marker` (nur `references/notes.md`) | ein Zitat, das in der Mitte seiner Quelle endete, trägt jetzt die Auslassung; `SKILL.md` und `templates/AGENTS.skills.md` bleiben bytegleich zu `4205142` |
+| `33cbd00` | `build-verify` (`SKILL.md`, `references/notes.md`), `.agents/rules/build-verify.md`, `agent-config` (`SKILL.md`), `README.md` des Skills-Repos | die **Ausnahme-Klausel** in der Regel-Datei: die Repo-Policy-Ausnahme für die Regeln 4–7 gilt **nicht** für die Pfad-Commit-Klausel von Regel 4 („except the path-commit clause of rule 4"); der kanonische Satz — die Klausel bindet **jede** Session in einem gemeinsamen Baum, die Verantwortung liegt beim **Kommittenden**, und **keine** Repo-Policy überschreibt sie — steht jetzt wörtlich gleich an **6** Stellen; der „Adding skills"-Block im README des Skills-Repos committet nicht mehr mit `git add -A && git commit && git push`, sondern pfadexplizit |
+| `e559a39` | `build-verify` (`SKILL.md`, `references/notes.md`), `.agents/rules/build-verify.md`, `agent-config` (`SKILL.md`, `references/snippets.md`) | **Regel 4** der Datei `.agents/rules/build-verify.md` bekommt die **Pfad-Commit-Klausel**: in einem Baum, in dem andere Sessions arbeiten, committet man mit `git commit -- <path>`, ein nackter `git commit` nimmt den **gesamten Index** (und damit die gestagede Arbeit anderer Sessions) mit, und es bleibt **nichts** gestaged liegen; `build-verify/SKILL.md` zeigt das Kommando mit den Pfaden, `references/notes.md` trägt die Begründung und eine neue Trap-Zeile; `agent-config` §6 (die Kurzform) und `references/snippets.md` (das Kommando-Template) tragen dieselbe Klausel |
 
 **Entscheidung je Skill der Range** (je genau eine der drei Entscheidungen aus §3 des
 `skills-marker`)
 
-- **`skills-marker` (`842e055`, `5243791`) — `ja`, bleibt `ja`.** Beide Commits
-  betreffen **nur** `references/notes.md`; die Regeldateien bleiben bytegleich zu
-  `4205142` (sha256 über `git show <sha>:<pfad>`: `SKILL.md` →
-  `eed3f1ec7c8988b6733a42d8a5e5093d1ca7b157e0bab163f450e3588e9b2fc6` und
-  `templates/AGENTS.skills.md` →
-  `08d8c9770cd62688cc9c28584bd9635a82b2e058555d80ce0df4e6bc62faa314`, jeweils an
-  `4205142`, `842e055` und `5243791` — identisch).
-  **Messung:** der Anker `Bezugsrahmen-Regel` steht am Stand `5243791` mit **1** Treffer
-  in `skills-marker/SKILL.md` (`git show 5243791:.agents/skills/skills-marker/SKILL.md |
-  grep -c "Bezugsrahmen-Regel"` → **1**; dieselbe Zahl an `4205142` und `842e055`), die
-  Abschnittsüberschrift `## Der Bezugsrahmen` in `skills-marker/references/notes.md` mit
-  **1** Treffer (`grep -c "^## Der Bezugsrahmen"` → **1**; der Name selbst kommt in der
-  Datei **2**-mal vor — als Überschrift und als Verweis in der Werkzeugtabelle).
-  **Was die Änderung an der Anwendung im Projekt ändert: nichts.** Die beiden Commits
-  korrigieren **Zitate** in den Notizen (eine Passage, die in der Mitte ihrer Quelle
-  endete, trägt jetzt die Auslassung; die Belege tragen den Stand, zu dem sie gemessen
-  wurden). Die Regel, die dieses Projekt anwendet — Zitierform ohne Zeilennummer,
-  Rahmenformen (a)/(b)/(c), Cursor-Klausel, Aufzählungs-Klausel,
-  `**Lokale Ergänzung:**`-Kennzeichnung — steht unverändert in `skills-marker/SKILL.md`.
-  Der Cursor deckt die Zitierstelle: sie steht am Stand `5243791`, der Cursor nennt
-  `5243791`.
-- **`ui-review` (`2e09608`) — `offen`, bleibt `offen`; die Position 5 im Board bleibt
-  stehen und wird nicht geschlossen.** Board-Positionen sind Sache des Owners.
-  **Messung:** `ui-review/SKILL.md` zitiert die Befundvorlage am Stand `5243791` mit den
-  **neun** Spalten (`Id | Severity | Status | Owner | Ticket | File:Line | Screenshot |
-  Finding | Suggested fix`; `git show 5243791:.agents/skills/ui-review/SKILL.md |
-  grep -c "Id | Severity | Status | Owner |"` → **1**; am Stand `4205142` → **0**) statt mit
-  den alten fünf (`grep -c "Severity | File:Line | Screenshot |"` → **1** an `4205142`,
-  **0** an `5243791`); die Datei trägt **149** Zeilen an `4205142` und **145** an
-  `5243791`. Für die Schweregrade steht dort jetzt ein Verweis auf das kanonische
-  Vokabular: `ratchet-gates/references/vocabulary.md` trägt **fünf** Stufen
-  (`grep -cE "^\| \`(critical|high|medium|low|info)\` \|"` → **5**; die Stufe `info`
-  steht mit **1** Treffer in der Datei), die eigene vierstufige Liste ist weg (`grep -c "nitpicks"` → **1** an
-  `4205142`, **0** an `5243791`).
-  **Was die Änderung an der Anwendung im Projekt ändert:** der offenen Position 5 gibt
-  sie erstmals ein **konkretes, zitierfähiges Ziel im Upstream** — Spaltenform und Vokabular stehen
-  jetzt **an einer Stelle** im Skill statt an zwei. Das Board beschrieb dieses Ziel
-  schon; der Upstream-Stand hat es jetzt eingeholt. Am **Projekt** ändert sie
-  **nichts**: die Befundliste in `AGENTS.todo.md` §„UI-Review-Befunde" trägt weiterhin
-  `hoch`/`mittel`/`niedrig` und den Status in der Behebungs-Spalte statt in einer
-  eigenen Spalte (am committeten Stand dieses Commits **10** Zeilen, davon **6** mit
-  „erledigt"). Genau das ist der offene Punkt der Position 5 — er bleibt offen, und
-  die Änderung macht ihn **überprüfbar**, nicht erledigt.
-- **`build-verify` (`80664ab`) — `ja`, bleibt `ja`.** Die Änderung betrifft die
+- **`build-verify` (`e559a39`, `33cbd00`) — `ja`, bleibt `ja`.** Die Änderung betrifft die
   **Regel**, die die Commits dieses Projekts formt.
-  **Messung:** Regel 6 der Datei `.agents/rules/build-verify.md` trägt am Stand `5243791`
-  die Ausnahme (`git show 5243791:.agents/rules/build-verify.md | grep -c
-  "force-with-lease"` → **1**; am Stand `4205142` → **0**; die Datei bleibt **42**
-  Zeilen). Die Bedingungen stehen in `build-verify/references/amend.md` (am Stand
-  `4205142` **25** Zeilen, am Stand `5243791` **63** Zeilen;
-  `git diff --numstat 4205142..5243791 --
-  .agents/skills/build-verify/references/amend.md` → **+43**/−**5**).
-  **Was die Änderung an der Anwendung im Projekt ändert:** sie ändert **das Verfahren,
-  nicht eine Projektdatei**. Dieses Projekt trägt **keine eigene, strengere
-  Amend-Policy** (gemessen am Vorgänger `2d772c7`, seitdem unverändert:
-  `git grep -n -iE "amend|unpushed|force-with-lease" 2d772c7 -- AGENTS.md` → **0**
-  Treffer; Beleg: `git diff --stat 2d772c7..<stand> -- AGENTS.md` → ohne Ausgabe; dieser
-  Commit schreibt die Datei nicht) — damit gilt die **allgemeine** Ausnahme hier, und
-  die Repo-Policy-Klausel greift nicht. Konkret: der eigene, frische, bereits gepushte
-  Commit dieser Aufgabe darf **einmal** per `--force-with-lease` ersetzt werden, wenn
-  der Remote-Head genau dieser Commit ist, keine fremde Arbeit im Baum liegt und der
-  ersetzte SHA im Commit-Body offengelegt wird; ein **zweiter** Ersetzungsvorgang auf
-  denselben Commit ist untersagt (ein neuer Commit stattdessen), und ein grüner Lauf
-  des ersetzten Commits gilt als **nichtig** — der neue SHA braucht seinen eigenen.
-  Das trifft die Marker-Serie **dieses** Repos unmittelbar: der Commit `2d772c7` ist
-  selbst aus **zwei** Ersetzungen entstanden (`1d473a2` → `a906c2a` → `2d772c7`, gemessen
-  über `git reflog` am Stand `2d772c7`: **21:31:16**, **21:33:02**, **21:33:52**) —
-  unter der neuen Regel wäre die zweite Ersetzung nicht zulässig gewesen.
-- **`agent-config` (`80664ab`) — `nein`, bleibt `nein`.** Die Änderung betrifft §6 der
-  Skill (`agent-config/SKILL.md`, der Klartext der globalen Verdrahtung).
-  **Messung:** am Stand `5243791` nennt §6 die allgemeine Ausnahme und hält fest, dass
-  **das Skills-Repo selbst** sie nicht nimmt (`git show
-  5243791:.agents/skills/agent-config/SKILL.md | grep -c "This repo does not take it"` →
-  **1**; am Stand `4205142` → **0**; die Datei wächst um **6** Zeilen).
-  **Was die Änderung an der Anwendung im Projekt ändert:** für die **Anwendbarkeit**
-  der Skill **nichts** — sie beschreibt die Maschinen-Konfiguration (globale
-  `opencode.jsonc`, MCP, Skill-Registrierung, Command-Templates), und dieses Projekt
-  definiert kein Agent-Setup; die Zeile der Skill-Stand-Tabelle bleibt deshalb auf
-  `nein` mit demselben Grund. Für **fremde** Repos — anders als für das Skills-Repo —
-  gilt die Ausnahme; das ist eine Aussage der Ausnahme selbst und keine Pflicht
-  dieses Projekts (die Entscheidung `build-verify` oben trägt sie).
+  **Messung:** Regel 4 der Datei `.agents/rules/build-verify.md` trägt am Stand `33cbd00`
+  die Pfad-Commit-Klausel (`git show 33cbd00:.agents/rules/build-verify.md | grep -c
+  "git commit -- <path>"` → **1**; am Stand `5243791` → **0**; die Datei bleibt **42**
+  Zeilen an allen drei Ständen), die Ausnahme aus Regel 6 steht unverändert daneben
+  (`grep -c "force-with-lease"` → **1** an `5243791`, `e559a39` und `33cbd00`), und die
+  Ausnahme-Klausel aus `33cbd00` nimmt die Pfad-Klausel **aus** der Repo-Policy-Ausnahme
+  heraus (`grep -c "except the path-commit clause of rule 4"` → **1** an `33cbd00`, **0**
+  an `e559a39` und `5243791`). Der kanonische Satz steht am Stand `33cbd00` wörtlich
+  gleich an **6** Stellen (`git grep -c "The path-commit clause of rule 4 binds" 33cbd00 --
+  .agents README.md` → **1** in `.agents/rules/build-verify.md`, **1** in
+  `agent-config/SKILL.md`, **1** in `build-verify/SKILL.md`, **3** in
+  `build-verify/references/notes.md` — Summe **6**; Scope: `.agents/` und `README.md` des
+  Skills-Repos). `build-verify/SKILL.md` trägt **131** Zeilen an `5243791` und **137** an
+  `e559a39` und `33cbd00` (`git diff --numstat 5243791..33cbd00 --
+  .agents/skills/build-verify/SKILL.md` → **+7**/−**1**), `references/notes.md` **264**
+  Zeilen an `5243791`, **286** an `e559a39` und **285** an `33cbd00` (`git diff --numstat
+  5243791..33cbd00 -- .agents/skills/build-verify/references/notes.md` → **+22**/−**1**).
+  Dieses Projekt trägt **keine eigene, strengere Commit-Policy** (gemessen am Vorgänger
+  `e5824e9`, seitdem unverändert: `git grep -n -iE "amend|unpushed|force-with-lease|git
+  add -A" e5824e9 -- AGENTS.md` → **0** Treffer; Beleg: `git diff --stat e5824e9..<stand>
+  -- AGENTS.md` → ohne Ausgabe; dieser Commit schreibt die Datei nicht).
+  **Was die Änderung an der Anwendung im Projekt ändert:** sie ändert **das Verfahren, nicht
+  eine Projektdatei**. Die Klausel **gilt hier**, weil das Projekt in einem Baum mit
+  parallelen Sessions arbeitet: dieser Commit committet mit
+  `git commit -- AGENTS.skills.md AGENTS.todo.md` statt mit einem nackten `git commit`,
+  nutzt kein `git add -A` und lässt danach **nichts** gestaged liegen (Index leer). Die Ausnahme-Klausel aus `33cbd00`
+  bestätigt, dass die Klausel **nicht** per Repo-Policy abgeschaltet werden kann — für
+  dieses Projekt ändert das **nichts**, weil es keine eigene Policy trägt; es ist die
+  Absicherung eines Falls, der hier gar nicht eintreten kann. Die Klausel erzeugt **keine**
+  Amend-Pflicht: die Ausnahme aus Regel 6 (`80664ab`) steht **neben** der Klausel, nicht in
+  ihr, und bleibt unberührt (`grep -c "force-with-lease"` → **1** an allen drei Ständen).
+- **`agent-config` (`e559a39`, `33cbd00`) — `nein`, bleibt `nein`.** Die Änderung betrifft
+  §6 der Skill (`agent-config/SKILL.md`, die Kurzform der Commit-Konvention) und das
+  Kommando-Template (`agent-config/references/snippets.md`).
+  **Messung:** §6 der Datei `agent-config/SKILL.md` trägt am Stand `33cbd00` die Klausel in
+  **einer** Zeile (`git show 33cbd00:.agents/skills/agent-config/SKILL.md | grep -c "in a
+  tree with parallel sessions, commit with the paths"` → **1**; am Stand `5243791` → **0**)
+  und den kanonischen Satz als Fortsetzung desselben Aufzählungspunkts
+  (`grep -c "The path-commit clause of rule 4 binds"` → **1**; die Datei trägt **252** Zeilen
+  an `5243791` und `e559a39`, **253** an `33cbd00`). Das Kommando-Template
+  `references/snippets.md` committet mit den Pfaden (`grep -c "git commit -F - --
+  <explicit path>"` → **1** an `33cbd00`, **0** an `5243791`). §6 der Datei trägt die
+  Überschrift „Commit convention (agents-skills repo)" (`git show
+  33cbd00:.agents/skills/agent-config/SKILL.md | grep -n "^## 6\."` → Zeile **166**) — die
+  geänderte Passage ist
+  die **Commit-Konvention des Skills-Repos**, keine Pflicht, die in fremden Projekten gilt.
+  **Was die Änderung an der Anwendung im Projekt ändert:** **nichts** — die Skill beschreibt
+  die Maschinen-Konfiguration (globale `opencode.jsonc`, MCP, Skill-Registrierung,
+  Command-Templates), und dieses Projekt definiert kein Agent-Setup; die Zeile der
+  Skill-Stand-Tabelle bleibt deshalb auf `nein` mit demselben Grund. Die Pflicht, die
+  dieses Projekt erreicht, steht in der **Regel-Datei** und ist unter `build-verify` oben
+  entschieden — nicht in §6 der Skill.
+- **`README.md` des Skills-Repos (`33cbd00`) — keine Pflicht für dieses Projekt.** Die
+  Datei ist **keine** Skill (kein Verzeichnis unter `.agents/skills/`), sondern die
+  Anleitung des Skills-Repos für das Anlegen einer Skill („Adding skills"); der Block
+  committet jetzt pfadexplizit (`git show 33cbd00:README.md | grep -c "git add"` → **1**
+  an beiden Ständen `5243791` und `33cbd00` — vorher `git add -A && git commit && git
+  push`, jetzt `git add .agents/skills/<id>/` … `git commit -m "feat(skill): <id>" --
+  .agents/skills/<id>/`; die Datei trägt **131** Zeilen an `5243791` und **134** an
+  `33cbd00`; `git diff --numstat 5243791..33cbd00 -- README.md` → **+4**/−**1**).
+  **Für dieses Projekt ändert das nichts:** dessen eigene `README.md` (**111** Zeilen)
+  enthält **keine** Anleitung zum Anlegen oder Veröffentlichen von Skills
+  (`grep -n -iE "skill|adding skills" README.md` → **0** Treffer) — das Repo konsumiert die
+  Skills des Skills-Repos, es veröffentlicht keine; die Pflicht, die hier greift, steht in
+  der Regel-Datei und ist unter `build-verify` oben entschieden.
 
 **Anker-Audit** — **alle** Anker neu belegt, gegen den **committeten** Stand (mit
 `git show <rev>:<datei>` und `git grep <rev> -- <pfad>`), **nicht** gegen den Arbeitsbaum.
+Diese Runde **zählt nicht neu** — sie **beweist**, dass die Anker der Zählung vom
+Vorgänger-Stand `e5824e9` weiter gelten.
 
 **Zähleinheit:** ein **Anker** = ein **Vorkommen** einer Referenz auf einen **Ort** —
 eine **Datei** (Pfad), eine **Zeile** (`Datei:Zeile`), ein **Bereich**
@@ -178,11 +170,14 @@ Commit-SHAs und -bereiche, Skill-IDs ohne Ort, API-Endpunkte und -Ereignisse,
 Paket-Spezifikationen, Dateiendungslisten, Werte ohne Repo-Ort und Pfade außerhalb des
 Repos. Gezählt werden **Vorkommen** (jedes Vorkommen einer Ankerform), **Zeilen**
 (Zeilen mit mindestens einem Anker) und **verschiedene Ziele** (die Ziele **als
-geschrieben**, je Anker einmal). Die Zählung gilt für den Stand, den dieser Commit
-festschreibt (Form (a) für die beiden Dateien, die er schreibt); die **Projektdateien**
-sind **Fremddateien** und stehen unter Form (b) — gemessen am Vorgänger `2d772c7`,
-seitdem unverändert (Beleg: `git diff --stat 2d772c7..<stand> -- <pfade>` → ohne
-Ausgabe; dieser Commit schreibt nur `AGENTS.skills.md` und `AGENTS.todo.md`).
+geschrieben**, je Anker einmal). **Zählung und Zähleinheit** stammen aus der Zählung am
+**Vorgänger-Stand `e5824e9`** (Zustand: der committete Stand dieses Vorgängers; Umfang:
+die beiden Marker-Dateien) und sind **unverändert übernommen** — diese Runde zählt nicht
+neu. Die **Projektdateien**, die die Anker tragen, sind **Fremddateien** und stehen unter
+Form (b) — gemessen am Vorgänger `2d772c7`, seitdem unverändert (Beleg: `git diff --stat
+2d772c7..<stand> -- <pfade>` → ohne Ausgabe; dieser Commit schreibt nur `AGENTS.skills.md`
+und `AGENTS.todo.md`) — und für die beiden Dateien, die dieser Commit selbst schreibt, gilt
+Form (a) am committeten Stand dieses Commits.
 
 | Umfang | Vorkommen | Zeilen | verschiedene Ziele |
 |---|---|---|---|
@@ -193,25 +188,42 @@ Ausgabe; dieser Commit schreibt nur `AGENTS.skills.md` und `AGENTS.todo.md`).
 | **Projekt + Upstream**, beide Dateien | **284** | — | — |
 | Verweise auf die globale Config (`opencode.jsonc`, `~/.config/opencode/AGENTS.md`) — zählen **nicht** als Projektanker | **7** | **6** | **2** |
 
-Ergebnis: **0** Anker zeigen auf fremden Inhalt, **0** sind gedriftet. **Tote**
-Anker sind die, die der Text selbst als tot ausweist: im Marker **4** Vorkommen auf
-**3** Zielen (im Korrekturprotokoll, Nummer 2 bis 4; jede **2**-mal zitiert), im Board
-**1** Vorkommen auf
+Die Zahlen dieser Tabelle sind die Zählung des **Vorgänger-Standes `e5824e9`**; sie gelten
+unverändert, weil die **Ziele** der Anker unverändert sind — der Diff über die
+**Fremddateien** des Projekts zwischen `2d772c7` und dem committeten Stand dieses Commits
+ist **leer** (`git diff --stat 2d772c7..<stand> -- . ':(exclude)AGENTS.skills.md'
+':(exclude)AGENTS.todo.md'` → ohne Ausgabe; Scope: alle versionierten Pfade außer den
+beiden Dateien, die dieser Commit schreibt) — und die **Zitierstellen** im Upstream stehen
+am neuen Cursor-Stand `33cbd00` weiter mit je **1** Treffer auf (alle am Stand `33cbd00`
+gemessen): `skills-marker/SKILL.md` trägt den Anker `Bezugsrahmen-Regel` mit **1**
+Treffer, `skills-marker/references/notes.md` die Abschnittsüberschrift `## Der Bezugsrahmen`
+mit **1** Treffer (der Name selbst kommt in der Datei **2**-mal vor — als Überschrift und
+als Verweis in der Werkzeugtabelle), `ui-review/SKILL.md` die neun Spalten der
+Befundvorlage mit **1** Treffer (die alten fünf mit **0**),
+`ratchet-gates/references/vocabulary.md` **fünf** Stufen, `build-verify/references/amend.md`
+**63** Zeilen,
+`agent-config/SKILL.md` „This repo does not take it" mit **1** Treffer. Die Commits der
+Range berühren **nur** Dateien des Skills-Repos (`git log --name-only --format=
+5243791..33cbd00 | sort -u` → **6** Pfade, alle unter `.agents/` oder `README.md` des
+Skills-Repos), **keine** Projektdatei. Ergebnis: **0** Anker zeigen auf fremden Inhalt,
+**0** sind gedriftet. **Tote** Anker sind die, die der Text selbst als tot ausweist: im
+Marker **4** Vorkommen auf **3** Zielen (im Korrekturprotokoll, Nummer 2 bis 4; jede
+**2**-mal zitiert), im Board **1** Vorkommen auf
 **1** Ziel (`generated/types.d.ts`, ausgewiesen mit dem Zusatz „liegt nicht in diesem
-Repo“). Von den **41** Zeilenankern der beiden Dateien (Datei:Zeile, Datei:Zeile–Zeile,
-Datei:Zeile/Zeile und die Prosaform „Z. n“) lösen **35** direkt auf und **2** über eine
+Repo"). Von den **41** Zeilenankern der beiden Dateien (Datei:Zeile, Datei:Zeile–Zeile,
+Datei:Zeile/Zeile und die Prosaform „Z. n") lösen **35** direkt auf und **2** über eine
 Kurzform (`ci.yml:23` → `.github/workflows/ci.yml:23`); **4** sind die im
 Korrekturprotokoll als tot ausgewiesenen (`client.d.ts:147-149` und `types.d.ts:3767+`,
 je **2**-mal zitiert — Dateien in `node_modules`, nicht versioniert). Darunter sind die Anker auf den
 wachsenden Projektdateien (`.github/workflows/ci.yml`, `.github/workflows/pages.yml`),
 die Abschnittsanker auf `AGENTS.md` und die Anker auf die beiden Dateien, die der
 Marker selbst schreibt (`AGENTS.skills.md`, `AGENTS.todo.md` — für diese gilt „am
-committeten Stand dieses Commits“). Die **Upstream-Zitate** tragen **keine**
+committeten Stand dieses Commits"). Die **Upstream-Zitate** tragen **keine**
 Zeilennummer (`git grep -nE '(skills-marker|
 ui-review|build-verify|ratchet-gates|agent-config|github-ci-filters)/[^ ]*:[0-9]+|
 references/[^ ]*:[0-9]+|SKILL\.md:[0-9]+' -- AGENTS.skills.md AGENTS.todo.md` → **0**
 Treffer; die Upstream-Regel verbietet die Zeilennummer im Zitat) und stehen am Stand
-`5243791` mit je **1** Treffer auf; die relativen Namen `SKILL.md` und `references/notes.md` stehen in
+`33cbd00` mit je **1** Treffer auf; die relativen Namen `SKILL.md` und `references/notes.md` stehen in
 **vier** bzw. **zwei** Skills und werden deshalb nach dem Skill benannt aufgelöst.
 
 **Die Korrekturen, jede mit ihrem Grund**
@@ -248,21 +260,22 @@ Treffer; die Upstream-Regel verbietet die Zeilennummer im Zitat) und stehen am S
    .github/workflows/pages.yml` → ohne Ausgabe) — der Token trägt nur in `ci.yml`, der
    alte Satz legte beide Dateien auf ihn.
 7. **Neu belegt** — **Board, Abschnitt „Skills-Stand (2026-10-21)"**: die Range
-   `4205142..5243791` trägt **keine neue Position** — ihre vier Skills sind bereits
-   erfasst (`ui-review` in Position 5, `skills-marker` und `build-verify` ohne
-   Position, `agent-config` trifft nicht zu). Grund: die Range ist begangen, ihr
-   Ergebnis gehört ins Board; eine Position entsteht nur, wenn etwas zu entscheiden
-   ist — hier ändert sich an den Positionen 1 bis 5 nichts.
+   `5243791..33cbd00` trägt **keine neue Position** — ihre zwei Skills sind bereits
+   erfasst (`build-verify` ohne Position, `agent-config` trifft nicht zu), und ihre
+   beiden übrigen Dateien (`README.md` des Skills-Repos, `.agents/rules/build-verify.md`)
+   sind keine Skills. Grund: die Range ist begangen, ihr Ergebnis gehört ins Board; eine
+   Position entsteht nur, wenn etwas zu entscheiden ist — hier ändert sich an den
+   Positionen 1 bis 5 nichts.
 
 **Regel-Drift** (Schritt 3 des Ablaufs): in dieser Range ist **eine** Datei unter
 `.agents/rules/` geändert — `.agents/rules/build-verify.md` (`git log --oneline
-4205142..5243791 -- .agents/rules/` → **1** Commit, `80664ab`; `git diff --numstat
-4205142..5243791 -- .agents/rules/build-verify.md` → **+2**/−**2**). Die globale
-`~/.config/opencode/AGENTS.md` bettet **keinen** build-verify-Text ein
-(`grep -n -iE "build-verify|amend|force-with-lease|unpushed"` → **0** Treffer), und
-keine Projekt-`AGENTS.md` wiederholt die Regel (siehe die Messung unter
-`build-verify` oben). **Nichts nachzuziehen**, kein Reload nötig — es änderte sich
-keine eingebettete Pflicht.
+5243791..33cbd00 -- .agents/rules/` → **1** Commit, `33cbd00`; `git diff --numstat
+5243791..33cbd00 -- .agents/rules/build-verify.md` → **+2**/−**2**; die Datei bleibt **42**
+Zeilen). Die globale `~/.config/opencode/AGENTS.md` bettet **keinen** build-verify-Text
+ein (`grep -n -iE "build-verify|amend|force-with-lease|unpushed"` → **0** Treffer), und
+keine Projekt-`AGENTS.md` wiederholt die Regel (siehe die Messung unter `build-verify`
+oben). **Nichts nachzuziehen**, kein Reload nötig — es änderte sich keine eingebettete
+Pflicht.
 
 **Lokale Ergänzung:** geprüft — das Projekt trägt **eine** eigene Zusatzregel: die
 `<stand>`-Definition (Marker, Kopf; Board, Kopf). Sie ist in **beiden** Dateien als
@@ -273,14 +286,14 @@ eigene Zusatzregeln trägt das Projekt **nicht**: die Abweichungen des Abschnitt
 Lesehilfe" (§5, Schritt 5) und die Tabelle in §3 — nicht einer eigenen Zusage; die
 Vorlage ist das Gerüst, die Regel ist die Fassung.
 
-**Cursor**: `agents-skills-consumed: 5243791` — der Stand des Skills-Repos,
-**gemessen am 2026-10-21, 22:05 UTC**. Der Cursor ist kein Rahmen; die Zitierstelle,
-die dieser Marker nennt, steht am Stand `5243791` mit je **1** Treffer auf, der Cursor
+**Cursor**: `agents-skills-consumed: 33cbd00` — der Stand des Skills-Repos,
+**gemessen am 2026-10-22, 06:00 UTC**. Der Cursor ist kein Rahmen; die Zitierstellen,
+die dieser Marker nennt, stehen am Stand `33cbd00` mit je **1** Treffer auf, der Cursor
 deckt sie.
 
 **Ungeprüfter Rest**: **keiner** — der Stand des Skills-Repos stand am Ende der
-Messung (2026-10-21, 22:30 UTC) erneut auf `5243791`, und `git -C <skills-repo> log
---oneline 5243791..HEAD` war zu diesem Zeitpunkt **leer** (Scope: alle Pfade, kein
+Messung (2026-10-22, 06:07 UTC) erneut auf `33cbd00`, und `git -C <skills-repo> log
+--oneline 33cbd00..HEAD` war zu diesem Zeitpunkt **leer** (Scope: alle Pfade, kein
 Pfadfilter). Was danach noch landet, gehört zur nächsten Runde.
 
 ## Fortschreiben
