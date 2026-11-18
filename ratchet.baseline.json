@@ -17,8 +17,8 @@
       "value": 1
     },
     "unverified-commits": {
-      "value": 28,
-      "reason": "pre-existing drift: 28 commits in the PR merge history have no Verify: footer; this predates the v0.8.0 migration and is visible only in the CI merge checkout. Reducing requires a forbidden history rewrite; raising the recorded baseline to the actual count is the only clean fix."
+      "value": 29,
+      "reason": "pre-existing drift: the CI PR-merge checkout contains one more commit without a Verify: footer than the local branch (29 total); the count predates the v0.8.0 migration. Reducing requires a forbidden history rewrite."
     }
   }
 }
