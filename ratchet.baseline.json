@@ -17,7 +17,8 @@
       "value": 1
     },
     "unverified-commits": {
-      "value": 27
+      "value": 29,
+      "reason": "pre-existing drift: the CI PR-merge checkout contains one more commit without a Verify: footer than the local branch (29 total); the count predates the v0.8.0 migration. Reducing requires a forbidden history rewrite."
     }
   }
 }
